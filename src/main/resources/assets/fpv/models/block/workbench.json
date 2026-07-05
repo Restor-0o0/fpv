@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "down": "fpv:block/workbench_bottom",
+    "up": "fpv:block/workbench_top",
+    "north": "fpv:block/workbench_side",
+    "south": "fpv:block/workbench_side",
+    "east": "fpv:block/workbench_side",
+    "west": "fpv:block/workbench_side",
+    "particle": "fpv:block/workbench_top"
+  }
+}

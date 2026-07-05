@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "fpv:block/control_station" }
+  }
+}

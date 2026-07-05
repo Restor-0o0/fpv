@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": { "pcb": "minecraft:block/green_concrete", "chip": "minecraft:block/black_concrete", "metal": "minecraft:block/iron_block" },
+  "display": { "gui": { "rotation": [30, 225, 0], "scale": [0.9, 0.9, 0.9] }, "ground": { "translation": [0, 3, 0], "scale": [0.35, 0.35, 0.35] }, "fixed": { "scale": [0.8, 0.8, 0.8] }, "thirdperson_righthand": { "rotation": [75, 45, 0], "scale": [0.45, 0.45, 0.45] } },
+  "elements": [
+    { "from": [3, 7, 3], "to": [13, 8, 13], "faces": { "down": { "texture": "#pcb" }, "up": { "texture": "#pcb" }, "north": { "texture": "#pcb" }, "south": { "texture": "#pcb" }, "west": { "texture": "#pcb" }, "east": { "texture": "#pcb" } } },
+    { "from": [5, 8, 5], "to": [8, 10, 8], "faces": { "down": { "texture": "#chip" }, "up": { "texture": "#chip" }, "north": { "texture": "#chip" }, "south": { "texture": "#chip" }, "west": { "texture": "#chip" }, "east": { "texture": "#chip" } } },
+    { "from": [9, 8, 6], "to": [11, 9.5, 10], "faces": { "down": { "texture": "#metal" }, "up": { "texture": "#metal" }, "north": { "texture": "#metal" }, "south": { "texture": "#metal" }, "west": { "texture": "#metal" }, "east": { "texture": "#metal" } } }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=up":    { "model": "fpv:block/race_gate" },
+    "facing=down":  { "model": "fpv:block/race_gate" },
+    "facing=north": { "model": "fpv:block/race_gate" },
+    "facing=east":  { "model": "fpv:block/race_gate" },
+    "facing=south": { "model": "fpv:block/race_gate" },
+    "facing=west":  { "model": "fpv:block/race_gate" }
+  }
+}

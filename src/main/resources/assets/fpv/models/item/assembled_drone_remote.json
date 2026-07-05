@@ -1,0 +1,19 @@
+{
+  "parent": "fpv:item/assembled_drone_quad",
+  "textures": {
+    "frame": "minecraft:block/deepslate_tiles",
+    "dark": "minecraft:block/black_concrete",
+    "metal": "minecraft:block/iron_block",
+    "prop": "minecraft:block/light_blue_concrete",
+    "battery": "minecraft:block/red_concrete",
+    "lens": "minecraft:block/blue_stained_glass"
+  },
+  "elements": [
+    { "from": [5, 7, 5], "to": [11, 8.2, 11], "faces": { "down": { "texture": "#dark" }, "up": { "texture": "#dark" }, "north": { "texture": "#dark" }, "south": { "texture": "#dark" }, "west": { "texture": "#dark" }, "east": { "texture": "#dark" } } },
+    { "from": [7.3, 7.2, 1], "to": [8.7, 8.0, 15], "rotation": { "origin": [8, 8, 8], "axis": "y", "angle": 45 }, "faces": { "down": { "texture": "#frame" }, "up": { "texture": "#frame" }, "north": { "texture": "#frame" }, "south": { "texture": "#frame" }, "west": { "texture": "#frame" }, "east": { "texture": "#frame" } } },
+    { "from": [7.3, 7.2, 1], "to": [8.7, 8.0, 15], "rotation": { "origin": [8, 8, 8], "axis": "y", "angle": -45 }, "faces": { "down": { "texture": "#frame" }, "up": { "texture": "#frame" }, "north": { "texture": "#frame" }, "south": { "texture": "#frame" }, "west": { "texture": "#frame" }, "east": { "texture": "#frame" } } },
+    { "from": [6, 8.2, 5], "to": [10, 10.2, 11], "faces": { "down": { "texture": "#battery" }, "up": { "texture": "#battery" }, "north": { "texture": "#battery" }, "south": { "texture": "#battery" }, "west": { "texture": "#battery" }, "east": { "texture": "#battery" } } },
+    { "from": [4, 10.2, 9], "to": [4.5, 15, 9.5], "faces": { "down": { "texture": "#dark" }, "up": { "texture": "#dark" }, "north": { "texture": "#dark" }, "south": { "texture": "#dark" }, "west": { "texture": "#dark" }, "east": { "texture": "#dark" } } },
+    { "from": [11.5, 10.2, 9], "to": [12, 15, 9.5], "faces": { "down": { "texture": "#dark" }, "up": { "texture": "#dark" }, "north": { "texture": "#dark" }, "south": { "texture": "#dark" }, "west": { "texture": "#dark" }, "east": { "texture": "#dark" } } }
+  ]
+}

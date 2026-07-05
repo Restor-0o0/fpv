@@ -1,0 +1,11 @@
+{
+  "parent": "fpv:item/assembled_drone_quad",
+  "textures": { "frame": "minecraft:block/deepslate_tiles", "dark": "minecraft:block/black_concrete", "metal": "minecraft:block/iron_block", "prop": "minecraft:block/light_blue_concrete", "battery": "minecraft:block/red_concrete", "lens": "minecraft:block/blue_stained_glass", "warhead": "minecraft:block/green_concrete" },
+  "elements": [
+    { "from": [5, 7, 5], "to": [11, 8.2, 11], "faces": { "down": { "texture": "#dark" }, "up": { "texture": "#dark" }, "north": { "texture": "#dark" }, "south": { "texture": "#dark" }, "west": { "texture": "#dark" }, "east": { "texture": "#dark" } } },
+    { "from": [7.3, 7.2, 1], "to": [8.7, 8.0, 15], "rotation": { "origin": [8, 8, 8], "axis": "y", "angle": 45 }, "faces": { "down": { "texture": "#frame" }, "up": { "texture": "#frame" }, "north": { "texture": "#frame" }, "south": { "texture": "#frame" }, "west": { "texture": "#frame" }, "east": { "texture": "#frame" } } },
+    { "from": [7.3, 7.2, 1], "to": [8.7, 8.0, 15], "rotation": { "origin": [8, 8, 8], "axis": "y", "angle": -45 }, "faces": { "down": { "texture": "#frame" }, "up": { "texture": "#frame" }, "north": { "texture": "#frame" }, "south": { "texture": "#frame" }, "west": { "texture": "#frame" }, "east": { "texture": "#frame" } } },
+    { "from": [5.2, 4.3, 2], "to": [10.8, 6, 9], "faces": { "down": { "texture": "#warhead" }, "up": { "texture": "#warhead" }, "north": { "texture": "#warhead" }, "south": { "texture": "#warhead" }, "west": { "texture": "#warhead" }, "east": { "texture": "#warhead" } } },
+    { "from": [6.4, 4.5, 9], "to": [9.6, 5.6, 15], "faces": { "down": { "texture": "#dark" }, "up": { "texture": "#dark" }, "north": { "texture": "#dark" }, "south": { "texture": "#dark" }, "west": { "texture": "#dark" }, "east": { "texture": "#dark" } } }
+  ]
+}

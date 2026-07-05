@@ -1,0 +1,85 @@
+package org.restor.fpv.client;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.client.KeyMapping;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import org.lwjgl.glfw.GLFW;
+import org.restor.fpv.Fpv;
+
+@Mod.EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+public class ModKeyBindings {
+    public static final KeyMapping CYCLE_MODE = new KeyMapping(
+        "key.fpv.cycle_mode",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_R,
+        "key.categories.fpv"
+    );
+
+    public static final KeyMapping OPEN_SETTINGS = new KeyMapping(
+        "key.fpv.open_settings",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_O,
+        "key.categories.fpv"
+    );
+
+    public static final KeyMapping CAMERA_UP = new KeyMapping(
+        "key.fpv.camera_up",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_PAGE_UP,
+        "key.categories.fpv"
+    );
+
+    public static final KeyMapping CAMERA_DOWN = new KeyMapping(
+        "key.fpv.camera_down",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_PAGE_DOWN,
+        "key.categories.fpv"
+    );
+
+    public static final KeyMapping TOGGLE_HUD = new KeyMapping(
+        "key.fpv.toggle_hud",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_H,
+        "key.categories.fpv"
+    );
+
+    // Plane-only, no RC connected: swaps the mouse between flying (roll/pitch) and
+    // looking around the belly camera (gimbal pan/tilt).
+    public static final KeyMapping PLANE_MOUSE_MODE = new KeyMapping(
+        "key.fpv.plane_mouse_mode",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_C,
+        "key.categories.fpv"
+    );
+
+    // Plane-only: recenters the belly-camera gimbal (yaw/pitch back to 0).
+    public static final KeyMapping PLANE_RESET_CAM = new KeyMapping(
+        "key.fpv.plane_reset_cam",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_V,
+        "key.categories.fpv"
+    );
+
+    // Plane-only: toggle orbit autopilot — circle the locked/crosshair point.
+    public static final KeyMapping PLANE_ORBIT = new KeyMapping(
+        "key.fpv.plane_orbit",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_G,
+        "key.categories.fpv"
+    );
+
+    @SubscribeEvent
+    public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
+        event.register(CYCLE_MODE);
+        event.register(OPEN_SETTINGS);
+        event.register(CAMERA_UP);
+        event.register(CAMERA_DOWN);
+        event.register(TOGGLE_HUD);
+        event.register(PLANE_MOUSE_MODE);
+        event.register(PLANE_RESET_CAM);
+        event.register(PLANE_ORBIT);
+    }
+}

@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:block/block",
+  "textures": { "metal": "minecraft:block/iron_block", "dark": "minecraft:block/black_concrete" },
+  "display": { "gui": { "rotation": [30, 225, 0], "scale": [0.9, 0.9, 0.9] }, "ground": { "translation": [0, 3, 0], "scale": [0.35, 0.35, 0.35] }, "fixed": { "scale": [0.8, 0.8, 0.8] }, "thirdperson_righthand": { "rotation": [75, 45, 0], "scale": [0.45, 0.45, 0.45] } },
+  "elements": [
+    { "from": [5.7, 5, 5.7], "to": [10.3, 8, 10.3], "faces": { "down": { "texture": "#dark" }, "up": { "texture": "#metal" }, "north": { "texture": "#metal" }, "south": { "texture": "#metal" }, "west": { "texture": "#metal" }, "east": { "texture": "#metal" } } },
+    { "from": [6.4, 8, 6.4], "to": [9.6, 9.5, 9.6], "faces": { "down": { "texture": "#dark" }, "up": { "texture": "#metal" }, "north": { "texture": "#dark" }, "south": { "texture": "#dark" }, "west": { "texture": "#dark" }, "east": { "texture": "#dark" } } },
+    { "from": [7.2, 9.5, 7.2], "to": [8.8, 11, 8.8], "faces": { "down": { "texture": "#metal" }, "up": { "texture": "#metal" }, "north": { "texture": "#metal" }, "south": { "texture": "#metal" }, "west": { "texture": "#metal" }, "east": { "texture": "#metal" } } }
+  ]
+}

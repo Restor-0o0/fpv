@@ -1,0 +1,335 @@
+package org.restor.fpv.render;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
+import org.restor.fpv.Fpv;
+import org.restor.fpv.assembly.FrameSpec;
+import org.restor.fpv.assembly.FrameSpecs;
+import org.restor.fpv.assembly.MountPoint;
+import org.restor.fpv.component.ModComponents;
+import org.restor.fpv.entity.DroneEntity;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+
+public class DroneRenderer extends EntityRenderer<DroneEntity> {
+    private static final ResourceLocation TEXTURE = new ResourceLocation(Fpv.MODID, "textures/entity/drone.png");
+
+    public DroneRenderer(EntityRendererProvider.Context ctx) {
+        super(ctx);
+    }
+
+    @Override
+    public void render(DroneEntity entity, float yaw, float partialTick, PoseStack poseStack,
+                       MultiBufferSource buffer, int packedLight) {
+        // Real FPV: the pilot never sees their own quad — the camera is mounted on it.
+        // Rendering it inside the FPV view read as "drone desynced from camera": with a
+        // 35° camera uptilt the frame hangs nose-down in view during level flight.
+        // Covers riding (camera entity is the player in the drone) and remote control
+        // (camera entity IS the drone).
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        boolean fpvSelf = mc.getCameraEntity() != null
+            && (mc.getCameraEntity() == entity || mc.getCameraEntity().getVehicle() == entity)
+            && mc.options.getCameraType() == net.minecraft.client.CameraType.FIRST_PERSON;
+        if (fpvSelf && !showPropsInFpv(entity)) {
+            return;
+        }
+        super.render(entity, yaw, partialTick, poseStack, buffer, packedLight);
+
+        poseStack.pushPose();
+        poseStack.translate(0, entity.getBbHeight() / 2, 0);
+
+        // Interpolate orientation as one quaternion — per-axis Euler lerps jerk near
+        // pitch ±90 where the decomposition flips yaw/roll by 180°.
+        Quaternionf q = new Quaternionf(modelQuat(entity.yRotO, entity.xRotO, entity.getPrevRoll()))
+            .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
+        poseStack.mulPose(q);
+
+        float scale = getScale(entity);
+        poseStack.scale(scale, scale, scale);
+
+        renderAssembledDrone(entity, poseStack, buffer, packedLight, entity.tickCount + partialTick, fpvSelf);
+        VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
+        if (!fpvSelf) renderPayload(entity, consumer, poseStack, packedLight);
+
+        poseStack.popPose();
+    }
+
+    // Same composition the old Axis-based code produced: Ry(yaw−180)·Rx(−pitch)·Rz(roll).
+    private static Quaternionf modelQuat(float yaw, float pitch, float roll) {
+        return new Quaternionf()
+            .rotateY((float) Math.toRadians(yaw - 180f))
+            .rotateX((float) Math.toRadians(-pitch))
+            .rotateZ((float) Math.toRadians(roll));
+    }
+
+    private float getScale(DroneEntity entity) {
+        if (entity instanceof org.restor.fpv.entity.TinyWhoopDroneEntity) return 0.3f;
+        if (entity instanceof org.restor.fpv.entity.CinewhoopDroneEntity) return 0.5f;
+        return 0.6f;
+    }
+
+    private static boolean showPropsInFpv(DroneEntity entity) {
+        return entity instanceof org.restor.fpv.entity.RacingDroneEntity
+            || entity instanceof org.restor.fpv.entity.RemoteRacingDroneEntity
+            || entity instanceof org.restor.fpv.entity.KamikazeDroneEntity;
+    }
+
+    private void renderAssembledDrone(DroneEntity entity, PoseStack poseStack, MultiBufferSource buffer,
+                                      int packedLight, float tick, boolean propsOnly) {
+        DefaultBuild build = defaultBuild(entity);
+        if (!propsOnly) {
+            renderPart(build.frame, poseStack, buffer, packedLight, 0, 0, 0, 0, build.frameScale);
+            renderPart(build.battery, poseStack, buffer, packedLight,
+                build.spec.batteryMount().x(), build.spec.batteryMount().y(), build.spec.batteryMount().z(), 0, build.batteryScale);
+            renderPart(build.camera, poseStack, buffer, packedLight,
+                build.spec.cameraMount().x(), build.spec.cameraMount().y(), build.spec.cameraMount().z(), 0, build.cameraScale);
+        }
+        float spin = entity.getVisualThrottle() * tick * 40f;
+        for (int i = 0; i < build.spec.motorCount(); i++) {
+            MountPoint m = build.spec.motorMounts().get(i);
+            float x = m.x() * build.armSpread;
+            float z = m.z() * build.armSpread;
+            if (propsOnly && z > 0) continue;
+            renderPart(build.motor, poseStack, buffer, packedLight, x, m.y(), z, 0, build.motorScale);
+            renderPart(build.prop, poseStack, buffer, packedLight, x, m.y() + 0.06f, z, i % 2 == 0 ? spin : -spin, build.propScale);
+        }
+        if (!propsOnly) renderTypeDetails(entity, build, poseStack, buffer, packedLight);
+    }
+
+    private void renderPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+                            int light, float x, float y, float z, float spinDeg) {
+        renderPart(stack, poseStack, buffer, light, x, y, z, spinDeg, 1.0f);
+    }
+
+    private void renderPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+                            int light, float x, float y, float z, float spinDeg, float scale) {
+        poseStack.pushPose();
+        poseStack.translate(x, y, z);
+        poseStack.scale(scale, scale, scale);
+        if (spinDeg != 0) poseStack.mulPose(Axis.YP.rotationDegrees(spinDeg));
+        net.minecraft.client.Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
+            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        poseStack.popPose();
+    }
+
+    private void renderTypeDetails(DroneEntity entity, DefaultBuild build, PoseStack poseStack,
+                                   MultiBufferSource buffer, int packedLight) {
+        VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
+        if (entity instanceof org.restor.fpv.entity.TinyWhoopDroneEntity
+            || entity instanceof org.restor.fpv.entity.CinewhoopDroneEntity) {
+            float radius = entity instanceof org.restor.fpv.entity.TinyWhoopDroneEntity ? 0.12f : 0.16f;
+            for (MountPoint m : build.spec.motorMounts()) {
+                renderDuct(consumer, poseStack, packedLight, m.x() * build.armSpread, m.y() + 0.01f, m.z() * build.armSpread, radius);
+            }
+        }
+        if (entity instanceof org.restor.fpv.entity.RemoteRacingDroneEntity) {
+            Matrix4f mat = poseStack.last().pose();
+            renderBox(consumer, mat, packedLight, 0.14f, 0.08f, 0.10f, 0.17f, 0.42f, 0.13f, 0.02f, 0.02f, 0.02f);
+            renderBox(consumer, mat, packedLight, -0.17f, 0.08f, 0.10f, -0.14f, 0.34f, 0.13f, 0.02f, 0.02f, 0.02f);
+        }
+        if (entity instanceof org.restor.fpv.entity.RacingDroneEntity || entity instanceof org.restor.fpv.entity.RemoteRacingDroneEntity) {
+            Matrix4f mat = poseStack.last().pose();
+            renderBox(consumer, mat, packedLight, -0.10f, 0.11f, -0.02f, 0.10f, 0.13f, 0.02f, 0.03f, 0.03f, 0.03f);
+        }
+    }
+
+    private static DefaultBuild defaultBuild(DroneEntity entity) {
+        if (entity instanceof org.restor.fpv.entity.TinyWhoopDroneEntity) {
+            return new DefaultBuild(FrameSpecs.FRAME_TINY_WHOOP,
+                new ItemStack(ModComponents.FRAME_TINY_WHOOP.get()),
+                new ItemStack(ModComponents.MOTOR_1103_8000.get()),
+                new ItemStack(ModComponents.PROP_65MM.get()),
+                new ItemStack(ModComponents.BATTERY_1S_300.get()),
+                new ItemStack(ModComponents.CAMERA_STANDARD.get()),
+                0.95f, 0.62f, 0.60f, 0.48f, 0.50f, 0.82f);
+        }
+        if (entity instanceof org.restor.fpv.entity.CinewhoopDroneEntity) {
+            return new DefaultBuild(FrameSpecs.FRAME_CINEWHOOP,
+                new ItemStack(ModComponents.FRAME_CINEWHOOP.get()),
+                new ItemStack(ModComponents.MOTOR_1404_4500.get()),
+                new ItemStack(ModComponents.PROP_3X2X3.get()),
+                new ItemStack(ModComponents.BATTERY_4S_650.get()),
+                new ItemStack(ModComponents.CAMERA_WIDE.get()),
+                1.05f, 0.72f, 0.70f, 0.55f, 0.62f, 1.02f);
+        }
+        return new DefaultBuild(FrameSpecs.FRAME_5INCH,
+            new ItemStack(ModComponents.FRAME_5INCH.get()),
+            new ItemStack(ModComponents.MOTOR_2207_2450.get()),
+            new ItemStack(ModComponents.PROP_5X4X3.get()),
+            new ItemStack(ModComponents.BATTERY_4S_1300.get()),
+            new ItemStack(ModComponents.CAMERA_STANDARD.get()),
+            1.18f, 0.70f, 0.74f, 0.58f, 0.62f, 1.18f);
+    }
+
+    private record DefaultBuild(FrameSpec spec, ItemStack frame, ItemStack motor, ItemStack prop,
+                                ItemStack battery, ItemStack camera, float armSpread, float motorScale,
+                                float propScale, float batteryScale, float cameraScale, float frameScale) {}
+
+    private void renderFrame(DroneEntity entity, VertexConsumer consumer, PoseStack poseStack, int packedLight) {
+        Matrix4f mat = poseStack.last().pose();
+        boolean tiny = entity instanceof org.restor.fpv.entity.TinyWhoopDroneEntity;
+        boolean cine = entity instanceof org.restor.fpv.entity.CinewhoopDroneEntity;
+        boolean remote = entity instanceof org.restor.fpv.entity.RemoteRacingDroneEntity;
+        boolean kamikaze = entity instanceof org.restor.fpv.entity.KamikazeDroneEntity;
+
+        // Central body
+        renderBox(consumer, mat, packedLight, -0.22f, -0.08f, -0.18f, 0.22f, 0.08f, 0.22f,
+            kamikaze ? 0.18f : 0.12f, kamikaze ? 0.20f : 0.12f, kamikaze ? 0.12f : 0.12f);
+        // Top plate and battery strap make the stock quads read as assembled drones.
+        renderBox(consumer, mat, packedLight, -0.16f, 0.08f, -0.12f, 0.16f, 0.14f, 0.18f, 0.05f, 0.05f, 0.05f);
+        renderBox(consumer, mat, packedLight, -0.06f, 0.14f, -0.16f, 0.06f, 0.18f, 0.20f, 0.8f, 0.12f, 0.08f);
+
+        float al = tiny ? 0.42f : cine ? 0.48f : 0.55f;
+        float at = tiny ? 0.025f : 0.04f;
+
+        renderBox(consumer, mat, packedLight, 0.0f, -at, -0.0f, al, at, -al, 0.4f, 0.4f, 0.4f);
+        renderBox(consumer, mat, packedLight, -0.0f, -at, -0.0f, -al, at, -al, 0.4f, 0.4f, 0.4f);
+        renderBox(consumer, mat, packedLight, 0.0f, -at, 0.0f, al, at, al, 0.4f, 0.4f, 0.4f);
+        renderBox(consumer, mat, packedLight, -0.0f, -at, 0.0f, -al, at, al, 0.4f, 0.4f, 0.4f);
+
+        if (cine || tiny) {
+            float duct = tiny ? 0.16f : 0.20f;
+            renderDuct(consumer, poseStack, packedLight, al, 0.01f, -al, duct);
+            renderDuct(consumer, poseStack, packedLight, -al, 0.01f, -al, duct);
+            renderDuct(consumer, poseStack, packedLight, al, 0.01f, al, duct);
+            renderDuct(consumer, poseStack, packedLight, -al, 0.01f, al, duct);
+        }
+        if (remote) {
+            renderBox(consumer, mat, packedLight, 0.18f, 0.12f, 0.10f, 0.22f, 0.48f, 0.14f, 0.02f, 0.02f, 0.02f);
+            renderBox(consumer, mat, packedLight, -0.22f, 0.12f, 0.10f, -0.18f, 0.40f, 0.14f, 0.02f, 0.02f, 0.02f);
+        }
+    }
+
+    private void renderMotorsAndProps(DroneEntity entity, VertexConsumer consumer, PoseStack poseStack, int packedLight,
+                                       float tick, float throttle) {
+        float al = entity instanceof org.restor.fpv.entity.TinyWhoopDroneEntity ? 0.42f
+            : entity instanceof org.restor.fpv.entity.CinewhoopDroneEntity ? 0.48f : 0.55f;
+        float spin = throttle * 40;
+
+        renderMotorAt(consumer, poseStack, packedLight, al, 0, -al, tick, spin, true);
+        renderMotorAt(consumer, poseStack, packedLight, -al, 0, -al, tick, spin, false);
+        renderMotorAt(consumer, poseStack, packedLight, al, 0, al, tick, spin, false);
+        renderMotorAt(consumer, poseStack, packedLight, -al, 0, al, tick, spin, true);
+    }
+
+    private void renderDuct(VertexConsumer consumer, PoseStack poseStack, int packedLight,
+                            float x, float y, float z, float radius) {
+        poseStack.pushPose();
+        poseStack.translate(x, y, z);
+        Matrix4f mat = poseStack.last().pose();
+        float t = radius * 0.22f;
+        renderBox(consumer, mat, packedLight, -radius, -0.025f, -radius, radius, 0.025f, -radius + t, 0.08f, 0.08f, 0.08f);
+        renderBox(consumer, mat, packedLight, -radius, -0.025f, radius - t, radius, 0.025f, radius, 0.08f, 0.08f, 0.08f);
+        renderBox(consumer, mat, packedLight, -radius, -0.025f, -radius, -radius + t, 0.025f, radius, 0.08f, 0.08f, 0.08f);
+        renderBox(consumer, mat, packedLight, radius - t, -0.025f, -radius, radius, 0.025f, radius, 0.08f, 0.08f, 0.08f);
+        poseStack.popPose();
+    }
+
+    private void renderMotorAt(VertexConsumer consumer, PoseStack poseStack, int packedLight,
+                               float x, float y, float z, float tick, float spinRate, boolean cw) {
+        poseStack.pushPose();
+        poseStack.translate(x, y, z);
+
+        // Motor bell
+        Matrix4f mat = poseStack.last().pose();
+        renderBox(consumer, mat, packedLight, -0.06f, -0.03f, -0.06f, 0.06f, 0.06f, 0.06f, 0.3f, 0.3f, 0.3f);
+        renderBox(consumer, mat, packedLight, -0.08f, 0.02f, -0.08f, 0.08f, 0.03f, 0.08f, 0.25f, 0.25f, 0.25f);
+
+        // Propeller (spinning blur when throttle > 0)
+        if (spinRate > 1) {
+            float angle = tick * spinRate * (cw ? 1 : -1);
+            poseStack.mulPose(Axis.YP.rotationDegrees(angle));
+            float pr = 0.2f, pw = 0.015f;
+            renderBox(consumer, poseStack.last().pose(), packedLight,
+                -pr, 0.04f, -pw, pr, 0.05f, pw, 0.4f, 0.6f, 0.9f);
+            renderBox(consumer, poseStack.last().pose(), packedLight,
+                -pw, 0.04f, -pr, pw, 0.05f, pr, 0.4f, 0.6f, 0.9f);
+        } else {
+            // Static props
+            renderBox(consumer, poseStack.last().pose(), packedLight,
+                -0.15f, 0.04f, -0.01f, 0.15f, 0.05f, 0.01f, 0.4f, 0.6f, 0.9f);
+            renderBox(consumer, poseStack.last().pose(), packedLight,
+                -0.01f, 0.04f, -0.15f, 0.01f, 0.05f, 0.15f, 0.4f, 0.6f, 0.9f);
+        }
+
+        poseStack.popPose();
+    }
+
+    private void renderCamera(VertexConsumer consumer, PoseStack poseStack, int packedLight) {
+        Matrix4f mat = poseStack.last().pose();
+        // Camera on front
+        renderBox(consumer, mat, packedLight, -0.05f, 0.03f, -0.25f, 0.05f, 0.08f, -0.18f, 0.1f, 0.1f, 0.1f);
+        renderBox(consumer, mat, packedLight, -0.025f, 0.04f, -0.26f, 0.025f, 0.07f, -0.25f, 0.3f, 0.6f, 1.0f);
+    }
+
+    private void renderPayload(DroneEntity entity, VertexConsumer consumer, PoseStack poseStack, int packedLight) {
+        if (!(entity instanceof org.restor.fpv.entity.KamikazeDroneEntity)) return;
+        Matrix4f mat = poseStack.last().pose();
+        // PG-7-style rocket grenade under the belly: olive warhead, dark motor tube, rear fins.
+        renderBox(consumer, mat, packedLight, -0.11f, -0.24f, -0.42f, 0.11f, -0.08f, -0.16f, 0.32f, 0.42f, 0.16f);
+        renderBox(consumer, mat, packedLight, -0.08f, -0.21f, -0.54f, 0.08f, -0.11f, -0.42f, 0.40f, 0.50f, 0.20f);
+        renderBox(consumer, mat, packedLight, -0.06f, -0.20f, -0.16f, 0.06f, -0.12f, 0.34f, 0.12f, 0.12f, 0.10f);
+        renderBox(consumer, mat, packedLight, -0.16f, -0.28f, 0.22f, -0.04f, -0.16f, 0.34f, 0.22f, 0.22f, 0.20f);
+        renderBox(consumer, mat, packedLight, 0.04f, -0.28f, 0.22f, 0.16f, -0.16f, 0.34f, 0.22f, 0.22f, 0.20f);
+        renderBox(consumer, mat, packedLight, -0.04f, -0.32f, 0.22f, 0.04f, -0.20f, 0.34f, 0.22f, 0.22f, 0.20f);
+        renderBox(consumer, mat, packedLight, -0.04f, -0.08f, -0.10f, 0.04f, -0.04f, 0.08f, 0.04f, 0.04f, 0.04f);
+    }
+
+    private void renderBox(VertexConsumer consumer, Matrix4f mat, int packedLight,
+                           float x1, float y1, float z1, float x2, float y2, float z2,
+                           float r, float g, float b) {
+        float u1 = 0, v1 = 0, u2 = 1, v2 = 1;
+
+        // Top
+        consumer.vertex(mat, x1, y2, z1).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
+        consumer.vertex(mat, x2, y2, z1).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
+        consumer.vertex(mat, x2, y2, z2).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
+        consumer.vertex(mat, x1, y2, z2).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
+
+        // Bottom
+        consumer.vertex(mat, x1, y1, z1).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
+        consumer.vertex(mat, x1, y1, z2).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
+        consumer.vertex(mat, x2, y1, z2).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
+        consumer.vertex(mat, x2, y1, z1).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
+
+        // Front
+        consumer.vertex(mat, x1, y1, z1).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
+        consumer.vertex(mat, x2, y1, z1).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
+        consumer.vertex(mat, x2, y2, z1).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
+        consumer.vertex(mat, x1, y2, z1).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
+
+        // Back
+        consumer.vertex(mat, x1, y1, z2).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
+        consumer.vertex(mat, x1, y2, z2).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
+        consumer.vertex(mat, x2, y2, z2).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
+        consumer.vertex(mat, x2, y1, z2).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
+
+        // Right
+        consumer.vertex(mat, x2, y1, z1).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
+        consumer.vertex(mat, x2, y1, z2).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
+        consumer.vertex(mat, x2, y2, z2).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
+        consumer.vertex(mat, x2, y2, z1).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
+
+        // Left
+        consumer.vertex(mat, x1, y1, z1).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
+        consumer.vertex(mat, x1, y2, z1).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
+        consumer.vertex(mat, x1, y2, z2).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
+        consumer.vertex(mat, x1, y1, z2).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
+    }
+
+    @Override
+    public ResourceLocation getTextureLocation(DroneEntity entity) {
+        return TEXTURE;
+    }
+}
