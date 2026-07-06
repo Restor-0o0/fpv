@@ -126,11 +126,20 @@ public class FPVOverlay {
             // Belly-camera gimbal pan/tilt, applied in the camera's local frame.
             .rotateY((float) Math.toRadians(-plane.getGimbalYaw()))
             .rotateX((float) Math.toRadians(-plane.getGimbalPitch()));
-        float[] a = DroneEntity.decomposeAttitude(q);
+        if (plane.isStabilizedGimbalView()) {
+            org.joml.Vector3f fwd = q.transform(new org.joml.Vector3f(0, 0, 1));
+            float yaw = (float) Math.toDegrees(Math.atan2(-fwd.x, fwd.z));
+            float pitch = (float) -Math.toDegrees(Math.asin(Mth.clamp(fwd.y, -1f, 1f)));
 
-        event.setYaw(a[0]);
-        event.setPitch(a[1]);
-        event.setRoll(a[2]);
+            event.setYaw(yaw);
+            event.setPitch(pitch);
+            event.setRoll(0f);
+        } else {
+            float[] a = DroneEntity.decomposeAttitude(q);
+            event.setYaw(a[0]);
+            event.setPitch(a[1]);
+            event.setRoll(a[2]);
+        }
     }
 
     @SubscribeEvent
@@ -304,6 +313,7 @@ public class FPVOverlay {
             topY = renderKeyHints(graphics, margin, topY, new net.minecraft.client.KeyMapping[]{
                 org.restor.fpv.client.ModKeyBindings.PLANE_MOUSE_MODE,
                 org.restor.fpv.client.ModKeyBindings.PLANE_RESET_CAM,
+                org.restor.fpv.client.ModKeyBindings.PLANE_CALL_STRIKE,
                 org.restor.fpv.client.ModKeyBindings.OPEN_SETTINGS,
                 org.restor.fpv.client.ModKeyBindings.TOGGLE_HUD,
             });

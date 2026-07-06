@@ -17,9 +17,22 @@ import org.joml.Quaternionf;
 
 public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
     private static final ResourceLocation TEXTURE = new ResourceLocation(Fpv.MODID, "textures/entity/plane.png");
+    private static final double FAR_RENDER_DISTANCE_SQR = 2048.0 * 2048.0;
 
     public PlaneRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
+    }
+
+    @Override
+    public boolean shouldRender(PlaneEntity entity, net.minecraft.client.renderer.culling.Frustum frustum,
+                                double camX, double camY, double camZ) {
+        if (entity instanceof org.restor.fpv.entity.KamikazeWingEntity) {
+            double dx = entity.getX() - camX;
+            double dy = entity.getY() - camY;
+            double dz = entity.getZ() - camZ;
+            if (dx * dx + dy * dy + dz * dz < FAR_RENDER_DISTANCE_SQR) return true;
+        }
+        return super.shouldRender(entity, frustum, camX, camY, camZ);
     }
 
     @Override
@@ -36,9 +49,22 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
         poseStack.pushPose();
         poseStack.translate(0, entity.getBbHeight() / 2, 0);
 
-        Quaternionf q = new Quaternionf(modelQuat(entity.yRotO, entity.xRotO, entity.getPrevRoll()))
-            .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
+        Quaternionf q;
+        if (entity instanceof org.restor.fpv.entity.KamikazeWingEntity wing && wing.isAttackRun()
+            && entity.getDeltaMovement().lengthSqr() > 1.0e-4) {
+            net.minecraft.world.phys.Vec3 v = entity.getDeltaMovement();
+            double len = v.length();
+            float vyaw = (float) Math.toDegrees(Math.atan2(-v.x, v.z));
+            float vpitch = (float) -Math.toDegrees(Math.asin(Math.max(-1.0, Math.min(1.0, v.y / len))));
+            q = modelQuat(vyaw, vpitch, 0f);
+        } else {
+            q = new Quaternionf(modelQuat(entity.yRotO, entity.xRotO, entity.getPrevRoll()))
+                .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
+        }
         poseStack.mulPose(q);
+        if (entity instanceof org.restor.fpv.entity.KamikazeWingEntity) {
+            poseStack.scale(3.0f, 3.0f, 3.0f);
+        }
 
         VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
         renderAirframe(consumer, poseStack, packedLight, entity.getVisualThrottle(),

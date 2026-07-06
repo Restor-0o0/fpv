@@ -24,9 +24,22 @@ import org.joml.Quaternionf;
 
 public class DroneRenderer extends EntityRenderer<DroneEntity> {
     private static final ResourceLocation TEXTURE = new ResourceLocation(Fpv.MODID, "textures/entity/drone.png");
+    private static final double FAR_RENDER_DISTANCE_SQR = 1024.0 * 1024.0;
 
     public DroneRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
+    }
+
+    @Override
+    public boolean shouldRender(DroneEntity entity, net.minecraft.client.renderer.culling.Frustum frustum,
+                                double camX, double camY, double camZ) {
+        if (entity instanceof org.restor.fpv.entity.KamikazeDroneEntity) {
+            double dx = entity.getX() - camX;
+            double dy = entity.getY() - camY;
+            double dz = entity.getZ() - camZ;
+            if (dx * dx + dy * dy + dz * dz < FAR_RENDER_DISTANCE_SQR) return true;
+        }
+        return super.shouldRender(entity, frustum, camX, camY, camZ);
     }
 
     @Override

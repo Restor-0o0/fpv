@@ -17,4 +17,9 @@ public class ScoutPlaneEntity extends PlaneEntity {
 
     // GRAVITY is private in the base; expose the same value locally for tuning.
     private static final float GRAVITY_REF = 9.81f;
+
+    @Override
+    protected net.minecraft.world.item.Item getDropItem() {
+        return org.restor.fpv.item.ModItems.PLANE_SCOUT.get();
+    }
 }

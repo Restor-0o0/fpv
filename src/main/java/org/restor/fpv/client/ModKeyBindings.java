@@ -71,6 +71,14 @@ public class ModKeyBindings {
         "key.categories.fpv"
     );
 
+    // Scout plane only: call in a kamikaze wing strike onto the locked/crosshair point.
+    public static final KeyMapping PLANE_CALL_STRIKE = new KeyMapping(
+        "key.fpv.plane_call_strike",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_B,
+        "key.categories.fpv"
+    );
+
     @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(CYCLE_MODE);
@@ -81,5 +89,6 @@ public class ModKeyBindings {
         event.register(PLANE_MOUSE_MODE);
         event.register(PLANE_RESET_CAM);
         event.register(PLANE_ORBIT);
+        event.register(PLANE_CALL_STRIKE);
     }
 }

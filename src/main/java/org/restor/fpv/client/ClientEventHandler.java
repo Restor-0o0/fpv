@@ -39,6 +39,8 @@ public class ClientEventHandler {
     private static float filteredPitch;
     private static float filteredRoll;
     private static float filteredYaw;
+    private static float mouseDronePitch;
+    private static float mouseDroneRoll;
     private static float filteredCtrlPitch;
     private static float filteredCtrlRoll;
     private static float filteredCtrlYaw;
@@ -58,6 +60,8 @@ public class ClientEventHandler {
     private static float lastPlanePitch;
     private static float filteredPlaneRoll;
     private static float filteredPlanePitch;
+    private static float mousePlaneRoll;
+    private static float mousePlanePitch;
     private static float filteredPlaneCtrlPitch;
     private static float filteredPlaneCtrlRoll;
     private static float filteredPlaneCtrlYaw;
@@ -67,9 +71,13 @@ public class ClientEventHandler {
     private static int planeRcLogTick;
     // Belly-camera target lock: aim at a block + LMB to lock the gimbal onto it.
     private static net.minecraft.world.phys.Vec3 planeLockTarget;
+    private static net.minecraft.world.phys.Vec3 planeRawLockTarget;
+    private static int planeLockManualTicks;
     private static boolean prevAttackKey;
     // Orbit autopilot around the locked/crosshair point.
     private static boolean planeOrbitActive;
+    private static net.minecraft.world.phys.Vec3 planeOrbitTarget;
+    private static int planeOrbitSyncGrace;
     // FPV camera zoom (mouse wheel), applied as an FOV divisor.
     private static float fpvZoom = 1f;
 
@@ -197,13 +205,13 @@ public class ClientEventHandler {
             prevCycleKey = cycleDown;
             return;
         }
+        keyboardInitialized = false;
 
         // Planes are riding-only (no remote control station).
         PlaneEntity plane = MC.player.getVehicle() instanceof PlaneEntity p ? p : null;
         if (plane == null) {
             planeInitialized = false;
-            planeLockTarget = null;
-            planeOrbitActive = false;
+            clearPlaneState(null, false);
             return;
         }
 
@@ -224,40 +232,41 @@ public class ClientEventHandler {
             planeMouseLookMode = !planeMouseLookMode;
         }
         if (ModKeyBindings.PLANE_RESET_CAM.consumeClick()) {
-            planeGimbalYaw = 0f;
-            planeGimbalPitch = 0f;
-            planeLockTarget = null;
-            plane.setGimbal(0f, 0f);
+            clearPlaneTracking(plane, true);
         }
 
         // LMB toggles a camera lock onto the block exactly under the crosshair.
         boolean atk = MC.options.keyAttack.isDown();
         if (atk && !prevAttackKey) {
-            planeLockTarget = (planeLockTarget != null) ? null
-                : raycastFromCrosshair(plane, planeGimbalYaw, planeGimbalPitch);
+            if (planeLockTarget != null) {
+                clearPlaneTracking(plane, false);
+            } else {
+                planeLockTarget = raycastFromCrosshair(plane, planeGimbalYaw, planeGimbalPitch);
+                planeRawLockTarget = planeLockTarget;
+                plane.setStabilizedGimbalView(planeLockTarget != null);
+            }
         }
         prevAttackKey = atk;
 
-        // Orbit autopilot: circle the locked point (or the crosshair block) at the current radius.
-        if (ModKeyBindings.PLANE_ORBIT.consumeClick()) {
-            if (planeOrbitActive) {
-                planeOrbitActive = false;
-                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
-                    plane.getId(), false, 0, 0, 0, 0));
+        if (planeOrbitSyncGrace > 0) {
+            planeOrbitSyncGrace--;
+        } else {
+            planeOrbitActive = plane.isOrbiting();
+            if (!planeOrbitActive) planeOrbitTarget = null;
+        }
+
+        if (ModKeyBindings.PLANE_CALL_STRIKE.consumeClick()
+            && plane instanceof org.restor.fpv.entity.ScoutPlaneEntity) {
+            net.minecraft.world.phys.Vec3 target = planeLockTarget != null ? planeLockTarget
+                : raycastFromCrosshair(plane, planeGimbalYaw, planeGimbalPitch);
+            if (target != null) {
+                planeLockTarget = target;
+                planeRawLockTarget = target;
+                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneStrikePacket(
+                    plane.getId(), target.x, target.y, target.z));
             } else {
-                net.minecraft.world.phys.Vec3 center = planeLockTarget != null ? planeLockTarget
-                    : raycastFromCrosshair(plane, planeGimbalYaw, planeGimbalPitch);
-                if (center != null) {
-                    planeLockTarget = center; // keep the camera on the orbit centre
-                    double dx = plane.getX() - center.x, dz = plane.getZ() - center.z;
-                    double radius = Math.max(12.0, Math.sqrt(dx * dx + dz * dz));
-                    planeOrbitActive = true;
-                    ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
-                        plane.getId(), true, center.x, center.y, center.z, radius));
-                } else {
-                    MC.player.displayClientMessage(
-                        net.minecraft.network.chat.Component.translatable("msg.fpv.orbit_no_target"), true);
-                }
+                MC.player.displayClientMessage(
+                    net.minecraft.network.chat.Component.translatable("msg.fpv.strike_no_target"), true);
             }
         }
         // RC connected: mouse always drives the gimbal. RC disconnected: mouse flies
@@ -273,21 +282,66 @@ public class ClientEventHandler {
         float pitchDeltaP = MC.player.getXRot() - lastPlanePitch;
         lastPlaneYaw = MC.player.getYRot();
         lastPlanePitch = MC.player.getXRot();
+        float zoomSensitivity = (float) Math.pow(Math.max(1f, fpvZoom), 1.7);
+        yawDeltaP /= zoomSensitivity;
+        pitchDeltaP /= zoomSensitivity;
 
         if (planeLockTarget != null) {
-            float[] g = gimbalForTarget(plane, planeLockTarget);
-            planeGimbalYaw = normalizeDegrees(g[0]);
-            planeGimbalPitch = clamp(g[1], PlaneEntity.GIMBAL_PITCH_MIN, PlaneEntity.GIMBAL_PITCH_MAX);
+            boolean movingAim = Math.abs(yawDeltaP) > 0.001f || Math.abs(pitchDeltaP) > 0.001f;
+            if (movingAim) {
+                planeLockManualTicks = 5;
+                planeGimbalYaw = normalizeDegrees(planeGimbalYaw + yawDeltaP);
+                planeGimbalPitch = clamp(planeGimbalPitch - pitchDeltaP,
+                    PlaneEntity.GIMBAL_PITCH_MIN, PlaneEntity.GIMBAL_PITCH_MAX);
+                net.minecraft.world.phys.Vec3 newTarget = raycastFromCrosshair(plane, planeGimbalYaw, planeGimbalPitch);
+                if (newTarget != null) {
+                    planeRawLockTarget = newTarget;
+                    planeLockTarget = smoothLockTarget(planeLockTarget, planeRawLockTarget, 0.10);
+                }
+            } else if (planeLockManualTicks > 0) {
+                planeLockManualTicks--;
+                if (planeRawLockTarget != null) {
+                    planeLockTarget = smoothLockTarget(planeLockTarget, planeRawLockTarget, 0.08);
+                }
+            } else {
+                if (planeRawLockTarget != null) {
+                    planeLockTarget = smoothLockTarget(planeLockTarget, planeRawLockTarget, 0.08);
+                }
+                float[] g = gimbalForTarget(plane, planeLockTarget);
+                planeGimbalYaw = approachDegrees(planeGimbalYaw, normalizeDegrees(g[0]), 3.5f);
+                planeGimbalPitch = approach(planeGimbalPitch,
+                    clamp(g[1], PlaneEntity.GIMBAL_PITCH_MIN, PlaneEntity.GIMBAL_PITCH_MAX), 3.5f);
+            }
+            yawDeltaP = 0f;
+            pitchDeltaP = 0f;
+            rebasePlaneViewPitch();
         } else if (gimbalMode) {
             // Full 360° pan (yaw wraps), free look-down; only up is capped (belly mount).
             planeGimbalYaw = normalizeDegrees(planeGimbalYaw + yawDeltaP);
             planeGimbalPitch = clamp(planeGimbalPitch - pitchDeltaP,
                 PlaneEntity.GIMBAL_PITCH_MIN, PlaneEntity.GIMBAL_PITCH_MAX);
+            rebasePlaneViewPitch();
         } else {
             planeGimbalYaw = 0f;
             planeGimbalPitch = 0f;
+            rebasePlaneViewPitch();
         }
         plane.setGimbal(planeGimbalYaw, planeGimbalPitch);
+        plane.setStabilizedGimbalView(planeLockTarget != null && planeLockManualTicks <= 0);
+
+        // Orbit autopilot is driven by G only while tracking a point. Pressing G on the
+        // same tracked point stops orbit; pressing it on a new tracked point retargets orbit.
+        if (ModKeyBindings.PLANE_ORBIT.consumeClick()) {
+            net.minecraft.world.phys.Vec3 orbitCandidate = planeRawLockTarget != null ? planeRawLockTarget : planeLockTarget;
+            if (orbitCandidate == null) {
+                stopPlaneOrbit(plane, true);
+            } else if (planeOrbitActive && samePoint(orbitCandidate, planeOrbitTarget)) {
+                stopPlaneOrbit(plane, true);
+            } else {
+                planeLockTarget = orbitCandidate;
+                startPlaneOrbit(plane, orbitCandidate);
+            }
+        }
 
         if (planeOrbitActive) {
             // Autopilot flies the plane server-side; don't send stick inputs (the client
@@ -378,12 +432,14 @@ public class ClientEventHandler {
 
     private static void sendKeyboardMouseInput(DroneEntity drone) {
         if (!keyboardInitialized) {
-            keyboardThrottle = drone.getVisualThrottle();
+            keyboardThrottle = 0f;
             lastPlayerYaw = MC.player.getYRot();
             lastPlayerPitch = MC.player.getXRot();
             filteredPitch = 0f;
             filteredRoll = 0f;
             filteredYaw = 0f;
+            mouseDronePitch = 0f;
+            mouseDroneRoll = 0f;
             keyboardInitialized = true;
         }
 
@@ -391,6 +447,8 @@ public class ClientEventHandler {
         float pitchDelta = MC.player.getXRot() - lastPlayerPitch;
         lastPlayerYaw = MC.player.getYRot();
         lastPlayerPitch = MC.player.getXRot();
+        MC.player.setXRot(0f);
+        lastPlayerPitch = 0f;
 
         // 0.15/tick = 3.0/sec → full throttle range in ~7 ticks (0.35s), real FPV feel.
         // Passive decay is near-zero so releasing W holds the throttle position.
@@ -398,27 +456,21 @@ public class ClientEventHandler {
             keyboardThrottle = Math.min(1.0f, keyboardThrottle + 0.15f);
         } else if (MC.options.keyDown.isDown()) {
             keyboardThrottle = Math.max(0.0f, keyboardThrottle - 0.15f);
-        } else {
-            keyboardThrottle = Math.max(0.0f, keyboardThrottle - 0.003f);
         }
 
-        // Mouse X → yaw (turn like normal Minecraft look — this is what players expect;
-        // mapping mouse X to roll made the view bank without turning, which read as
-        // "camera turns but the drone doesn't"). Mouse Y → pitch. A/D → roll (bank).
-        float rollTarget = 0f;
-        float rollSensitivity = Config.KEYBOARD_YAW_SENSITIVITY.get().floatValue();
-        if (MC.options.keyLeft.isDown()) rollTarget -= rollSensitivity;
-        if (MC.options.keyRight.isDown()) rollTarget += rollSensitivity;
-        filteredRoll += (rollTarget - filteredRoll) * 0.18f;
-        float roll = applyDeadband(filteredRoll, 0.01f);
-
-        float rawPitch = clamp(-pitchDelta * Config.MOUSE_PITCH_SENSITIVITY.get().floatValue(), -1f, 1f);
-        float rawYaw = clamp(yawDelta * Config.MOUSE_ROLL_SENSITIVITY.get().floatValue(), -1f, 1f);
+        mouseDroneRoll = clamp(mouseDroneRoll + yawDelta * Config.MOUSE_ROLL_SENSITIVITY.get().floatValue(), -1f, 1f);
+        mouseDronePitch = clamp(mouseDronePitch - pitchDelta * Config.MOUSE_PITCH_SENSITIVITY.get().floatValue(), -1f, 1f);
         float smoothing = Config.MOUSE_SMOOTHING.get().floatValue();
-        filteredPitch = filteredPitch * smoothing + rawPitch * (1f - smoothing);
-        filteredYaw = filteredYaw * smoothing + rawYaw * (1f - smoothing);
+        filteredRoll = filteredRoll * smoothing + mouseDroneRoll * (1f - smoothing);
+        filteredPitch = filteredPitch * smoothing + mouseDronePitch * (1f - smoothing);
+
+        float yawTarget = 0f;
+        if (MC.options.keyLeft.isDown()) yawTarget -= 1f;
+        if (MC.options.keyRight.isDown()) yawTarget += 1f;
+        filteredYaw += (yawTarget - filteredYaw) * 0.35f;
         float deadband = Config.MOUSE_DEADBAND.get().floatValue();
         float pitch = applyDeadband(filteredPitch, deadband);
+        float roll = applyDeadband(filteredRoll, deadband);
         float yaw = applyDeadband(filteredYaw, deadband);
         boolean arm = keyboardThrottle > 0.05f;
 
@@ -467,53 +519,140 @@ public class ClientEventHandler {
         return true;
     }
 
+    private static void clearPlaneState(PlaneEntity plane, boolean notifyServer) {
+        clearPlaneTracking(plane, true);
+        stopPlaneOrbit(plane, notifyServer);
+    }
+
+    private static void clearPlaneTracking(PlaneEntity plane, boolean resetGimbal) {
+        planeLockTarget = null;
+        planeRawLockTarget = null;
+        planeLockManualTicks = 0;
+        if (resetGimbal) {
+            planeGimbalYaw = 0f;
+            planeGimbalPitch = 0f;
+        }
+        if (plane != null) {
+            plane.setGimbal(planeGimbalYaw, planeGimbalPitch);
+            plane.setStabilizedGimbalView(false);
+            rebasePlaneMouseInput();
+        }
+    }
+
+    private static void startPlaneOrbit(PlaneEntity plane, net.minecraft.world.phys.Vec3 center) {
+        double dx = plane.getX() - center.x, dz = plane.getZ() - center.z;
+        double radius = Math.max(12.0, Math.sqrt(dx * dx + dz * dz));
+        planeOrbitActive = true;
+        planeOrbitTarget = center;
+        planeOrbitSyncGrace = 10;
+        plane.setOrbit(true, center, radius);
+        ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
+            plane.getId(), true, center.x, center.y, center.z, radius));
+    }
+
+    private static void stopPlaneOrbit(PlaneEntity plane, boolean notifyServer) {
+        planeOrbitActive = false;
+        planeOrbitTarget = null;
+        planeOrbitSyncGrace = notifyServer ? 20 : 0;
+        if (plane != null) {
+            plane.setOrbit(false, net.minecraft.world.phys.Vec3.ZERO, 0);
+            if (notifyServer) {
+                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
+                    plane.getId(), false, 0, 0, 0, 0));
+            }
+        }
+    }
+
+    private static boolean samePoint(net.minecraft.world.phys.Vec3 a, net.minecraft.world.phys.Vec3 b) {
+        return a != null && b != null && a.distanceToSqr(b) < 0.01;
+    }
+
+    private static net.minecraft.world.phys.Vec3 smoothLockTarget(net.minecraft.world.phys.Vec3 current,
+                                                                 net.minecraft.world.phys.Vec3 target,
+                                                                 double alpha) {
+        if (current == null) return target;
+        double dist = Math.sqrt(current.distanceToSqr(target));
+        double maxStep = Math.max(2.0, dist * alpha);
+        if (dist <= maxStep) return target;
+        return current.add(target.subtract(current).normalize().scale(maxStep));
+    }
+
+    private static void rebasePlaneMouseInput() {
+        if (MC.player == null) return;
+        MC.player.setXRot(0f);
+        lastPlaneYaw = MC.player.getYRot();
+        lastPlanePitch = 0f;
+        filteredPlaneRoll = 0f;
+        filteredPlanePitch = 0f;
+        mousePlaneRoll = 0f;
+        mousePlanePitch = 0f;
+        planeKeyboardInitialized = false;
+        planeInitialized = true;
+    }
+
+    private static void rebasePlaneViewPitch() {
+        if (MC.player == null) return;
+        MC.player.setXRot(0f);
+        lastPlanePitch = 0f;
+    }
+
     private static void sendPlaneKeyboardInput(PlaneEntity plane, boolean gimbalMode,
                                                float yawDeltaP, float pitchDeltaP) {
         if (!planeKeyboardInitialized) {
             planeThrottle = plane.getVisualThrottle();
             filteredPlaneRoll = 0f;
             filteredPlanePitch = 0f;
+            mousePlaneRoll = 0f;
+            mousePlanePitch = 0f;
             planeKeyboardInitialized = true;
         }
 
-        if (MC.options.keyUp.isDown()) {
-            planeThrottle = Math.min(1.0f, planeThrottle + 0.15f);
-        } else if (MC.options.keyDown.isDown()) {
-            planeThrottle = Math.max(0.0f, planeThrottle - 0.15f);
-        } else {
-            planeThrottle = Math.max(0.0f, planeThrottle - 0.003f);
+        if (!gimbalMode) {
+            if (MC.options.keyUp.isDown()) {
+                planeThrottle = Math.min(1.0f, planeThrottle + 0.15f);
+            } else if (MC.options.keyDown.isDown()) {
+                planeThrottle = Math.max(0.0f, planeThrottle - 0.15f);
+            }
         }
 
-        float roll, pitch;
+        float roll, pitch, yaw;
         if (gimbalMode) {
-            // Mouse is busy panning the camera — roll/pitch fall back to keyboard.
+            // Mouse is busy panning the camera — WASD flies the wing, throttle is held.
             float rollTarget = 0f;
             if (MC.options.keyLeft.isDown()) rollTarget -= 1f;
             if (MC.options.keyRight.isDown()) rollTarget += 1f;
-            filteredPlaneRoll += (rollTarget - filteredPlaneRoll) * 0.18f;
+            filteredPlaneRoll += (rollTarget - filteredPlaneRoll) * 0.35f;
             roll = filteredPlaneRoll;
 
             float pitchTarget = 0f;
-            if (MC.options.keyJump.isDown()) pitchTarget -= 1f;
-            if (MC.options.keyShift.isDown()) pitchTarget += 1f;
-            filteredPlanePitch += (pitchTarget - filteredPlanePitch) * 0.18f;
+            if (MC.options.keyUp.isDown()) pitchTarget -= 1f;
+            if (MC.options.keyDown.isDown()) pitchTarget += 1f;
+            filteredPlanePitch += (pitchTarget - filteredPlanePitch) * 0.35f;
             pitch = filteredPlanePitch;
+            yaw = 0f;
         } else {
-            // Mouse flies directly: X → roll, Y → pitch.
-            float rawRoll = clamp(yawDeltaP * Config.MOUSE_ROLL_SENSITIVITY.get().floatValue(), -1f, 1f);
-            float rawPitch = clamp(-pitchDeltaP * Config.MOUSE_PITCH_SENSITIVITY.get().floatValue(), -1f, 1f);
+            // Mouse rate mode: current mouse movement commands pitch/roll rate, then
+            // returns to neutral. This avoids accumulated stick state getting stuck near
+            // vertical/Euler edge cases.
+            float mouseRateScale = 3.5f;
+            mousePlaneRoll = clamp(yawDeltaP * Config.MOUSE_ROLL_SENSITIVITY.get().floatValue() * mouseRateScale, -1f, 1f);
+            mousePlanePitch = clamp(-pitchDeltaP * Config.MOUSE_PITCH_SENSITIVITY.get().floatValue() * mouseRateScale, -1f, 1f);
             float smoothing = Config.MOUSE_SMOOTHING.get().floatValue();
-            filteredPlaneRoll = filteredPlaneRoll * smoothing + rawRoll * (1f - smoothing);
-            filteredPlanePitch = filteredPlanePitch * smoothing + rawPitch * (1f - smoothing);
+            filteredPlaneRoll = filteredPlaneRoll * smoothing + mousePlaneRoll * (1f - smoothing);
+            filteredPlanePitch = filteredPlanePitch * smoothing + mousePlanePitch * (1f - smoothing);
             float deadband = Config.MOUSE_DEADBAND.get().floatValue();
             roll = applyDeadband(filteredPlaneRoll, deadband);
             pitch = applyDeadband(filteredPlanePitch, deadband);
+
+            yaw = 0f;
+            if (MC.options.keyLeft.isDown()) yaw += 1f;
+            if (MC.options.keyRight.isDown()) yaw -= 1f;
         }
 
         boolean arm = planeThrottle > 0.05f;
-        plane.setClientPredictedInputs(planeThrottle, pitch, roll, 0f);
+        plane.setClientPredictedInputs(planeThrottle, pitch, roll, yaw);
         ModNetworking.CHANNEL.sendToServer(new PlaneControllerPacket(
-            plane.getId(), planeThrottle, pitch, roll, 0f, arm
+            plane.getId(), planeThrottle, pitch, roll, yaw, arm
         ));
     }
 
@@ -534,6 +673,17 @@ public class ClientEventHandler {
         while (value > 180f) value -= 360f;
         while (value < -180f) value += 360f;
         return value;
+    }
+
+    private static float approach(float current, float target, float maxDelta) {
+        float delta = clamp(target - current, -maxDelta, maxDelta);
+        return current + delta;
+    }
+
+    private static float approachDegrees(float current, float target, float maxDelta) {
+        float delta = normalizeDegrees(target - current);
+        delta = clamp(delta, -maxDelta, maxDelta);
+        return normalizeDegrees(current + delta);
     }
 
     @SubscribeEvent
@@ -573,13 +723,17 @@ public class ClientEventHandler {
             .transform(new org.joml.Vector3f(0, 0, 1));
         net.minecraft.world.phys.Vec3 start = plane.position().add(0, plane.getBbHeight() / 2.0, 0);
         net.minecraft.world.phys.Vec3 dir = new net.minecraft.world.phys.Vec3(f.x, f.y, f.z);
-        net.minecraft.world.phys.Vec3 end = start.add(dir.scale(256));
+        net.minecraft.world.phys.Vec3 end = start.add(dir.scale(1024));
         net.minecraft.world.phys.BlockHitResult hit = MC.level.clip(new net.minecraft.world.level.ClipContext(
-            start, end, net.minecraft.world.level.ClipContext.Block.OUTLINE,
+            start, end, net.minecraft.world.level.ClipContext.Block.VISUAL,
             net.minecraft.world.level.ClipContext.Fluid.NONE, MC.player));
+        if (hit.getType() != net.minecraft.world.phys.HitResult.Type.BLOCK) {
+            hit = MC.level.clip(new net.minecraft.world.level.ClipContext(
+                start, end, net.minecraft.world.level.ClipContext.Block.OUTLINE,
+                net.minecraft.world.level.ClipContext.Fluid.NONE, MC.player));
+        }
         if (hit.getType() == net.minecraft.world.phys.HitResult.Type.BLOCK) {
-            var bp = hit.getBlockPos();
-            return new net.minecraft.world.phys.Vec3(bp.getX() + 0.5, bp.getY() + 0.5, bp.getZ() + 0.5);
+            return hit.getLocation();
         }
         return null;
     }
@@ -601,11 +755,13 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public static void onRenderPlayer(net.minecraftforge.client.event.RenderPlayerEvent.Pre event) {
-        // While remote-controlling, the pilot's body is teleported along with the
-        // drone (chunk streaming) — never draw it in front of the drone camera.
-        if (MC.player != null && event.getEntity() == MC.player
-            && !(MC.player.getVehicle() instanceof DroneEntity)
-            && MC.getCameraEntity() instanceof DroneEntity) {
+        // Pilots ride inside the FPV entity/camera-follow body; don't render their player
+        // model clipped into the drone/plane for any client in multiplayer.
+        if (event.getEntity().getVehicle() instanceof DroneEntity
+            || event.getEntity().getVehicle() instanceof PlaneEntity
+            || (MC.player != null && event.getEntity() == MC.player
+                && !(MC.player.getVehicle() instanceof DroneEntity)
+                && MC.getCameraEntity() instanceof DroneEntity)) {
             event.setCanceled(true);
         }
     }

@@ -42,5 +42,9 @@ public class ModNetworking {
             RaceMarkPacket::encode, RaceMarkPacket::new, RaceMarkPacket::handle);
         CHANNEL.registerMessage(id++, PlaneOrbitPacket.class,
             PlaneOrbitPacket::encode, PlaneOrbitPacket::new, PlaneOrbitPacket::handle);
+        CHANNEL.registerMessage(id++, PlaneStrikePacket.class,
+            PlaneStrikePacket::encode, PlaneStrikePacket::new, PlaneStrikePacket::handle);
+        CHANNEL.registerMessage(id++, ExplosionParticlesPacket.class,
+            ExplosionParticlesPacket::encode, ExplosionParticlesPacket::new, ExplosionParticlesPacket::handle);
     }
 }

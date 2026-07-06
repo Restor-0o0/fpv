@@ -67,6 +67,8 @@ public class PlaneEntity extends Entity implements Pilotable {
 
     public float rollO;
     private float displayRoll;
+    private final Quaternionf attitude = new Quaternionf();
+    private boolean attitudeValid;
     private float throttleInput;
     private float angVelRoll, angVelPitch, angVelYaw;
     private boolean armed;
@@ -86,24 +88,31 @@ public class PlaneEntity extends Entity implements Pilotable {
     // Belly-camera gimbal look (client-only, local pilot's mouse look while in
     // "camera mode"). Never synced — meaningless to anyone but the pilot's own client.
     private float gimbalYaw, gimbalPitch;
+    private boolean stabilizedGimbalView;
 
     private Vec3 mountReturnPos;
     private java.util.UUID dummyId;
 
     // Orbit autopilot: circle a fixed point (the camera-lock target) at a set radius.
-    private static final float ORBIT_SPEED = 0.9f; // blocks/tick (~18 m/s), smooth for filming
+    private static final float ORBIT_RADIUS_MARGIN = 3.0f;
     private boolean orbitActive;
     private Vec3 orbitCenter;
     private double orbitRadius;
     private double orbitY;
     private int orbitDir = 1; // +1 CCW / -1 CW, chosen from motion at engage
+    private float orbitBlend;
+    private boolean orbitWasActive;
+    private float orbitRollIn, orbitPitchIn, orbitYawIn;
+    private float orbitTargetRoll;
+    private float orbitDisplayRoll;
 
     public void setOrbit(boolean active, Vec3 center, double radius) {
         orbitActive = active;
         entityData.set(DATA_ORBIT, active);
+        resetOrbitSmoothing();
         if (active) {
             orbitCenter = center;
-            orbitRadius = Math.max(4.0, radius);
+            orbitRadius = Math.max(4.0, radius + ORBIT_RADIUS_MARGIN);
             orbitY = getY();
             Vec3 v = getDeltaMovement();
             double rx = getX() - center.x, rz = getZ() - center.z;
@@ -114,10 +123,21 @@ public class PlaneEntity extends Entity implements Pilotable {
             entityData.set(DATA_ORB_R, (float) orbitRadius);
             entityData.set(DATA_ORB_DIR, (float) orbitDir);
             entityData.set(DATA_ORB_Y, (float) orbitY);
+        } else {
+            orbitCenter = null;
         }
     }
 
-    public boolean isOrbiting() { return orbitActive; }
+    private void resetOrbitSmoothing() {
+        orbitBlend = 0f;
+        orbitRollIn = 0f;
+        orbitPitchIn = 0f;
+        orbitYawIn = 0f;
+        orbitTargetRoll = 0f;
+        orbitDisplayRoll = 0f;
+    }
+
+    public boolean isOrbiting() { return orbitActive || entityData.get(DATA_ORBIT); }
 
     public PlaneEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -164,6 +184,7 @@ public class PlaneEntity extends Entity implements Pilotable {
             updateForcedChunks();
             if (!pilotWasMounted) {
                 angVelRoll = 0; angVelPitch = 0; angVelYaw = 0;
+                resetAttitudeFromEuler(entityData.get(DATA_ROLL));
                 pilotWasMounted = true;
             }
 
@@ -192,7 +213,7 @@ public class PlaneEntity extends Entity implements Pilotable {
                 applyGravity();
             }
         } else {
-            orbitActive = false;
+            setOrbit(false, Vec3.ZERO, 0);
             pilotWasMounted = false;
             armed = false;
             throttleInput = 0;
@@ -231,11 +252,11 @@ public class PlaneEntity extends Entity implements Pilotable {
 
     private void applyFlightPhysics(float dt, float throttle, float pitchIn, float rollIn, float yawIn) {
         float thrustAccel = throttle * maxThrust / MASS;
-        Vec3 fwd = getLookAngle();
+        float curRoll = entityData.get(DATA_ROLL);
+        Vec3 fwd = bodyForward(curRoll);
         float dv = thrustAccel * MS2_TO_BT;
         setDeltaMovement(getDeltaMovement().add(fwd.x * dv, fwd.y * dv, fwd.z * dv));
 
-        float curRoll = entityData.get(DATA_ROLL);
         // Full-manual / acro: stick commands a BODY-frame rotation RATE for both roll and
         // pitch — no self-leveling and no angle limits, so full-stick gives unlimited rolls
         // and loops and the plane holds whatever attitude you leave it in. Body-frame is
@@ -258,11 +279,38 @@ public class PlaneEntity extends Entity implements Pilotable {
     }
 
     private float integrateRotation(float dt, float rRoll, float rPitch, float rYaw, float curRoll) {
-        Quaternionf q = DroneEntity.attitudeQuat(getYRot(), getXRot(), curRoll)
+        ensureAttitude(curRoll);
+        attitude
             .rotateX((float) Math.toRadians(rPitch * dt))
             .rotateY((float) Math.toRadians(-rYaw * dt))
-            .rotateZ((float) Math.toRadians(rRoll * dt));
-        float[] a = DroneEntity.decomposeAttitude(q);
+            .rotateZ((float) Math.toRadians(rRoll * dt))
+            .normalize();
+        float[] a = DroneEntity.decomposeAttitude(attitude);
+        setYRot(normalizeYaw(a[0]));
+        setXRot(a[1]);
+        return a[2];
+    }
+
+    private void ensureAttitude(float roll) {
+        if (!attitudeValid) resetAttitudeFromEuler(roll);
+    }
+
+    private void resetAttitudeFromEuler(float roll) {
+        attitude.set(DroneEntity.attitudeQuat(getYRot(), getXRot(), roll));
+        attitudeValid = true;
+    }
+
+    private void setAttitudeFromEuler(float yaw, float pitch, float roll) {
+        setYRot(yaw);
+        setXRot(pitch);
+        attitude.set(DroneEntity.attitudeQuat(yaw, pitch, roll));
+        attitudeValid = true;
+    }
+
+    private float setAttitudeFromQuat(Quaternionf q) {
+        attitude.set(q).normalize();
+        attitudeValid = true;
+        float[] a = DroneEntity.decomposeAttitude(attitude);
         setYRot(normalizeYaw(a[0]));
         setXRot(a[1]);
         return a[2];
@@ -275,9 +323,7 @@ public class PlaneEntity extends Entity implements Pilotable {
 
         // Lift acts along body-up, fades to zero below stall speed (arcade stall model).
         float roll = entityData.get(DATA_ROLL);
-        Quaternionf rot = DroneEntity.attitudeQuat(getYRot(), getXRot(), roll);
-        Vector3f up = new Vector3f(0, 1, 0);
-        rot.transform(up);
+        Vector3f up = bodyUp(roll);
 
         float liftFactor = (float) Math.min(1.0, speedMs / stallSpeed);
         // liftCoeff tuned so lift balances gravity at the type's cruise speed; capped by
@@ -302,9 +348,9 @@ public class PlaneEntity extends Entity implements Pilotable {
         vel = getDeltaMovement();
         double curSpeed = vel.length();
         if (curSpeed > 1e-4) {
-            Vec3 fwd = getLookAngle();
-            float speedFactor = (float) Math.min(1.0, Math.max(0.0, (speedMs - stallSpeed) / stallSpeed));
-            float alignBlend = (float) Math.min(1.0, ALIGN_RESPONSIVENESS * speedFactor * dt);
+                Vec3 fwd = bodyForward(roll);
+                float speedFactor = (float) Math.min(1.0, Math.max(0.0, (speedMs - stallSpeed) / stallSpeed));
+                float alignBlend = (float) Math.min(1.0, ALIGN_RESPONSIVENESS * speedFactor * dt);
             if (alignBlend > 0f) {
                 Vec3 blended = vel.normalize().scale(1 - alignBlend).add(fwd.scale(alignBlend));
                 if (blended.lengthSqr() > 1e-8) {
@@ -312,6 +358,20 @@ public class PlaneEntity extends Entity implements Pilotable {
                 }
             }
         }
+    }
+
+    private Vec3 bodyForward(float roll) {
+        ensureAttitude(roll);
+        Vector3f fwd = new Vector3f(0, 0, 1);
+        attitude.transform(fwd);
+        return new Vec3(fwd.x, fwd.y, fwd.z);
+    }
+
+    private Vector3f bodyUp(float roll) {
+        ensureAttitude(roll);
+        Vector3f up = new Vector3f(0, 1, 0);
+        attitude.transform(up);
+        return up;
     }
 
     private void applyGravity() {
@@ -344,14 +404,30 @@ public class PlaneEntity extends Entity implements Pilotable {
         float target = entityData.get(DATA_THROTTLE);
         throttleInput += (target - throttleInput) * 0.4f;
 
-        // Orbit autopilot: predict the exact same circle locally from the synced params, so
-        // it's perfectly smooth instead of easing toward batched server position updates.
-        if (entityData.get(DATA_ORBIT)) {
-            displayRoll = stepOrbit(entityData.get(DATA_ORB_CX), entityData.get(DATA_ORB_CZ),
-                entityData.get(DATA_ORB_R), Math.round(entityData.get(DATA_ORB_DIR)),
-                entityData.get(DATA_ORB_Y));
-            predAge = 100; // ensure we re-enter local prediction cleanly when orbit ends
+        boolean orbitSynced = entityData.get(DATA_ORBIT);
+        if (orbitSynced) {
+            if (!orbitWasActive) {
+                resetOrbitSmoothing();
+                orbitWasActive = true;
+            }
+            flyOrbit(new Vec3(entityData.get(DATA_ORB_CX), entityData.get(DATA_ORB_Y), entityData.get(DATA_ORB_CZ)),
+                entityData.get(DATA_ORB_R), Math.round(entityData.get(DATA_ORB_DIR)), entityData.get(DATA_ORB_Y));
+            displayRoll = entityData.get(DATA_ROLL);
+            predAge = 100;
+            if (serverSyncPos != null) {
+                Vec3 delta = serverSyncPos.subtract(position());
+                double d2 = delta.lengthSqr();
+                if (d2 > 144.0) {
+                    setPos(serverSyncPos.x, serverSyncPos.y, serverSyncPos.z);
+                } else if (d2 > 1.0e-4) {
+                    Vec3 p = position().add(delta.scale(0.06));
+                    setPos(p.x, p.y, p.z);
+                }
+            }
             return;
+        } else if (orbitWasActive) {
+            orbitWasActive = false;
+            resetOrbitSmoothing();
         }
 
         predAge++;
@@ -383,9 +459,8 @@ public class PlaneEntity extends Entity implements Pilotable {
             qc.slerp(qs, 0.08f);
             displayRoll = applyAttitudeClient(qc);
         } else {
-            setYRot(entityData.get(DATA_YAW_SYNC));
-            setXRot(entityData.get(DATA_PITCH_SYNC));
             displayRoll = entityData.get(DATA_ROLL);
+            setAttitudeFromEuler(entityData.get(DATA_YAW_SYNC), entityData.get(DATA_PITCH_SYNC), displayRoll);
         }
 
         if (localPilot) {
@@ -418,15 +493,12 @@ public class PlaneEntity extends Entity implements Pilotable {
     }
 
     private float applyAttitudeClient(Quaternionf q) {
-        float[] a = DroneEntity.decomposeAttitude(q);
-        setYRot(normalizeYaw(a[0]));
-        setXRot(a[1]);
-        return a[2];
+        return setAttitudeFromQuat(q);
     }
 
     @Override
     public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps, boolean teleport) {
-        if (level().isClientSide && predAge <= 5) {
+        if (level().isClientSide && (predAge <= 5 || entityData.get(DATA_ORBIT))) {
             serverSyncPos = new Vec3(x, y, z);
             return;
         }
@@ -439,6 +511,13 @@ public class PlaneEntity extends Entity implements Pilotable {
         predRoll = roll;
         predYaw = yaw;
         predAge = 0;
+    }
+
+    protected void syncVisualAttitude(float yaw, float pitch, float roll) {
+        setAttitudeFromEuler(yaw, pitch, roll);
+        entityData.set(DATA_YAW_SYNC, yaw);
+        entityData.set(DATA_PITCH_SYNC, pitch);
+        entityData.set(DATA_ROLL, roll);
     }
 
     // -------------------------------------------------------------------------
@@ -492,38 +571,64 @@ public class PlaneEntity extends Entity implements Pilotable {
         dummyId = null;
     }
 
-    // Server orbit step: sweep the plane around the centre, set attitude + bank, and mark it
-    // armed. The identical kinematics run client-side (stepOrbit) for smooth prediction.
+    // Server orbit autopilot: fly the same physics as manual control, but feed gentle stick
+    // commands toward a loose circle. This avoids hard setPos() snapping and lets block
+    // collisions work through normal move().
     private void doOrbit() {
         if (orbitCenter == null) { orbitActive = false; entityData.set(DATA_ORBIT, false); return; }
-        float bank = stepOrbit(orbitCenter.x, orbitCenter.z, orbitRadius, orbitDir, orbitY);
-        entityData.set(DATA_ROLL, bank);
-        throttleInput = 0.5f;
-        armed = true;
-        angVelRoll = 0; angVelPitch = 0; angVelYaw = 0;
+        flyOrbit(orbitCenter, orbitRadius, orbitDir, orbitY);
     }
 
-    // Kinematic circle step (used by both server and client): advance one tick around the
-    // circle of radius R about (cx,cz), easing radius + altitude, face the tangent. Returns
-    // the bank angle to display. setPos/setYRot make it self-contained per side.
-    private float stepOrbit(double cx, double cz, double radius, int dir, double holdY) {
-        double rx = getX() - cx, rz = getZ() - cz;
-        double dist = Math.sqrt(rx * rx + rz * rz);
-        if (dist < 1e-3) { rx = radius; rz = 0; dist = radius; }
-        double ang = Math.atan2(rz, rx);
-        double omega = dir * ORBIT_SPEED / Math.max(radius, 4.0);
-        double newAng = ang + omega;
-        double newDist = dist + (radius - dist) * 0.08;
-        double nx = cx + Math.cos(newAng) * newDist;
-        double nz = cz + Math.sin(newAng) * newDist;
-        double ny = getY() + (holdY - getY()) * 0.08;
+    private void flyOrbit(Vec3 center, double radius, int dir, double holdY) {
+        float dt = 0.05f;
+        orbitBlend = Math.min(1.0f, orbitBlend + 0.045f);
+        double ease = orbitBlend * orbitBlend * (3.0 - 2.0 * orbitBlend);
 
-        float yaw = (float) Math.toDegrees(Math.atan2(-(nx - getX()), (nz - getZ())));
-        setYRot(yaw);
-        setXRot(0f);
-        setDeltaMovement(new Vec3(nx - getX(), ny - getY(), nz - getZ()));
-        setPos(nx, ny, nz);
-        return (float) (-dir * 28.0); // bank into the turn
+        double rx = getX() - center.x;
+        double rz = getZ() - center.z;
+        double dist = Math.sqrt(rx * rx + rz * rz);
+        if (dist < 1e-3) dist = 1e-3;
+
+        double radiusError = dist - radius;
+        double tangentX = -rz / dist * dir;
+        double tangentZ = rx / dist * dir;
+        double radialX = rx / dist;
+        double radialZ = rz / dist;
+        double intercept = clamp((float) (radiusError / Math.max(radius * 0.45, 5.0)), -1.10f, 1.10f);
+        double desiredX = tangentX - radialX * intercept;
+        double desiredZ = tangentZ - radialZ * intercept;
+        double desiredLen = Math.sqrt(desiredX * desiredX + desiredZ * desiredZ);
+        if (desiredLen < 1e-4) { desiredX = tangentX; desiredZ = tangentZ; desiredLen = 1.0; }
+        desiredX /= desiredLen;
+        desiredZ /= desiredLen;
+
+        float altitudeError = (float) (holdY - getY());
+        double desiredSpeed = Math.min(maxSpeedBt * 0.70, Math.max(0.75, getDeltaMovement().horizontalDistance()));
+        double desiredY = clamp(altitudeError * 0.010f - (float) getDeltaMovement().y * 0.20f, -0.12f, 0.12f);
+        Vec3 desiredVel = new Vec3(desiredX * desiredSpeed, desiredY, desiredZ * desiredSpeed);
+        Vec3 vel = getDeltaMovement();
+        double maxStep = 0.055 + 0.045 * ease;
+        Vec3 change = desiredVel.subtract(vel);
+        if (change.length() > maxStep) change = change.normalize().scale(maxStep);
+        Vec3 newVel = vel.add(change);
+
+        float desiredYaw = (float) Math.toDegrees(Math.atan2(-newVel.x, newVel.z));
+        float newYaw = approachDegrees(getYRot(), desiredYaw, 3.0f + 7.0f * orbitBlend);
+        float newPitch = approachDegrees(getXRot(), 0f, 2.0f);
+        orbitDisplayRoll += (((float) (-dir * clamp((float) (24.0 + Math.abs(radiusError) * 1.4), 18.0f, 45.0f)) * ease) - orbitDisplayRoll) * 0.16f;
+        setAttitudeFromEuler(newYaw, newPitch, orbitDisplayRoll);
+        entityData.set(DATA_ROLL, orbitDisplayRoll);
+        setDeltaMovement(newVel);
+
+        throttleInput = (float) (0.58f + 0.08f * ease);
+        armed = true;
+        applyMovement();
+    }
+
+    private static float approachDegrees(float current, float target, float maxDelta) {
+        float delta = wrapDegrees(target - current);
+        delta = clamp(delta, -maxDelta, maxDelta);
+        return wrapDegrees(current + delta);
     }
 
     // ---- Chunk force-loading around the piloted plane (prevents far-flight unload) ----
@@ -567,7 +672,10 @@ public class PlaneEntity extends Entity implements Pilotable {
 
     @Override
     public void remove(Entity.RemovalReason reason) {
-        if (!level().isClientSide) clearForcedChunks();
+        if (!level().isClientSide) {
+            if (!getPassengers().isEmpty()) ejectPassengers();
+            clearForcedChunks();
+        }
         super.remove(reason);
     }
 
@@ -583,6 +691,11 @@ public class PlaneEntity extends Entity implements Pilotable {
 
     @Override
     public double getPassengersRidingOffset() { return 0.0; }
+
+    @Override
+    public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
+        return mountReturnPos != null ? mountReturnPos : position().add(0, 1.5, 0);
+    }
 
     @Override
     protected void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
@@ -603,6 +716,29 @@ public class PlaneEntity extends Entity implements Pilotable {
 
     @Override
     public boolean isPushable() { return false; }
+
+    @Override
+    public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
+        if (isInvulnerableTo(source)) return false;
+        if (source.getEntity() instanceof Player && hasPassenger(source.getEntity())) return false;
+        if (level().isClientSide) return true;
+
+        boolean explosion = source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION);
+        boolean creative = source.getEntity() instanceof Player p && p.getAbilities().instabuild;
+        if (!explosion && !creative) {
+            spawnAtLocation(getDropStack());
+        }
+        discard();
+        return true;
+    }
+
+    protected net.minecraft.world.item.Item getDropItem() {
+        return org.restor.fpv.item.ModItems.PLANE.get();
+    }
+
+    protected net.minecraft.world.item.ItemStack getDropStack() {
+        return new net.minecraft.world.item.ItemStack(getDropItem());
+    }
 
     // -------------------------------------------------------------------------
     //  Controller input / getters
@@ -635,15 +771,17 @@ public class PlaneEntity extends Entity implements Pilotable {
     // Belly-camera gimbal limits: full 360° pan (yaw wraps freely) and unrestricted look-down
     // (to nearly straight down). Only the up direction is capped — that's the belly-mount
     // limit (the camera can't look up through the aircraft body).
-    public static final float GIMBAL_PITCH_MIN = -89f; // ~straight down (avoid the ±90 gimbal-lock singularity)
-    public static final float GIMBAL_PITCH_MAX = 20f;  // just above the horizon
+    public static final float GIMBAL_PITCH_MIN = -180f; // full lower hemisphere, including straight down/behind
+    public static final float GIMBAL_PITCH_MAX = 20f;   // limited upward look above the horizon
 
     public float getGimbalYaw()   { return gimbalYaw; }
     public float getGimbalPitch() { return gimbalPitch; }
+    public boolean isStabilizedGimbalView() { return stabilizedGimbalView; }
     public void setGimbal(float yaw, float pitch) {
         gimbalYaw = wrapDegrees(yaw);
         gimbalPitch = clamp(pitch, GIMBAL_PITCH_MIN, GIMBAL_PITCH_MAX);
     }
+    public void setStabilizedGimbalView(boolean stabilized) { stabilizedGimbalView = stabilized; }
 
     private static float wrapDegrees(float a) {
         a %= 360f;

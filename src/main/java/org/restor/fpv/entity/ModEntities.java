@@ -55,7 +55,8 @@ public class ModEntities {
     public static final RegistryObject<EntityType<KamikazeDroneEntity>> KAMIKAZE = ENTITIES.register("kamikaze_drone",
         () -> EntityType.Builder.<KamikazeDroneEntity>of(KamikazeDroneEntity::new, MobCategory.MISC)
             .sized(0.8f, 0.4f)
-            .clientTrackingRange(64)
+            .clientTrackingRange(512)
+            .updateInterval(1)
             .build("kamikaze_drone"));
 
     public static final RegistryObject<EntityType<PlaneEntity>> PLANE = ENTITIES.register("plane",
@@ -73,6 +74,7 @@ public class ModEntities {
     public static final RegistryObject<EntityType<KamikazeWingEntity>> PLANE_KAMIKAZE = ENTITIES.register("plane_kamikaze",
         () -> EntityType.Builder.<KamikazeWingEntity>of(KamikazeWingEntity::new, MobCategory.MISC)
             .sized(1.4f, 0.6f)
-            .clientTrackingRange(64)
+            .clientTrackingRange(1024)
+            .updateInterval(1)
             .build("plane_kamikaze"));
 }

@@ -211,6 +211,7 @@ public class DroneEntity extends Entity implements Pilotable {
         activePilot = pilot;
         boolean hasPilot = pilot != null;
         if (hasPilot) {
+            pilot.setInvisible(true);
             streamChunksToPilot(pilot);
         } else {
             clearChunkStreaming();
@@ -1043,12 +1044,12 @@ public class DroneEntity extends Entity implements Pilotable {
         clearChunkStreaming();
         discardDummy();
         if (p != null) {
-            if (p.getCamera() == this) p.setCamera(p);
-            p.setInvulnerable(pilotWasInvulnerable);
-            p.setInvisible(false);
             if (stationReturnPos != null) {
                 p.teleportTo(stationReturnPos.x, stationReturnPos.y, stationReturnPos.z);
             }
+            if (p.getCamera() == this) p.setCamera(p);
+            p.setInvulnerable(pilotWasInvulnerable);
+            p.setInvisible(false);
         }
         stationReturnPos = null;
     }
@@ -1189,6 +1190,7 @@ public class DroneEntity extends Entity implements Pilotable {
     @Override
     public void remove(RemovalReason reason) {
         if (!level().isClientSide) {
+            if (!getPassengers().isEmpty()) ejectPassengers();
             endRemoteControl();
             clearForcedChunks();
             clearChunkStreaming();

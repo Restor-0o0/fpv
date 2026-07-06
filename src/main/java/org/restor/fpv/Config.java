@@ -37,6 +37,11 @@ public class Config {
     public static final ForgeConfigSpec.DoubleValue DEV_DRAG_MULT;
     public static final ForgeConfigSpec.DoubleValue DEV_MAX_SPEED;
     public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_POWER;
+    public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_BLOCK_BREAK_PERCENT;
+    public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_BLOCK_FLING_PERCENT;
+    public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_MOB_DAMAGE_MULT;
+    public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_CAMERA_BACKSTEP;
+    public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_CAMERA_SECONDS;
     public static final ForgeConfigSpec.IntValue DEV_CHUNK_RADIUS;
     public static final ForgeConfigSpec.DoubleValue DEV_HITBOX_SCALE;
     public static final ForgeConfigSpec.DoubleValue DEV_HITBOX_Y_OFFSET;
@@ -121,6 +126,16 @@ public class Config {
             .defineInRange("maxSpeed", 60.0, 10.0, 150.0);
         DEV_EXPLOSION_POWER = BUILDER.comment("Kamikaze explosion power. 4.0 = TNT.")
             .defineInRange("explosionPower", 4.0, 1.0, 100.0);
+        DEV_EXPLOSION_BLOCK_BREAK_PERCENT = BUILDER.comment("Percent of vanilla kamikaze block destruction to keep. 0 = no block breaking, 100 = normal explosion crater.")
+            .defineInRange("explosionBlockBreakPercent", 100.0, 0.0, 100.0);
+        DEV_EXPLOSION_BLOCK_FLING_PERCENT = BUILDER.comment("Percent of nearby blocks copied into flying debris before the kamikaze explosion.")
+            .defineInRange("explosionBlockFlingPercent", 100.0, 0.0, 200.0);
+        DEV_EXPLOSION_MOB_DAMAGE_MULT = BUILDER.comment("Extra kamikaze mob damage multiplier. 1.0 = default tuned damage.")
+            .defineInRange("explosionMobDamageMultiplier", 1.0, 0.0, 5.0);
+        DEV_EXPLOSION_CAMERA_BACKSTEP = BUILDER.comment("Before a kamikaze detonates, move its FPV camera this many blocks backward along the flight path so the blast is visible. 0 = off.")
+            .defineInRange("explosionCameraBackstep", 8.0, 0.0, 40.0);
+        DEV_EXPLOSION_CAMERA_SECONDS = BUILDER.comment("How long to keep the FPV camera watching the kamikaze blast after detonation.")
+            .defineInRange("explosionCameraSeconds", 2.0, 0.0, 6.0);
         DEV_CHUNK_RADIUS = BUILDER.comment("Chunk streaming radius around a piloted drone (chunks are pushed to the pilot's client). 0 = off.")
             .defineInRange("chunkRadius", 8, 0, 12);
         DEV_HITBOX_SCALE = BUILDER.comment("Drone hitbox size multiplier.")

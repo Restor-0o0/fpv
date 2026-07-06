@@ -8,6 +8,8 @@ import org.restor.fpv.data.DroneData;
 public class KamikazeDroneEntity extends RemoteDroneEntity {
     private int airborneTicks;
     private boolean exploded;
+    private int explosionViewTicks;
+    private net.minecraft.world.phys.Vec3 explosionLookTarget;
 
     public KamikazeDroneEntity(EntityType<? extends DroneEntity> type, Level level) {
         super(type, level, DroneData.RACING);
@@ -15,6 +17,17 @@ public class KamikazeDroneEntity extends RemoteDroneEntity {
 
     @Override
     public void tick() {
+        if (explosionViewTicks > 0) {
+            setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            super.tick();
+            setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+            if (explosionLookTarget != null) KamikazeExplosionEffects.lookAt(this, explosionLookTarget);
+            if (--explosionViewTicks <= 0) {
+                endRemoteControl();
+                discard();
+            }
+            return;
+        }
         super.tick();
         if (level().isClientSide) return;
 
@@ -58,11 +71,27 @@ public class KamikazeDroneEntity extends RemoteDroneEntity {
     private void explodeNow() {
         if (exploded) return;
         exploded = true;
-        // Return the pilot to the station BEFORE detonating — their body follows the
-        // drone (chunk loading), so exploding first would blast the pilot too.
-        endRemoteControl();
         float power = (float) org.restor.fpv.Config.DEV_EXPLOSION_POWER.get().doubleValue();
-        level().explode(this, getX(), getY(), getZ(), power, Level.ExplosionInteraction.TNT);
-        discard();
+        boolean cinematic = org.restor.fpv.Config.DEV_EXPLOSION_CAMERA_BACKSTEP.get() > 0.0;
+        net.minecraft.world.phys.Vec3 impact = cinematic ? KamikazeExplosionEffects.moveCameraBack(this) : position();
+        if (!cinematic) endRemoteControl();
+        KamikazeExplosionEffects.flingBlocks(level(), impact.x, impact.y, impact.z, power);
+        java.util.Map<net.minecraft.core.BlockPos, net.minecraft.world.level.block.state.BlockState> before =
+            KamikazeExplosionEffects.captureBreakableBlocks(level(), impact.x, impact.y, impact.z, power);
+        level().explode(this, impact.x, impact.y, impact.z, power, Level.ExplosionInteraction.TNT);
+        KamikazeExplosionEffects.restoreUnbrokenBlocks(level(), before, impact.x, impact.y, impact.z);
+        KamikazeExplosionEffects.removeFloatingBlocks(level(), impact.x, impact.y, impact.z, power);
+        KamikazeExplosionEffects.damageMobs(level(), this, impact.x, impact.y, impact.z, power);
+        KamikazeExplosionEffects.spawn(level(), impact.x, impact.y, impact.z, power);
+        if (cinematic) {
+            explosionLookTarget = impact;
+            explosionViewTicks = Math.max(0, (int) Math.round(org.restor.fpv.Config.DEV_EXPLOSION_CAMERA_SECONDS.get() * 20.0));
+            if (explosionViewTicks <= 0) {
+                endRemoteControl();
+                discard();
+            }
+        } else {
+            discard();
+        }
     }
 }
