@@ -87,6 +87,7 @@ public class RaceMarkPacket {
             && player.level().getBlockEntity(session.route.get(session.route.size() - 1)) instanceof RaceGateBlockEntity prev) {
             prev.setNextRoutePos(gatePos);
         }
+        gate.setPrevRoutePos(session.route.isEmpty() ? startPos : session.route.get(session.route.size() - 1));
         session.route.add(gatePos);
         gate.setRouteIndex(session.route.size());
         gate.clearNextRoutePos();

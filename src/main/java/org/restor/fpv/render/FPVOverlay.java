@@ -44,6 +44,14 @@ public class FPVOverlay {
         if (finishTicks >= 0) raceFinishAtMs = System.currentTimeMillis();
     }
 
+    public static int raceGatesHit() {
+        return raceLap > 0 ? raceGatesHit : 0;
+    }
+
+    public static boolean raceActive() {
+        return raceLap > 0;
+    }
+
     private static void renderRaceHud(GuiGraphics graphics, int width, int height) {
         Font font = MC.font;
         if (raceFinishTicks >= 0) {
@@ -242,6 +250,10 @@ public class FPVOverlay {
                 drone.blockPosition().getX(), drone.blockPosition().getZ());
             String altStr = String.format("ALT: %.0f m", Math.max(0, drone.getY() - surfaceY));
             graphics.drawString(font, altStr, margin, y, color);
+            y += lineHeight;
+
+            String camStr = String.format("CAM: %.0f°", drone.getCameraAngle());
+            graphics.drawString(font, camStr, margin, y, color);
 
             // Controller status + horizontal speed (bottom left). Vertical climb is useful,
             // but ground speed is what shows whether tilt is converting thrust into forward motion.
@@ -327,6 +339,9 @@ public class FPVOverlay {
                 plane.blockPosition().getX(), plane.blockPosition().getZ());
             String altStr = String.format("ALT: %.0f m", Math.max(0, plane.getY() - surfaceY));
             graphics.drawString(font, altStr, margin, topY + lineHeight, color);
+
+            String camStr = String.format("CAM: %.0f°", plane.getGimbalPitch());
+            graphics.drawString(font, camStr, margin, topY + lineHeight * 2, color);
 
             String ctrlStr = RCController.isConnected()
                 ? "TX: " + RCController.getControllerName()

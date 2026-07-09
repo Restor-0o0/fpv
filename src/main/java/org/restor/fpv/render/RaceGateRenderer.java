@@ -16,6 +16,7 @@ import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.restor.fpv.block.entity.RaceGateBlockEntity;
+import org.restor.fpv.block.entity.RaceStartBlockEntity;
 
 // Draws each gate as a glowing coloured square frame oriented by its yaw/pitch, plus its
 // route order number floating at the centre.
@@ -29,6 +30,8 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
     @Override
     public void render(RaceGateBlockEntity gate, float partialTick, PoseStack pose,
                        MultiBufferSource buffer, int packedLight, int packedOverlay) {
+        if (!FPVOverlay.raceActive()) return;
+
         int c = gate.getColor();
         float a = ((c >> 24) & 0xFF) / 255f; if (a <= 0f) a = 1f;
         float r = ((c >> 16) & 0xFF) / 255f;
@@ -58,7 +61,9 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
         VertexConsumer vc = buffer.getBuffer(RenderType.lines());
         Matrix4f mat = pose.last().pose();
         Matrix3f nrm = pose.last().normal();
-        for (int i = 0; i < 4; i++) line(vc, mat, nrm, corners[i], corners[(i + 1) % 4], r, g, b, a);
+        if (gate.getRouteIndex() <= 0 || (FPVOverlay.raceActive() && gate.getRouteIndex() > FPVOverlay.raceGatesHit())) {
+            for (int i = 0; i < 4; i++) thickLine(vc, mat, nrm, corners[i], corners[(i + 1) % 4], right, up, n, r, g, b, a);
+        }
         renderRouteLine(gate, center, vc, mat, nrm, r, g, b, a * 0.7f);
 
         int idx = gate.getRouteIndex();
@@ -82,41 +87,110 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
         vc.vertex(mat, p2.x, p2.y, p2.z).color(r, g, b, a).normal(nrm, nx, ny, nz).endVertex();
     }
 
+    private static void thickLine(VertexConsumer vc, Matrix4f mat, Matrix3f nrm, Vector3f p1, Vector3f p2,
+                                  Vector3f right, Vector3f up, Vector3f normal, float r, float g, float b, float a) {
+        float s = 0.11f;
+        line(vc, mat, nrm, p1, p2, r, g, b, a);
+        offsetLine(vc, mat, nrm, p1, p2, right, s, r, g, b, a);
+        offsetLine(vc, mat, nrm, p1, p2, right, -s, r, g, b, a);
+        offsetLine(vc, mat, nrm, p1, p2, up, s, r, g, b, a);
+        offsetLine(vc, mat, nrm, p1, p2, up, -s, r, g, b, a);
+        offsetLine(vc, mat, nrm, p1, p2, normal, s, r, g, b, a);
+        offsetLine(vc, mat, nrm, p1, p2, normal, -s, r, g, b, a);
+    }
+
+    private static void offsetLine(VertexConsumer vc, Matrix4f mat, Matrix3f nrm, Vector3f p1, Vector3f p2,
+                                   Vector3f axis, float amount, float r, float g, float b, float a) {
+        Vector3f o = new Vector3f(axis).normalize().mul(amount);
+        line(vc, mat, nrm, new Vector3f(p1).add(o), new Vector3f(p2).add(o), r, g, b, a);
+    }
+
     private static void renderRouteLine(RaceGateBlockEntity gate, Vector3f from, VertexConsumer vc, Matrix4f mat,
                                         Matrix3f nrm, float r, float g, float b, float a) {
         BlockPos next = gate.getNextRoutePos();
         if (next == null) return;
-        Vec3 target = targetCenter(gate, next);
+        if (gate.getRouteIndex() > 0 && gate.getRouteIndex() < FPVOverlay.raceGatesHit()) return;
+        Vec3 source = gate.center();
+        Vec3 prevTarget = routeCenter(gate, gate.getPrevRoutePos(), source);
+        Vec3 target = routeCenter(gate, next, source);
+        Vec3 nextTarget = routeCenter(gate, nextNextPos(gate, next), target);
+        Vector3f prevPoint = new Vector3f(
+            (float) (prevTarget.x - gate.getBlockPos().getX()),
+            (float) (prevTarget.y - gate.getBlockPos().getY()),
+            (float) (prevTarget.z - gate.getBlockPos().getZ()));
         Vector3f to = new Vector3f(
             (float) (target.x - gate.getBlockPos().getX()),
             (float) (target.y - gate.getBlockPos().getY()),
             (float) (target.z - gate.getBlockPos().getZ()));
-        float lift = Math.min(4.0f, Math.max(1.0f, from.distance(to) * 0.12f));
-        Vector3f control = new Vector3f(from).add(to).mul(0.5f).add(0.0f, lift, 0.0f);
+        Vector3f nextPoint = new Vector3f(
+            (float) (nextTarget.x - gate.getBlockPos().getX()),
+            (float) (nextTarget.y - gate.getBlockPos().getY()),
+            (float) (nextTarget.z - gate.getBlockPos().getZ()));
+
+        float handleOut = curveHandle(from, prevPoint, to);
+        float handleIn = curveHandle(to, from, nextPoint);
+        Vector3f p1 = new Vector3f(from).add(tangent(from, prevPoint, to, handleOut));
+        Vector3f p2 = new Vector3f(to).sub(tangent(to, from, nextPoint, handleIn));
+
         Vector3f prev = new Vector3f(from);
-        for (int i = 1; i <= 18; i++) {
-            float t = i / 18.0f;
-            Vector3f point = quadratic(from, control, to, t);
+        for (int i = 1; i <= 24; i++) {
+            float t = i / 24.0f;
+            Vector3f point = cubic(from, p1, p2, to, t);
             line(vc, mat, nrm, prev, point, r, g, b, a);
             prev = point;
         }
     }
 
-    private static Vec3 targetCenter(RaceGateBlockEntity gate, BlockPos pos) {
+    private static Vec3 routeCenter(RaceGateBlockEntity gate, BlockPos pos, Vec3 fallback) {
+        if (pos == null) return fallback;
         Level level = gate.getLevel();
         if (level != null) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof RaceGateBlockEntity nextGate) return nextGate.center();
+            if (be instanceof RaceStartBlockEntity start) return start.frameCenter();
         }
         return new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
     }
 
-    private static Vector3f quadratic(Vector3f a, Vector3f b, Vector3f c, float t) {
+    private static BlockPos nextNextPos(RaceGateBlockEntity gate, BlockPos pos) {
+        Level level = gate.getLevel();
+        if (level != null && pos != null && level.getBlockEntity(pos) instanceof RaceGateBlockEntity nextGate) {
+            return nextGate.getNextRoutePos();
+        }
+        return null;
+    }
+
+    private static Vector3f tangent(Vector3f point, Vector3f prevPoint, Vector3f nextPoint, float handle) {
+        Vector3f t = new Vector3f(nextPoint).sub(prevPoint);
+        if (t.lengthSquared() < 1e-4f) t.set(nextPoint).sub(point);
+        if (t.lengthSquared() < 1e-4f) return new Vector3f();
+        return t.normalize().mul(handle);
+    }
+
+    private static float curveHandle(Vector3f point, Vector3f prevPoint, Vector3f nextPoint) {
+        float inLen = point.distance(prevPoint);
+        float outLen = point.distance(nextPoint);
+        float span = Math.min(inLen, outLen);
+        if (span < 1e-4f) span = Math.max(inLen, outLen);
+        if (span < 1e-4f) return 0.0f;
+        Vector3f in = new Vector3f(point).sub(prevPoint);
+        Vector3f out = new Vector3f(nextPoint).sub(point);
+        float turn = 0.0f;
+        if (in.lengthSquared() >= 1e-4f && out.lengthSquared() >= 1e-4f) {
+            turn = (1.0f - Math.max(-1.0f, Math.min(1.0f, in.normalize().dot(out.normalize())))) * 0.5f;
+        }
+        float handle = span * (0.28f + 0.55f * turn);
+        return Math.min(span * 0.85f, Math.max(1.2f, handle));
+    }
+
+    private static Vector3f cubic(Vector3f a, Vector3f b, Vector3f c, Vector3f d, float t) {
         float inv = 1.0f - t;
+        float inv2 = inv * inv;
+        float t2 = t * t;
         return new Vector3f(
-            inv * inv * a.x + 2.0f * inv * t * b.x + t * t * c.x,
-            inv * inv * a.y + 2.0f * inv * t * b.y + t * t * c.y,
-            inv * inv * a.z + 2.0f * inv * t * b.z + t * t * c.z);
+            inv2 * inv * a.x + 3.0f * inv2 * t * b.x + 3.0f * inv * t2 * c.x + t2 * t * d.x,
+            inv2 * inv * a.y + 3.0f * inv2 * t * b.y + 3.0f * inv * t2 * c.y + t2 * t * d.y,
+            inv2 * inv * a.z + 3.0f * inv2 * t * b.z + 3.0f * inv * t2 * c.z + t2 * t * d.z);
     }
 
     private void renderNumber(String s, Vector3f center, PoseStack pose, MultiBufferSource buffer) {

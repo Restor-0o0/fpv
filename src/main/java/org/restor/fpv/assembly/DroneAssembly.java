@@ -15,9 +15,10 @@ import org.restor.fpv.data.DroneData;
  */
 public class DroneAssembly {
     public static final int MAX_MOTORS = 8;
-    // Tuned so a 4×"2207" (power 1.0) + 5x4x3 props build ≈ 70 N total (TWR ~11).
-    private static final float THRUST_N_PER_POWER = 17.5f;
-    private static final float ELECTRONICS_GRAMS = 110f; // ESC, wiring, FC, mounts baseline
+    // Thrust per motor-power unit. A 4×2207+5x4x3 4S build lands at ~TWR 5 — enough that level
+    // cruise sits at ~40-45° pitch (not 65°, which TWR ~8+ forced), while low drag still gives a
+    // high top speed. More cells (6S) or stronger motors push TWR up for a punchier build.
+    private static final float THRUST_N_PER_POWER = 5.5f;
 
     public ItemStack frame = ItemStack.EMPTY;
     public ItemStack battery = ItemStack.EMPTY;
@@ -129,10 +130,14 @@ public class DroneAssembly {
     // ---------------------------------------------------------------- derived stats
 
     public float totalMassKg() {
-        float g = ELECTRONICS_GRAMS;
+        ComponentStats fs = stats(frame, ComponentType.FRAME);
+        float frameSize = fs != null ? fs.frameSize() : 5f;
+        // Electronics (FC, ESC, RX, wiring, VTX, mounts) scale with frame size — a whoop carries
+        // a few grams, a 7" a full stack. A flat baseline made small builds absurdly heavy.
+        float g = 8f + frameSize * 14f;
         g += weight(frame) + weight(battery) + weight(camera);
         for (int i = 0; i < MAX_MOTORS; i++) g += weight(motors[i]) + weight(props[i]);
-        return Math.max(0.03f, g / 1000f);
+        return Math.max(0.02f, g / 1000f);
     }
 
     private static float weight(ItemStack s) {
@@ -155,7 +160,20 @@ public class DroneAssembly {
         if (spec == null) return 1;
         float sum = 0;
         for (int i = 0; i < spec.motorCount(); i++) sum += motorThrustFactor(i);
-        return Math.max(1f, sum * THRUST_N_PER_POWER);
+        return Math.max(1f, sum * THRUST_N_PER_POWER * batteryThrustFactor());
+    }
+
+    // More battery cells = more voltage = more motor RPM = more thrust. Normalized to the frame's
+    // nominal cell count (a whoop on 1S, a 5" on 4S, a 7"/octo on 6S all read 1.0), so it only
+    // rewards over-volting / penalizes under-volting — otherwise a heavier 6S pack only ADDED
+    // mass and a tiny 1S read the HIGHEST TWR, which was backwards.
+    private float batteryThrustFactor() {
+        ComponentStats b = stats(battery, ComponentType.BATTERY);
+        if (b == null || b.batteryCells() <= 0) return 1f;
+        ComponentStats fr = stats(frame, ComponentType.FRAME);
+        float size = fr != null ? fr.frameSize() : 5f;
+        float refCells = size <= 2f ? 1f : size <= 6.5f ? 4f : 6f;
+        return (float) Math.pow(b.batteryCells() / refCells, 0.7);
     }
 
     /**
@@ -203,8 +221,9 @@ public class DroneAssembly {
         float mass = totalMassKg();
         float thrust = totalThrustN();
         float frameSize = frameStats != null ? frameStats.frameSize() : 5f;
-        // Drag area grows with frame size (5-inch ≈ 0.025 like the stock racer).
-        float dragCdA = 0.005f * frameSize;
+        // Drag area grows with frame size. Was 0.005·size (5" ≈ 0.025) which capped top speed
+        // ~2× too low vs a real 5"; 0.0032·size (5" ≈ 0.016) gives ~170 km/h headroom.
+        float dragCdA = 0.0032f * frameSize;
         float camTilt = cameraStats != null ? cameraStats.cameraTiltAngle() : 20f;
         int capacity = batteryStats != null ? batteryStats.batteryCapacity() : 650;
 

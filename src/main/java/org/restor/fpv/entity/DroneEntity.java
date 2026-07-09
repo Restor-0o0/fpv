@@ -34,6 +34,12 @@ public class DroneEntity extends Entity implements Pilotable {
     // Log every N server ticks while flying (20 = once/sec, 1 = every tick)
     private static final int LOG_INTERVAL = 20;
     private int logTick;
+    // Finer physics-behaviour trace: [FPV-PHYS] every N ticks (2 = 10 Hz). Shows how the drone
+    // climbs/sinks vs pitch, throttle and gravity so behaviour is readable straight from the log.
+    private static final int PHYS_LOG_INTERVAL = 2;
+    private int physLogTick;
+    private float dbgThrustAccel;   // last thrust accel magnitude (m/s²), 0 when not thrusting
+    private float dbgThrustVert;    // its vertical (world-up) component (m/s²)
 
     // Existing synced state
     private static final EntityDataAccessor<Float>   DATA_ROLL          = SynchedEntityData.defineId(DroneEntity.class, EntityDataSerializers.FLOAT);
@@ -69,6 +75,10 @@ public class DroneEntity extends Entity implements Pilotable {
     private static final float GRAVITY = 9.81f;       // m/s²
     private static final float AIR_DENSITY = 1.225f;  // kg/m³
     private static final float MS2_TO_BT = 0.05f / 20f; // (a m/s²) * this = Δblocks/tick per tick
+    // Throttle→thrust curve exponent. Steeper than a pure ∝RPM² (2.0) so hover sits ~40-45%
+    // stick and mid-throttle climbs less eagerly (gravity stays felt); full throttle is
+    // unaffected, so top speed doesn't suffer.
+    private static final float THROTTLE_EXP = 2.5f;
 
     public DroneData droneData;
     public FlightController flightController;
@@ -244,6 +254,8 @@ public class DroneEntity extends Entity implements Pilotable {
 
             battery.tick(throttleInput, effMotorPower());
 
+            dbgThrustAccel = 0;
+            dbgThrustVert = 0;
             if (flightController.isArmed()) {
                 applyFlightPhysics(dt);
             }
@@ -252,11 +264,30 @@ public class DroneEntity extends Entity implements Pilotable {
 
             if (battery.isEmpty()) flightController.armed = false;
 
+            // ---- fine physics trace (10 Hz): angle → thrust vs gravity → vertical/horizontal speed.
+            // vThrust = vertical lift from thrust (m/s²); net = vThrust − g (pre-drag: >0 tends to
+            // climb, <0 to sink); vSpd/hSpd in m/s (+up); alt = m above ground.
+            if (++physLogTick >= PHYS_LOG_INTERVAL) {
+                physLogTick = 0;
+                Vec3 pv = getDeltaMovement();
+                LOGGER.info("[FPV-PHYS] pitch={} roll={} thr={}% vThrust={} net={} vSpd={} hSpd={} alt={}",
+                    String.format("%.1f", getXRot()),
+                    String.format("%.1f", entityData.get(DATA_ROLL)),
+                    String.format("%.0f", flightController.throttle * 100f),
+                    String.format("%.1f", dbgThrustVert),
+                    String.format("%.1f", dbgThrustVert - GRAVITY),
+                    String.format("%.2f", pv.y * 20.0),
+                    String.format("%.2f", Math.sqrt(pv.x * pv.x + pv.z * pv.z) * 20.0),
+                    String.format("%.1f", getHeightAboveGround()));
+            }
+
             // ---- physics diagnostics (once per second while piloted) ----
             if (++logTick >= LOG_INTERVAL) {
                 logTick = 0;
-                float hoverPct = GRAVITY * mass()
-                    / (effMotorPower() * getBatteryPowerFactor() * droneData.maxThrottle) * 100f;
+                // Hover stick %: solve maxThrottle·throttle^EXP·thrustAccelMax = g for throttle.
+                float thrustAccelMax = effMotorPower() * getBatteryPowerFactor() / mass();
+                float hoverFrac = GRAVITY / Math.max(0.01f, droneData.maxThrottle * thrustAccelMax);
+                float hoverPct = (float) Math.pow(Math.min(1f, hoverFrac), 1f / THROTTLE_EXP) * 100f;
                 Vec3 v = getDeltaMovement();
                 // Recompute thrust vector for logging
                 Quaternionf rotLog = new Quaternionf()
@@ -399,7 +430,7 @@ public class DroneEntity extends Entity implements Pilotable {
             setDeltaMovement(vel);
         }
 
-        move(MoverType.SELF, getDeltaMovement());
+        moveWithBlockCollisionDamping(getDeltaMovement());
 
         // Blend toward the authoritative server position captured in lerpTo() —
         // gentle so it never reads as a snap; hard snap only if truly far off.
@@ -522,8 +553,30 @@ public class DroneEntity extends Entity implements Pilotable {
             vel = new Vec3(vel.x * 0.7, 0, vel.z * 0.7);
             setDeltaMovement(vel);
         }
-        move(MoverType.SELF, vel);
+        moveWithBlockCollisionDamping(vel);
         collideWithEntities(vel);
+    }
+
+    private void moveWithBlockCollisionDamping(Vec3 vel) {
+        Vec3 before = position();
+        move(MoverType.SELF, vel);
+        Vec3 moved = position().subtract(before);
+        setDeltaMovement(dampBlockedVelocity(vel, moved));
+    }
+
+    private static Vec3 dampBlockedVelocity(Vec3 intended, Vec3 moved) {
+        double eps = 1.0e-5;
+        boolean blockedX = Math.abs(intended.x) > eps && Math.abs(moved.x) < Math.abs(intended.x) * 0.75;
+        boolean blockedY = Math.abs(intended.y) > eps && Math.abs(moved.y) < Math.abs(intended.y) * 0.75;
+        boolean blockedZ = Math.abs(intended.z) > eps && Math.abs(moved.z) < Math.abs(intended.z) * 0.75;
+        if (!blockedX && !blockedY && !blockedZ) return intended;
+
+        double slide = 0.78;
+        double normal = 0.08;
+        return new Vec3(
+            blockedX ? moved.x * normal : intended.x * slide,
+            blockedY ? moved.y * normal : intended.y * slide,
+            blockedZ ? moved.z * normal : intended.z * slide);
     }
 
     // Prop strike: flying into a living entity damages and shoves it, kills most of
@@ -536,9 +589,8 @@ public class DroneEntity extends Entity implements Pilotable {
                 && !(e instanceof OperatorDummyEntity)
                 && !(e instanceof ServerPlayer sp && isRemotePilot(sp)));
         if (hits.isEmpty()) return;
-        float dmg = (float) (speed * 20.0 * mass() * 0.6);
         for (Entity e : hits) {
-            e.hurt(level().damageSources().thrown(this, activePilot), dmg);
+            e.hurt(level().damageSources().thrown(this, activePilot), Float.MAX_VALUE);
             e.push(velBefore.x * 0.8, Math.abs(velBefore.y) * 0.4 + 0.1, velBefore.z * 0.8);
         }
         setDeltaMovement(getDeltaMovement().scale(0.35));
@@ -553,7 +605,6 @@ public class DroneEntity extends Entity implements Pilotable {
     private static final float ROT_MIX = 0.5f;
 
     private void applyFlightPhysics(float dt) {
-        float t  = flightController.throttle * droneData.maxThrottle;
         float ro = flightController.rollOutput;
         float po = flightController.pitchOutput;
         float yo = flightController.yawOutput;
@@ -561,9 +612,13 @@ public class DroneEntity extends Entity implements Pilotable {
         float newRoll = integrateRotation(dt, ro, po, yo, entityData.get(DATA_ROLL));
         entityData.set(DATA_ROLL, newRoll);
 
-        // Throttle directly sets total thrust — no motor mixing on the thrust axis.
-        // Clamp to [0,1]: ACRO never produces negative (reverse) thrust.
-        float totalFrac = Math.max(0f, t);
+        // Non-linear throttle→thrust curve (thrust ∝ throttle^EXP, since prop thrust ∝ RPM²).
+        // A realistic build with TWR ~10 then hovers near 30% stick instead of a linear ~10% —
+        // that's what stops the drone feeling "airy"/overpowered and lets a tilt at cruise drop
+        // altitude like a real quad. throttle clamped to [0,1] (ACRO never reverses); maxThrottle
+        // caps this drone's usable top end.
+        float throttle = Math.max(0f, Math.min(1f, flightController.throttle));
+        float totalFrac = droneData.maxThrottle * (float) Math.pow(throttle, THROTTLE_EXP);
 
         // Ground effect: extra lift close to terrain surface
         double height = getHeightAboveGround();
@@ -571,7 +626,10 @@ public class DroneEntity extends Entity implements Pilotable {
             ? 1.0f + 0.25f * (float) Math.exp(-height / droneData.armLength)
             : 1.0f;
 
-        // Thrust acceleration in m/s²: motorPower is max thrust in Newtons.
+        // Thrust acceleration in m/s²: max thrust (Newtons) is this drone's own — a preset or a
+        // module-built assembly (DroneAssembly.totalThrustN) — divided by its own mass. Both are
+        // per-drone; no global override. Heavier build = higher hover throttle and less punch,
+        // as in reality. DEV_POWER_MULT stays as a global fine multiplier for quick testing.
         float thrustAccel = totalFrac * groundEffect * getBatteryPowerFactor()
             * effMotorPower() / mass();
 
@@ -583,6 +641,8 @@ public class DroneEntity extends Entity implements Pilotable {
         rot.transform(up);
         float dv = thrustAccel * MS2_TO_BT;
         setDeltaMovement(getDeltaMovement().add(up.x * dv, up.y * dv, up.z * dv));
+        dbgThrustAccel = thrustAccel;
+        dbgThrustVert = thrustAccel * up.y;   // vertical lift the thrust provides right now
 
         // limitVelocity() NOT called here — it runs in applyGravity() after gravity is subtracted.
         // Calling it here caused: thrust cap (1.245) → gravity subtracts 1.177 → net ≈ 0.07 (hover!)
@@ -604,11 +664,11 @@ public class DroneEntity extends Entity implements Pilotable {
         float targetPitchRate =  clamp(po, -1f, 1f) * droneData.maxPitchRate * ratePitch + trimPitchRate();
         float targetYawRate   = -clamp(yo, -1f, 1f) * droneData.maxYawRate   * rateYaw   - trimYawRate();
 
-        // Lerp angular velocity toward target — gives rotational inertia per spec.
-        // factor = min(responsiveness * dt, 1.0): at dt=0.05, racing=15 → factor=0.75 per tick.
-        // Heavier drone (dev weight) = more rotational inertia = slower response.
-        float massMult = (float) org.restor.fpv.Config.DEV_MASS_MULT.get().doubleValue();
-        float resp = Math.min(droneData.rotationResponsiveness / massMult * dt, 1.0f);
+        // Lerp angular velocity toward target. Heavier drones rotate AND stop rotating more
+        // sluggishly — this is where mass is "felt" in the sticks. Referenced to a 0.5 kg
+        // nominal quad; a 1 kg rig turns ~1.3× lazier, a whoop snappier.
+        float massInertia = Mth.clamp((float) Math.pow(mass() / 0.5f, 0.65f), 0.5f, 3.0f);
+        float resp = Math.min(droneData.rotationResponsiveness / massInertia * dt, 1.0f);
         angVelRoll  += (targetRollRate  - angVelRoll)  * resp;
         angVelPitch += (targetPitchRate - angVelPitch) * resp;
         angVelYaw   += (targetYawRate   - angVelYaw)   * resp;
@@ -660,13 +720,36 @@ public class DroneEntity extends Entity implements Pilotable {
         return getY() - surfaceY;
     }
 
-    // The prop discs + frame top present more area to airflow along body-up (disc-on) than
-    // edge-on. Split the velocity into its body-up (axial) and in-plane (forward-flight)
-    // components and drag each with its own CdA: low planar drag lets a forward tilt build
-    // speed, while the higher axial drag brakes hard when you flip the drone to reverse.
-    // The split is deterministic (no normalize of the tiny near-hover velocity), so it does
-    // not jitter at low speed the way a single normalized-velocity CdA did.
-    private static final double AXIAL_DRAG_MULT = 2.5;
+    // The prop discs + frame top only present their large area to airflow that hits the disc
+    // HEAD-ON — i.e. air flowing up through the disc against the thrust (the drone descending,
+    // parachuting, or flipped 180° to brake). Split the velocity into its body-up (axial) and
+    // in-plane (forward-flight) components and drag each with its own CdA.
+    //
+    // Directional axial drag: the high multiplier applies ONLY when the axial velocity opposes
+    // thrust (moving "into" the disc, vel·up < 0) — that's braking/descent. When the drone is
+    // instead accelerating ALONG its thrust axis (pitched forward and flying forward, or
+    // climbing), that motion is edge-on to the disc and uses the low planar drag. Without this,
+    // a hard forward tilt braked itself: the forward velocity of a nose-down drone is largely
+    // "axial", so the 2.5x drag capped and even reversed the speed gain past ~45° pitch and made
+    // the drone sink instead of translating — the opposite of how a real quad converts tilt to
+    // speed. The split is deterministic (no normalize of the tiny near-hover velocity), so it
+    // does not jitter at low speed the way a single normalized-velocity CdA did.
+    private static final double AXIAL_DRAG_MULT = 1.15;
+
+    // Disc drag while DESCENDING is scaled between these two by throttle. Off the throttle the
+    // rotor is unloaded and barely brakes, so the drone drops fast (FALL ≈ ¼ of the powered disc
+    // drag → terminal fall ≈ 2× faster); powered up it loads the disc for the full parachute/brake
+    // (AXIAL_DRAG_MULT). Keeps mass mattering (terminal ∝ √mass) while killing the airy float.
+    private static final double FALL_DRAG_MULT = 0.29;
+
+    // Linear momentum bleed (per second): Δv = -k·v each second, applied to the HORIZONTAL
+    // velocity only. The aero drag below is quadratic (∝ v²) so it barely acts at low/medium
+    // speed, which left a long paraglider-like horizontal coast after cutting throttle. This term
+    // scales with v and bleeds that drift, yet is negligible next to the quadratic term near top
+    // speed so it does NOT lower max speed. Deliberately NOT applied to vertical velocity — doing
+    // so parachuted the fall and made the drone feel airy; falls should stay fast. Tied to the
+    // Drag dev slider so the overall horizontal "inertia / glide" feel is tunable.
+    private static final double LINEAR_DAMP = 0.5;
 
     private void applyDrag(float dt) {
         Vec3 vel = getDeltaMovement();
@@ -677,10 +760,24 @@ public class DroneEntity extends Entity implements Pilotable {
         rot.transform(up);
         Vec3 upV = new Vec3(up.x, up.y, up.z);
 
-        Vec3 axial = upV.scale(vel.dot(upV));   // disc-on component (along body-up)
-        Vec3 planar = vel.subtract(axial);       // edge-on component (forward flight)
-        setDeltaMovement(dragComponent(axial, droneData.dragCoefficient * AXIAL_DRAG_MULT)
+        double axialSpeed = vel.dot(upV);        // signed: <0 = moving into the disc (brake/descend)
+        Vec3 axial = upV.scale(axialSpeed);      // component along body-up
+        Vec3 planar = vel.subtract(axial);       // in-plane (translational) component
+        // Descending: interpolate the disc drag by throttle — idle = light (fast fall),
+        // full = loaded disc (heavy brake). Climbing/edge-on uses the low planar drag.
+        float thr = Math.max(0f, Math.min(1f, flightController.throttle));
+        double descentMult = Mth.lerp(thr, FALL_DRAG_MULT, AXIAL_DRAG_MULT);
+        double axialCdA = axialSpeed < 0
+            ? droneData.dragCoefficient * descentMult        // disc-on: throttle-scaled brake/parachute
+            : droneData.dragCoefficient;                     // moving along thrust: edge-on, low drag
+        setDeltaMovement(dragComponent(axial, axialCdA)
             .add(dragComponent(planar, droneData.dragCoefficient)));
+
+        // Horizontal-only linear momentum bleed on top of the quadratic aero drag (see LINEAR_DAMP).
+        double k = LINEAR_DAMP * org.restor.fpv.Config.DEV_DRAG_MULT.get();
+        double hFactor = Math.max(0.0, 1.0 - k * dt);
+        Vec3 dm = getDeltaMovement();
+        setDeltaMovement(dm.x * hFactor, dm.y, dm.z * hFactor);
     }
 
     private Vec3 dragComponent(Vec3 v, double cdA) {
@@ -693,18 +790,23 @@ public class DroneEntity extends Entity implements Pilotable {
         return v.subtract(v.normalize().scale(drag));
     }
 
-    // Effective mass/power with the dev-tab multipliers applied. Mass touches every
-    // place real weight matters: thrust & drag accel, terminal velocity (emerges from
-    // drag), rotation inertia and (via hover throttle) battery drain.
+    // This drone's mass in kg — from its own build (preset DroneData or module-derived
+    // DroneAssembly.totalMassKg), NOT a global slider. Mass touches every place weight matters:
+    // thrust & drag accel, terminal fall speed, rotation inertia (via rotationResponsiveness),
+    // impact damage and (via hover throttle) battery drain.
     private float mass() {
-        return droneData.mass * (float) org.restor.fpv.Config.DEV_MASS_MULT.get().doubleValue();
+        return Math.max(0.01f, droneData.mass);
     }
 
+    // Max thrust in Newtons from this drone's build, times a global fine-test multiplier.
     private float effMotorPower() {
         return droneData.motorPower * (float) org.restor.fpv.Config.DEV_POWER_MULT.get().doubleValue();
     }
 
     private void applyGravity(float dt) {
+        // Constant g: every mass falls at the same acceleration. Heavier drones fall FASTER in
+        // practice because thrust (÷mass) can't hold them and drag (÷mass) brakes them less —
+        // that emerges from the thrust/drag terms, not from scaling g.
         setDeltaMovement(getDeltaMovement().add(0, -GRAVITY * MS2_TO_BT, 0));
         limitVelocity();
     }
@@ -761,6 +863,14 @@ public class DroneEntity extends Entity implements Pilotable {
     @Override
     public double getPassengersRidingOffset() { return 0.0; }
 
+    // Remote-control view: the camera IS this entity, so its eye height sets the camera's vertical
+    // spot. Match the ridden camera (FPV_CAMERA_HEIGHT fraction of the frame) so both views agree.
+    @Override
+    protected float getEyeHeight(net.minecraft.world.entity.Pose pose,
+                                 net.minecraft.world.entity.EntityDimensions dimensions) {
+        return dimensions.height * (float) org.restor.fpv.Config.FPV_CAMERA_HEIGHT.get().doubleValue();
+    }
+
     @Override
     protected void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
         if (hasPassenger(passenger)) {
@@ -774,9 +884,11 @@ public class DroneEntity extends Entity implements Pilotable {
             double x = getX() - Math.sin(yaw) * forward;
             double z = getZ() + Math.cos(yaw) * forward;
 
-            // Camera above the frame top (real FPV top-plate camera mount) in every mode —
-            // a mode-dependent height caused a camera jump when cycling modes mid-flight.
-            double cameraY = getY() + getBbHeight() * (showProps ? 1.05 : 1.4) - passenger.getEyeHeight();
+            // Camera vertical position, as a fraction of the frame height (dev-tunable):
+            // 0 = bottom, 0.5 = center, 1 = top plate. Same value drives the remote-view eye
+            // height below so ridden and remote cameras sit at the same spot.
+            double camFrac = org.restor.fpv.Config.FPV_CAMERA_HEIGHT.get();
+            double cameraY = getY() + getBbHeight() * camFrac - passenger.getEyeHeight();
             moveFunction.accept(passenger, x, cameraY, z);
         }
     }

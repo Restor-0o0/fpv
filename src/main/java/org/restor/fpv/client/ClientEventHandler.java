@@ -78,6 +78,8 @@ public class ClientEventHandler {
     private static boolean planeOrbitActive;
     private static net.minecraft.world.phys.Vec3 planeOrbitTarget;
     private static int planeOrbitSyncGrace;
+    private static int planeTargetStreamTicks;
+    private static boolean planeTargetStreamActive;
     // FPV camera zoom (mouse wheel), applied as an FOV divisor.
     private static float fpvZoom = 1f;
 
@@ -211,6 +213,8 @@ public class ClientEventHandler {
         PlaneEntity plane = MC.player.getVehicle() instanceof PlaneEntity p ? p : null;
         if (plane == null) {
             planeInitialized = false;
+            planeTargetStreamActive = false;
+            planeTargetStreamTicks = 0;
             clearPlaneState(null, false);
             return;
         }
@@ -342,6 +346,8 @@ public class ClientEventHandler {
                 startPlaneOrbit(plane, orbitCandidate);
             }
         }
+
+        updatePlaneTargetStreaming(plane);
 
         if (planeOrbitActive) {
             // Autopilot flies the plane server-side; don't send stick inputs (the client
@@ -575,6 +581,27 @@ public class ClientEventHandler {
         double maxStep = Math.max(2.0, dist * alpha);
         if (dist <= maxStep) return target;
         return current.add(target.subtract(current).normalize().scale(maxStep));
+    }
+
+    private static void updatePlaneTargetStreaming(PlaneEntity plane) {
+        net.minecraft.world.phys.Vec3 target = planeRawLockTarget != null ? planeRawLockTarget
+            : planeLockTarget != null ? planeLockTarget
+            : planeOrbitTarget;
+        if (target == null) {
+            if (planeTargetStreamActive) {
+                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
+                    plane.getId(), false, 0, 0, 0));
+                planeTargetStreamActive = false;
+            }
+            planeTargetStreamTicks = 0;
+            return;
+        }
+        if (!planeTargetStreamActive || planeTargetStreamTicks-- <= 0) {
+            ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
+                plane.getId(), true, target.x, target.y, target.z));
+            planeTargetStreamActive = true;
+            planeTargetStreamTicks = 10;
+        }
     }
 
     private static void rebasePlaneMouseInput() {

@@ -32,7 +32,6 @@ public class Config {
 
     public static final ForgeConfigSpec.ConfigValue<String> DEFAULT_LINK_CODE;
 
-    public static final ForgeConfigSpec.DoubleValue DEV_MASS_MULT;
     public static final ForgeConfigSpec.DoubleValue DEV_POWER_MULT;
     public static final ForgeConfigSpec.DoubleValue DEV_DRAG_MULT;
     public static final ForgeConfigSpec.DoubleValue DEV_MAX_SPEED;
@@ -45,6 +44,12 @@ public class Config {
     public static final ForgeConfigSpec.IntValue DEV_CHUNK_RADIUS;
     public static final ForgeConfigSpec.DoubleValue DEV_HITBOX_SCALE;
     public static final ForgeConfigSpec.DoubleValue DEV_HITBOX_Y_OFFSET;
+
+    public static final ForgeConfigSpec.DoubleValue FPV_CAMERA_HEIGHT;
+    public static final ForgeConfigSpec.BooleanValue FPV_PROPS_IN_VIEW;
+    public static final ForgeConfigSpec.DoubleValue FPV_PROPS_FORWARD;
+    public static final ForgeConfigSpec.DoubleValue FPV_PROPS_DOWN;
+    public static final ForgeConfigSpec.DoubleValue FPV_PROPS_SCALE;
 
     public static final ForgeConfigSpec.BooleanValue HUD_HINTS;
     public static final ForgeConfigSpec.BooleanValue HUD_TELEMETRY;
@@ -116,9 +121,7 @@ public class Config {
         BUILDER.pop();
 
         BUILDER.push("dev");
-        DEV_MASS_MULT = BUILDER.comment("Drone weight multiplier. Affects acceleration, braking, terminal velocity, rotation inertia and battery drain (heavier hovers at higher throttle).")
-            .defineInRange("massMultiplier", 1.0, 0.2, 5.0);
-        DEV_POWER_MULT = BUILDER.comment("Motor power multiplier. Affects thrust (punch), top speed and battery drain.")
+        DEV_POWER_MULT = BUILDER.comment("Global fine thrust multiplier for quick testing (and battery drain). Mass and thrust themselves come from each drone's build (preset or assembled modules); leave at 1.0 normally.")
             .defineInRange("powerMultiplier", 1.0, 0.2, 5.0);
         DEV_DRAG_MULT = BUILDER.comment("Air-drag multiplier. Higher = the drone dumps its current momentum faster, so it brakes and reverses direction (flip 180 + full throttle) more sharply; lower = more glide/inertia.")
             .defineInRange("dragMultiplier", 1.0, 0.1, 6.0);
@@ -142,6 +145,16 @@ public class Config {
             .defineInRange("hitboxScale", 1.0, 0.2, 3.0);
         DEV_HITBOX_Y_OFFSET = BUILDER.comment("Drone hitbox vertical offset in blocks.")
             .defineInRange("hitboxYOffset", 0.0, -1.0, 1.0);
+        FPV_CAMERA_HEIGHT = BUILDER.comment("FPV camera vertical position as a fraction of the drone's height. 0 = bottom of the model, 0.5 = center, 1.0 = top plate, >1 = above the frame.")
+            .defineInRange("fpvCameraHeight", 0.5, 0.0, 1.5);
+        FPV_PROPS_IN_VIEW = BUILDER.comment("Show your own drone model (frame, props, camera) locked into the FPV view, parked a bit below/ahead like an onboard chase cam.")
+            .define("fpvPropsInView", false);
+        FPV_PROPS_FORWARD = BUILDER.comment("How far ahead of the camera the drone model sits (blocks). Bigger = further into the screen / smaller on screen.")
+            .defineInRange("fpvPropsForward", 0.80, 0.0, 2.5);
+        FPV_PROPS_DOWN = BUILDER.comment("Vertical offset of the drone model from the camera line (blocks). Negative = lower into the bottom of the view.")
+            .defineInRange("fpvPropsDown", -0.45, -1.5, 1.0);
+        FPV_PROPS_SCALE = BUILDER.comment("Size multiplier for the in-view drone model.")
+            .defineInRange("fpvPropsScale", 1.0, 0.2, 3.0);
         BUILDER.pop();
 
         BUILDER.push("hud");

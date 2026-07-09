@@ -15,6 +15,7 @@ public class RaceGateConfigPacket {
     public static final int ADJUST_YAW = 2;
     public static final int ADJUST_PITCH = 3;
     public static final int SET_OFFSET = 4;
+    public static final int FLIP_NORMAL = 5;
 
     private final BlockPos pos;
     private final int action;
@@ -50,6 +51,7 @@ public class RaceGateConfigPacket {
                     case ADJUST_YAW -> be.adjustYaw(value);
                     case ADJUST_PITCH -> be.adjustPitch(value);
                     case SET_OFFSET -> be.setOffset(value);
+                    case FLIP_NORMAL -> be.flipNormal();
                 }
             }
         });

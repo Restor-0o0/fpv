@@ -47,28 +47,26 @@ public class DroneData {
         this.rotationResponsiveness = rotationResponsiveness;
     }
 
-    // motorPower is max total thrust in Newtons, tuned for TWR ≈ 11 — full throttle
-    // slams like a top-end racing quad. Hover stick lands at ≈ 9%
-    // (hover_throttle = GRAVITY * mass / (maxThrottle * motorPower)).
-    // Rates are full-stick °/s: expo keeps the center gentle, and ACRO has no attitude
-    // limits — full stick held long enough performs flips/rolls through ±180°.
-    // Presets tuned to real-world AUW masses (fully equipped, with battery) and top-speed
-    // targets. Top speed is a thrust↔drag force balance (mass cancels): at full throttle a
-    // high-TWR quad flies heavily pitched, so the prop disc faces the airflow and the 4x
-    // axial drag (AXIAL_DRAG_MULT) dominates → v_max ≈ sqrt(maxThrottle*motorPower /
-    // (k*AIR_DENSITY*dragCoefficient)), k ≈ 3 for the mixed axial/planar case. So drag
-    // controls BOTH top speed and braking — lower drag = faster but softer braking.
-    // For live testing, DEV_MASS_MULT / DEV_POWER_MULT (dev settings) scale mass/motorPower
-    // globally across every drone type, including the remote/kamikaze ones below.
+    // motorPower is max total thrust in Newtons. Thrust is per-drone (this preset, or a
+    // module-built DroneAssembly), applied through a throttle² curve in DroneEntity, so a
+    // realistic TWR (~5-11) hovers near ~30-43% stick — NOT the old linear ~9%. Full stick still
+    // slams. Rates are full-stick °/s: expo keeps the center gentle, ACRO has no attitude limits.
+    // Presets tuned to real-world AUW masses (fully equipped, with battery) and top-speed targets.
+    // Top speed is a thrust↔drag force balance (mass cancels): a pitched-forward quad flies
+    // edge-on to the airflow, so forward flight uses the LOW planar dragCoefficient (see
+    // DroneEntity.applyDrag — the heavy AXIAL_DRAG_MULT only kicks in when air hits the disc
+    // head-on: descent/braking). So more forward tilt → more speed, and v_max ≈
+    // sqrt(maxThrottle*motorPower / (k*AIR_DENSITY*dragCoefficient)), capped by DEV_MAX_SPEED.
+    // DEV_POWER_MULT is a global fine test multiplier; there is no longer a global mass/TWR knob.
     //   type       AUW      TWR    hover%   target v_max
-    //   Tiny Whoop 0.03kg   10.2   ~9.8%    ~40 km/h (11 m/s)
-    //   Cinewhoop  0.35kg    7.5   ~13%     ~70 km/h (19 m/s)
-    //   5" Racing  0.55kg   14.8   ~6.8%    ~180 km/h (50 m/s)
+    //   Tiny Whoop 0.03kg   10.2   ~31%     ~40 km/h (11 m/s)
+    //   Cinewhoop  0.48kg    5.4   ~43%     ~70 km/h (19 m/s)
+    //   5" Racing  0.75kg   10.9   ~30%     ~180 km/h (50 m/s)
     public static final DroneData CINEWHOOP = new DroneData(
         DroneType.CINEWHOOP, "Cinewhoop", 0.8f,
         220f, 300f, 250f,   // rolls take ~1.6s at full stick; expo softens the center
         0.48f, 0.037f, 650f,
-        15f, 32.0f, 0.55f,  // stable cruiser, not built for speed
+        15f, 22.0f, 0.55f,  // heavy cruiser: TWR ~4.7, hover ~46% — weight is felt
         8.0f
     );
 
@@ -76,7 +74,7 @@ public class DroneData {
         DroneType.RACING, "5-inch Racing", 1.0f,
         450f, 500f, 350f,   // racing: aggressive but roll toned down from 600°/s
         0.75f, 0.017f, 1300f,
-        20f, 80.0f, 0.80f,  // light + max thrust + low drag = highest top speed
+        20f, 37.0f, 0.80f,  // TWR ~5: level cruise ~40-45° pitch, top speed still high (low drag)
         15.0f
     );
 
@@ -84,7 +82,7 @@ public class DroneData {
         DroneType.TINY_WHOOP, "Tiny Whoop", 0.6f,
         240f, 300f, 270f,   // playful: nimble but not twitchy
         0.045f, 0.013f, 300f,
-        0f, 5.0f, 0.40f,    // almost a toy — slow top speed, very light
+        0f, 3.5f, 0.40f,    // whoops stay punchy (very light): TWR ~12
         10.0f
     );
 

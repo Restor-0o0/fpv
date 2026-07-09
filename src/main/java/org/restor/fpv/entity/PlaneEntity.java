@@ -182,6 +182,7 @@ public class PlaneEntity extends Entity implements Pilotable {
             // Keep a hard-loaded bubble around the plane so flying far and fast never
             // outruns chunk loading (which was dumping the pilot back to the launch point).
             updateForcedChunks();
+            updateTargetStreaming(pilot);
             if (!pilotWasMounted) {
                 angVelRoll = 0; angVelPitch = 0; angVelYaw = 0;
                 resetAttitudeFromEuler(entityData.get(DATA_ROLL));
@@ -221,6 +222,7 @@ public class PlaneEntity extends Entity implements Pilotable {
             applyAerodynamics(0.05f);
             applyGravity();
             clearForcedChunks();
+            clearTargetStreaming();
         }
 
         if (!(pilot != null && orbitActive)) applyMovement();
@@ -633,6 +635,17 @@ public class PlaneEntity extends Entity implements Pilotable {
 
     // ---- Chunk force-loading around the piloted plane (prevents far-flight unload) ----
     private final java.util.Set<Long> forcedChunks = new java.util.HashSet<>();
+    private final java.util.Set<Long> targetForcedChunks = new java.util.HashSet<>();
+    private final java.util.Set<Long> targetStreamedChunks = new java.util.HashSet<>();
+    private final java.util.Set<Long> targetStreamTickets = new java.util.HashSet<>();
+    private Vec3 targetStreamCenter;
+    private long lastTargetStreamCenter = Long.MIN_VALUE;
+    private int targetCacheCenterRefresh;
+
+    public void setTargetStreaming(Vec3 center) {
+        targetStreamCenter = center;
+        if (center == null) clearTargetStreaming();
+    }
 
     private void updateForcedChunks() {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel sl)) return;
@@ -670,11 +683,117 @@ public class PlaneEntity extends Entity implements Pilotable {
         forcedChunks.clear();
     }
 
+    private void updateTargetStreaming(ServerPlayer pilot) {
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel sl) || targetStreamCenter == null) {
+            if (pilot != null) {
+                net.minecraft.world.level.ChunkPos self = chunkPosition();
+                pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket(self.x, self.z));
+            }
+            clearTargetStreaming();
+            return;
+        }
+        int r = net.minecraft.util.Mth.clamp(org.restor.fpv.Config.DEV_CHUNK_RADIUS.get(), 1, 12);
+        net.minecraft.world.level.ChunkPos center = new net.minecraft.world.level.ChunkPos(
+            ((int) Math.floor(targetStreamCenter.x)) >> 4,
+            ((int) Math.floor(targetStreamCenter.z)) >> 4);
+
+        if (center.toLong() != lastTargetStreamCenter) {
+            lastTargetStreamCenter = center.toLong();
+            targetStreamedChunks.clear();
+            targetCacheCenterRefresh = 0;
+        }
+        if (targetCacheCenterRefresh-- <= 0) {
+            pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket(center.x, center.z));
+            targetCacheCenterRefresh = 10;
+        }
+
+        java.util.Set<Long> wantForced = new java.util.HashSet<>();
+        int tickRadius = Math.min(2, r);
+        for (int dx = -tickRadius; dx <= tickRadius; dx++) {
+            for (int dz = -tickRadius; dz <= tickRadius; dz++) {
+                wantForced.add(net.minecraft.world.level.ChunkPos.asLong(center.x + dx, center.z + dz));
+            }
+        }
+        syncForcedChunkSet(sl, targetForcedChunks, wantForced);
+
+        int sentThisTick = 0;
+        for (int dx = -r; dx <= r && sentThisTick < 12; dx++) {
+            for (int dz = -r; dz <= r && sentThisTick < 12; dz++) {
+                int cx = center.x + dx;
+                int cz = center.z + dz;
+                long key = net.minecraft.world.level.ChunkPos.asLong(cx, cz);
+                if (targetStreamedChunks.contains(key)) continue;
+                net.minecraft.world.level.chunk.LevelChunk chunk = sl.getChunkSource().getChunkNow(cx, cz);
+                if (chunk != null) {
+                    pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(
+                        chunk, sl.getLightEngine(), null, null));
+                    targetStreamedChunks.add(key);
+                    if (targetStreamTickets.remove(key)) removeStreamTicket(sl, key);
+                    sentThisTick++;
+                } else if (targetStreamTickets.add(key)) {
+                    net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(cx, cz);
+                    sl.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 1, cp);
+                }
+            }
+        }
+
+        int forgetRadius = r + 2;
+        targetStreamedChunks.removeIf(k -> chunkDist(k, center) > forgetRadius);
+        targetStreamTickets.removeIf(k -> {
+            if (chunkDist(k, center) > forgetRadius) {
+                removeStreamTicket(sl, k);
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private void clearTargetStreaming() {
+        if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            syncForcedChunkSet(sl, targetForcedChunks, java.util.Collections.emptySet());
+            for (long key : targetStreamTickets) removeStreamTicket(sl, key);
+        }
+        targetStreamCenter = null;
+        targetStreamedChunks.clear();
+        targetStreamTickets.clear();
+        lastTargetStreamCenter = Long.MIN_VALUE;
+        targetCacheCenterRefresh = 0;
+    }
+
+    private static void syncForcedChunkSet(net.minecraft.server.level.ServerLevel sl, java.util.Set<Long> current,
+                                           java.util.Set<Long> wanted) {
+        if (current.equals(wanted)) return;
+        for (long c : current) {
+            if (!wanted.contains(c)) {
+                sl.setChunkForced(net.minecraft.world.level.ChunkPos.getX(c), net.minecraft.world.level.ChunkPos.getZ(c), false);
+            }
+        }
+        for (long c : wanted) {
+            if (!current.contains(c)) {
+                sl.setChunkForced(net.minecraft.world.level.ChunkPos.getX(c), net.minecraft.world.level.ChunkPos.getZ(c), true);
+            }
+        }
+        current.clear();
+        current.addAll(wanted);
+    }
+
+    private static int chunkDist(long key, net.minecraft.world.level.ChunkPos center) {
+        return Math.max(Math.abs(net.minecraft.world.level.ChunkPos.getX(key) - center.x),
+            Math.abs(net.minecraft.world.level.ChunkPos.getZ(key) - center.z));
+    }
+
+    private static void removeStreamTicket(net.minecraft.server.level.ServerLevel sl, long key) {
+        net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(
+            net.minecraft.world.level.ChunkPos.getX(key), net.minecraft.world.level.ChunkPos.getZ(key));
+        sl.getChunkSource().removeRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 1, cp);
+    }
+
     @Override
     public void remove(Entity.RemovalReason reason) {
         if (!level().isClientSide) {
             if (!getPassengers().isEmpty()) ejectPassengers();
             clearForcedChunks();
+            clearTargetStreaming();
         }
         super.remove(reason);
     }

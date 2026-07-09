@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(Copy-Item *)"
+      "PowerShell(Copy-Item *)",
+      "Bash(cp build/libs/fpv-1.0.jar \"C:/Users/komar/AppData/Roaming/.minecraft/versions/fpvtest/mods/\")",
+      "Read(//c/Users/komar/AppData/Roaming/.minecraft/versions/fpvtest/mods/**)",
+      "Bash(./gradlew build *)"
     ]
   }
 }

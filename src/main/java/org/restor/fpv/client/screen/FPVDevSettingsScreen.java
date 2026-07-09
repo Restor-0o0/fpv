@@ -25,10 +25,6 @@ public class FPVDevSettingsScreen extends Screen {
         int w = 240;
         int gap = 26;
 
-        addRenderableWidget(new DevSlider(cx - w / 2, y, w, 20, "settings.fpv.dev_mass",
-            Config.DEV_MASS_MULT.get(), 0.2, 5.0, "%.2fx",
-            v -> { Config.DEV_MASS_MULT.set(v); Config.save(); }));
-        y += gap;
         addRenderableWidget(new DevSlider(cx - w / 2, y, w, 20, "settings.fpv.dev_power",
             Config.DEV_POWER_MULT.get(), 0.2, 5.0, "%.2fx",
             v -> { Config.DEV_POWER_MULT.set(v); Config.save(); }));

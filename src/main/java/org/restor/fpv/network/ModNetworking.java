@@ -46,5 +46,9 @@ public class ModNetworking {
             PlaneStrikePacket::encode, PlaneStrikePacket::new, PlaneStrikePacket::handle);
         CHANNEL.registerMessage(id++, ExplosionParticlesPacket.class,
             ExplosionParticlesPacket::encode, ExplosionParticlesPacket::new, ExplosionParticlesPacket::handle);
+        CHANNEL.registerMessage(id++, PlaneTargetStreamPacket.class,
+            PlaneTargetStreamPacket::encode, PlaneTargetStreamPacket::new, PlaneTargetStreamPacket::handle);
+        CHANNEL.registerMessage(id++, DevDroneGivePacket.class,
+            DevDroneGivePacket::encode, DevDroneGivePacket::new, DevDroneGivePacket::handle);
     }
 }

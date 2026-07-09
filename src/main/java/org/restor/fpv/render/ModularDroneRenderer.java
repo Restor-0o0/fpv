@@ -13,8 +13,8 @@ import org.joml.Quaternionf;
 import org.restor.fpv.assembly.DroneAssembly;
 import org.restor.fpv.assembly.FrameSpec;
 import org.restor.fpv.assembly.ModularDroneEntity;
+import org.restor.fpv.Config;
 import org.restor.fpv.assembly.MountPoint;
-import org.restor.fpv.component.ComponentItem;
 import org.restor.fpv.entity.DroneEntity;
 
 /**
@@ -40,9 +40,23 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
 
         DroneAssembly assembly = entity.getAssembly();
         FrameSpec spec = assembly.frameSpec();
-        if (fpvSelf && !shouldShowPropsInFpv(assembly)) {
+
+        // FPV self-view: draw the WHOLE model LOCKED to the camera (parked below+ahead, a "chase
+        // from the frame" look), not with its world attitude — the latter desyncs because model
+        // (modelQuat) and camera (attitudeQuat) conventions differ. Locked, it sits steady in the
+        // goggles, props spin, and tilts as the camera angle changes.
+        if (fpvSelf) {
+            if (Config.FPV_PROPS_IN_VIEW.get()) {
+                poseStack.pushPose();
+                DroneRenderer.applyFpvViewmodelPose(poseStack, entity, partialTick);
+                float s = Config.FPV_PROPS_SCALE.get().floatValue();
+                poseStack.scale(s, s, s);
+                renderAssembly(entity, assembly, spec, poseStack, buffer, packedLight, partialTick);
+                poseStack.popPose();
+            }
             return;
         }
+
         super.render(entity, yaw, partialTick, poseStack, buffer, packedLight);
 
         poseStack.pushPose();
@@ -50,15 +64,20 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
         Quaternionf q = new Quaternionf(modelQuat(entity.yRotO, entity.xRotO, entity.getPrevRoll()))
             .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
         poseStack.mulPose(q);
+        renderAssembly(entity, assembly, spec, poseStack, buffer, packedLight, partialTick);
+        poseStack.popPose();
+    }
 
-        if (!fpvSelf) renderPart(assembly.frame, poseStack, buffer, packedLight, 0, 0, 0, 0);
+    /** Draws the full assembled drone (frame, battery, camera, motors + spinning props) at the
+     *  current pose origin. Shared by the world view and the FPV camera-locked view. */
+    private void renderAssembly(ModularDroneEntity entity, DroneAssembly assembly, FrameSpec spec,
+                                PoseStack poseStack, MultiBufferSource buffer, int packedLight, float partialTick) {
+        renderPart(assembly.frame, poseStack, buffer, packedLight, 0, 0, 0, 0);
         if (spec != null) {
-            if (!fpvSelf) {
-                renderPart(assembly.battery, poseStack, buffer, packedLight,
-                    spec.batteryMount().x(), spec.batteryMount().y(), spec.batteryMount().z(), 0);
-                renderPart(assembly.camera, poseStack, buffer, packedLight,
-                    spec.cameraMount().x(), spec.cameraMount().y(), spec.cameraMount().z(), 0);
-            }
+            renderPart(assembly.battery, poseStack, buffer, packedLight,
+                spec.batteryMount().x(), spec.batteryMount().y(), spec.batteryMount().z(), 0);
+            renderPart(assembly.camera, poseStack, buffer, packedLight,
+                spec.cameraMount().x(), spec.cameraMount().y(), spec.cameraMount().z(), 0);
             float spin = (entity.tickCount + partialTick) * entity.getVisualThrottle() * 40f;
             for (int i = 0; i < spec.motorCount(); i++) {
                 MountPoint m = spec.motorMounts().get(i);
@@ -69,13 +88,6 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
                     m.x(), m.y() + 0.06f, m.z(), i % 2 == 0 ? spin : -spin);
             }
         }
-        poseStack.popPose();
-    }
-
-    private static boolean shouldShowPropsInFpv(DroneAssembly assembly) {
-        if (!(assembly.frame.getItem() instanceof ComponentItem ci)) return false;
-        float size = ci.getStats().frameSize();
-        return size >= 5.0f && size <= 8.5f;
     }
 
     private void renderPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,

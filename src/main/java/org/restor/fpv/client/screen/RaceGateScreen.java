@@ -16,7 +16,7 @@ public class RaceGateScreen extends Screen {
     private int size = 5;
     private int yaw = 0;
     private int pitch = 0;
-    private int offset = 1;
+    private int offset = 0;
     private int color = RaceGateBlockEntity.PALETTE[0];
 
     public RaceGateScreen(BlockPos pos) {
@@ -71,6 +71,9 @@ public class RaceGateScreen extends Screen {
         // colour
         addRenderableWidget(Button.builder(Component.translatable("screen.fpv.race_color"),
             b -> updateColor()).bounds(cx - 90, y, 180, 20).build());
+        y += 24;
+        addRenderableWidget(Button.builder(Component.translatable("screen.fpv.race_flip"),
+            b -> flipNormal()).bounds(cx - 90, y, 180, 20).build());
 
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
             .bounds(cx - 90, height - 28, 180, 20).build());
@@ -82,21 +85,29 @@ public class RaceGateScreen extends Screen {
 
     private void updateSize(int value) {
         size = Math.max(2, Math.min(15, value));
+        RaceGateBlockEntity be = be();
+        if (be != null) be.setSize(size);
         send(RaceGateConfigPacket.SET_SIZE, size);
     }
 
     private void updateYaw(int delta) {
         yaw = Math.floorMod(yaw + delta, 360);
+        RaceGateBlockEntity be = be();
+        if (be != null) be.adjustYaw(delta);
         send(RaceGateConfigPacket.ADJUST_YAW, delta);
     }
 
     private void updatePitch(int delta) {
         pitch = Math.max(-90, Math.min(90, pitch + delta));
+        RaceGateBlockEntity be = be();
+        if (be != null) be.adjustPitch(delta);
         send(RaceGateConfigPacket.ADJUST_PITCH, delta);
     }
 
     private void updateOffset(int value) {
         offset = Math.max(0, Math.min(12, value));
+        RaceGateBlockEntity be = be();
+        if (be != null) be.setOffset(offset);
         send(RaceGateConfigPacket.SET_OFFSET, offset);
     }
 
@@ -104,7 +115,17 @@ public class RaceGateScreen extends Screen {
         int idx = 0;
         for (int i = 0; i < RaceGateBlockEntity.PALETTE.length; i++) if (RaceGateBlockEntity.PALETTE[i] == color) { idx = i; break; }
         color = RaceGateBlockEntity.PALETTE[(idx + 1) % RaceGateBlockEntity.PALETTE.length];
+        RaceGateBlockEntity be = be();
+        if (be != null) be.cycleColor();
         send(RaceGateConfigPacket.CYCLE_COLOR, 0);
+    }
+
+    private void flipNormal() {
+        yaw = Math.floorMod(yaw + 180, 360);
+        pitch = -pitch;
+        RaceGateBlockEntity be = be();
+        if (be != null) be.flipNormal();
+        send(RaceGateConfigPacket.FLIP_NORMAL, 0);
     }
 
     @Override

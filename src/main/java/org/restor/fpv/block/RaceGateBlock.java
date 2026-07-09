@@ -51,7 +51,9 @@ public class RaceGateBlock extends BaseEntityBlock {
 
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext ctx) {
-        return defaultBlockState().setValue(FACING, ctx.getClickedFace());
+        Direction face = ctx.getClickedFace();
+        if (face == Direction.UP || face == Direction.DOWN) face = ctx.getHorizontalDirection().getOpposite();
+        return defaultBlockState().setValue(FACING, face);
     }
 
     @Override
@@ -89,29 +91,41 @@ public class RaceGateBlock extends BaseEntityBlock {
         double size = gate.getSize();
         double half = size / 2.0;
         double cX = 0.5 + n.x * gate.getOffset();
-        double cY = size / 2.0 + n.y * gate.getOffset();
+        double cY = 1.0 + size / 2.0 + n.y * gate.getOffset();
         double cZ = 0.5 + n.z * gate.getOffset();
-        double t = 0.25;
 
-        if (Math.abs(n.y) > Math.abs(n.x) && Math.abs(n.y) > Math.abs(n.z)) {
-            return Shapes.or(
-                frameBox(cX - half, cY - t, cZ - half, cX + half, cY + t, cZ - half + t),
-                frameBox(cX - half, cY - t, cZ + half - t, cX + half, cY + t, cZ + half),
-                frameBox(cX - half, cY - t, cZ - half, cX - half + t, cY + t, cZ + half),
-                frameBox(cX + half - t, cY - t, cZ - half, cX + half, cY + t, cZ + half));
+        Vector3f ref = Math.abs(n.y) > 0.99f ? new Vector3f(0, 0, 1) : new Vector3f(0, 1, 0);
+        Vector3f right = new Vector3f(ref).cross(n).normalize();
+        Vector3f up = new Vector3f(n).cross(right).normalize();
+        Vector3f center = new Vector3f((float) cX, (float) cY, (float) cZ);
+        Vector3f[] corners = {
+            corner(center, right, up, (float) -half, (float) -half),
+            corner(center, right, up, (float)  half, (float) -half),
+            corner(center, right, up, (float)  half, (float)  half),
+            corner(center, right, up, (float) -half, (float)  half),
+        };
+
+        VoxelShape shape = Shapes.empty();
+        for (int i = 0; i < 4; i++) shape = Shapes.or(shape, edgeShape(corners[i], corners[(i + 1) % 4]));
+        return shape;
+    }
+
+    private static Vector3f corner(Vector3f c, Vector3f right, Vector3f up, float u, float v) {
+        return new Vector3f(c.x + right.x * u + up.x * v, c.y + right.y * u + up.y * v, c.z + right.z * u + up.z * v);
+    }
+
+    private static VoxelShape edgeShape(Vector3f a, Vector3f b) {
+        VoxelShape shape = Shapes.empty();
+        int steps = Math.max(3, (int) Math.ceil(a.distance(b) * 2.0));
+        double radius = 0.32;
+        for (int i = 0; i <= steps; i++) {
+            double t = i / (double) steps;
+            double x = a.x + (b.x - a.x) * t;
+            double y = a.y + (b.y - a.y) * t;
+            double z = a.z + (b.z - a.z) * t;
+            shape = Shapes.or(shape, frameBox(x - radius, y - radius, z - radius, x + radius, y + radius, z + radius));
         }
-        if (Math.abs(n.x) > Math.abs(n.z)) {
-            return Shapes.or(
-                frameBox(cX - t, cY - half, cZ - half, cX + t, cY + half, cZ - half + t),
-                frameBox(cX - t, cY - half, cZ + half - t, cX + t, cY + half, cZ + half),
-                frameBox(cX - t, cY - half, cZ - half, cX + t, cY - half + t, cZ + half),
-                frameBox(cX - t, cY + half - t, cZ - half, cX + t, cY + half, cZ + half));
-        }
-        return Shapes.or(
-            frameBox(cX - half, cY - half, cZ - t, cX + half, cY - half + t, cZ + t),
-            frameBox(cX - half, cY + half - t, cZ - t, cX + half, cY + half, cZ + t),
-            frameBox(cX - half, cY - half, cZ - t, cX - half + t, cY + half, cZ + t),
-            frameBox(cX + half - t, cY - half, cZ - t, cX + half, cY + half, cZ + t));
+        return shape;
     }
 
     private static VoxelShape frameBox(double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {

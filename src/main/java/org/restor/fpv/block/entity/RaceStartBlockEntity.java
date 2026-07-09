@@ -1,6 +1,7 @@
 package org.restor.fpv.block.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.LongTag;
@@ -20,6 +21,7 @@ import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.entity.PlaneEntity;
 import org.restor.fpv.network.ModNetworking;
 import org.restor.fpv.network.RaceTimerPacket;
+import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +33,8 @@ import java.util.UUID;
 // be passed in sequence, and keeps a leaderboard of completed runs (name + time).
 public class RaceStartBlockEntity extends BlockEntity {
     public static final int MAX_RESULTS = 15;
-    private static final double START_RADIUS = 2.5;
+    public static final int DEFAULT_START_COLOR = 0xFF40E040;
+    private static final double START_PLANE_HALF_THICKNESS = 1.25;
     private static final double TRACK_MARGIN = 48.0;
 
     public record Result(String player, int timeTicks, int laps) {}
@@ -47,26 +50,88 @@ public class RaceStartBlockEntity extends BlockEntity {
     }
 
     private int laps = 3;
+    private int color = DEFAULT_START_COLOR;
+    private int size = 6;
+    private int yaw = 0;
+    private int pitch = 0;
+    private int offset = 0;
     private final List<Result> results = new ArrayList<>();
     private final List<BlockPos> route = new ArrayList<>();
     private BlockPos finishPos;
 
     private UUID markingPlayer; // transient: who is currently marking this route
     private final Map<UUID, Progress> runs = new java.util.HashMap<>();
+    private final java.util.Set<UUID> finishedInsideStart = new java.util.HashSet<>();
 
     public RaceStartBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.RACE_START.get(), pos, state);
     }
 
     public int getLaps() { return laps; }
+    public int getColor() { return color; }
+    public int getSize() { return size; }
+    public int getYaw() { return yaw; }
+    public int getPitch() { return pitch; }
+    public int getOffset() { return offset; }
+    public BlockPos getFirstRoutePos() { return route.isEmpty() ? null : route.get(0); }
 
     public void setLaps(int n) {
         laps = Math.max(1, Math.min(50, n));
         sync();
     }
 
+    public void cycleColor() {
+        int idx = 0;
+        for (int i = 0; i < RaceGateBlockEntity.PALETTE.length; i++) if (RaceGateBlockEntity.PALETTE[i] == color) { idx = i; break; }
+        color = RaceGateBlockEntity.PALETTE[(idx + 1) % RaceGateBlockEntity.PALETTE.length];
+        sync();
+    }
+
+    public void setSize(int s) {
+        size = Math.max(2, Math.min(15, s));
+        sync();
+    }
+
+    public void adjustYaw(int d) { yaw = Math.floorMod(yaw + d, 360); sync(); }
+    public void adjustPitch(int d) { pitch = Math.max(-90, Math.min(90, pitch + d)); sync(); }
+    public void flipNormal() { yaw = Math.floorMod(yaw + 180, 360); pitch = -pitch; sync(); }
+    public void setOffset(int o) { offset = Math.max(0, Math.min(12, o)); sync(); }
+
+    public void initOrientationFromFacing(Direction face) {
+        Vector3f n = new Vector3f(face.getStepX(), face.getStepY(), face.getStepZ());
+        pitch = Math.round((float) Math.toDegrees(Math.asin(Math.max(-1, Math.min(1, n.y)))));
+        yaw = Math.round((float) Math.toDegrees(Math.atan2(-n.x, n.z)));
+        yaw = Math.floorMod(yaw, 360);
+        sync();
+    }
+
+    public Vector3f normal() {
+        float y = (float) Math.toRadians(yaw);
+        float p = (float) Math.toRadians(pitch);
+        float horiz = (float) Math.cos(p);
+        return new Vector3f((float) (-Math.sin(y) * horiz), (float) Math.sin(p), (float) (Math.cos(y) * horiz));
+    }
+
+    public Vec3 frameCenter() {
+        Vector3f n = normal();
+        return new Vec3(
+            worldPosition.getX() + 0.5 + n.x * offset,
+            worldPosition.getY() + size / 2.0 + 1.0 + n.y * offset,
+            worldPosition.getZ() + 0.5 + n.z * offset);
+    }
+
     public int getRouteSize() { return route.size(); }
     public List<Result> getResults() { return List.copyOf(results); }
+
+    @Override
+    public AABB getRenderBoundingBox() {
+        Vec3 c = frameCenter();
+        double frameReach = size * 0.75 + Math.abs(offset) + 2.0;
+        AABB box = new AABB(c.x - frameReach, c.y - frameReach, c.z - frameReach,
+            c.x + frameReach, c.y + frameReach, c.z + frameReach);
+        if (!route.isEmpty()) box = box.minmax(new AABB(route.get(0)).inflate(2.0));
+        return box;
+    }
 
     public void clearResults() {
         results.clear();
@@ -83,6 +148,7 @@ public class RaceStartBlockEntity extends BlockEntity {
         finishPos = null;
         markingPlayer = player.getUUID();
         runs.clear();
+        finishedInsideStart.clear();
         sync();
         player.sendSystemMessage(Component.translatable("msg.fpv.race_mark_begin"));
     }
@@ -94,6 +160,7 @@ public class RaceStartBlockEntity extends BlockEntity {
         if (!(level.getBlockEntity(gatePos) instanceof RaceGateBlockEntity gate)) return;
         route.add(gatePos);
         gate.setRouteIndex(route.size());
+        gate.setPrevRoutePos(route.size() > 1 ? route.get(route.size() - 2) : worldPosition);
         gate.clearNextRoutePos();
         if (route.size() > 1 && level.getBlockEntity(route.get(route.size() - 2)) instanceof RaceGateBlockEntity prev) {
             prev.setNextRoutePos(gatePos);
@@ -117,12 +184,14 @@ public class RaceStartBlockEntity extends BlockEntity {
         for (int i = 0; i < route.size(); i++) {
             if (level.getBlockEntity(route.get(i)) instanceof RaceGateBlockEntity gate) {
                 gate.setRouteIndex(i + 1);
+                gate.setPrevRoutePos(i > 0 ? route.get(i - 1) : worldPosition);
                 BlockPos next = i + 1 < route.size() ? route.get(i + 1) : (finishPos != null ? finishPos : worldPosition);
                 gate.setNextRoutePos(next);
             }
         }
         markingPlayer = null;
         runs.clear();
+        finishedInsideStart.clear();
         sync();
         player.sendSystemMessage(Component.translatable("msg.fpv.race_mark_done", route.size()));
     }
@@ -136,6 +205,7 @@ public class RaceStartBlockEntity extends BlockEntity {
         for (BlockPos p : route) {
             if (level.getBlockEntity(p) instanceof RaceGateBlockEntity g) {
                 g.setRouteIndex(0);
+                g.clearPrevRoutePos();
                 g.clearNextRoutePos();
             }
         }
@@ -150,7 +220,8 @@ public class RaceStartBlockEntity extends BlockEntity {
     }
 
     private void tick(ServerLevel level) {
-        Vec3 startCenter = new Vec3(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5);
+        Vec3 startCenter = frameCenter();
+        Vector3f startNormal = normal().normalize();
         Vec3 finishCenter = finishPos != null
             ? new Vec3(finishPos.getX() + 0.5, finishPos.getY() + 0.5, finishPos.getZ() + 0.5)
             : startCenter;
@@ -163,6 +234,7 @@ public class RaceStartBlockEntity extends BlockEntity {
             if (pilot == null) continue;
             Progress prog = runs.get(pilot.getUUID());
             Vec3 vp = v.position();
+            AABB vehicleBox = v.getBoundingBox();
 
             // Next gate in the ordered route (skip any that were removed).
             if (prog != null) {
@@ -174,15 +246,17 @@ public class RaceStartBlockEntity extends BlockEntity {
                 }
             }
 
-            boolean inStart = vp.distanceTo(startCenter) <= START_RADIUS;
-            boolean entering = inStart && (prog == null || !prog.wasInStart);
+            boolean inStart = intersectsFrame(vehicleBox, startCenter, startNormal, size);
+            if (!inStart) finishedInsideStart.remove(pilot.getUUID());
+            boolean entering = inStart && !finishedInsideStart.contains(pilot.getUUID()) && (prog == null || !prog.wasInStart);
             if (entering) {
                 onCrossStart(level, pilot, prog);
                 prog = runs.get(pilot.getUUID());
+                if (prog == null) continue;
             }
             if (prog != null) {
                 if (finishPos != null) {
-                    boolean inFinish = vp.distanceTo(finishCenter) <= START_RADIUS;
+                    boolean inFinish = vp.distanceTo(finishCenter) <= Math.max(2.5, size * 0.55);
                     if (inFinish && !prog.wasInFinish) onCrossFinish(level, pilot, prog);
                     if (!runs.containsKey(pilot.getUUID())) continue;
                     prog.wasInFinish = inFinish;
@@ -222,6 +296,7 @@ public class RaceStartBlockEntity extends BlockEntity {
         int time = (int) (level.getGameTime() - prog.startTime);
         recordResult(new Result(pilot.getName().getString(), time, resultLaps));
         runs.remove(pilot.getUUID());
+        finishedInsideStart.add(pilot.getUUID());
         pilot.sendSystemMessage(Component.translatable("msg.fpv.race_finish", formatTime(time)));
         ModNetworking.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pilot),
             new RaceTimerPacket(0, totalLaps(), prog.startTime, route.size(), route.size(), time));
@@ -233,6 +308,7 @@ public class RaceStartBlockEntity extends BlockEntity {
         p.lap = 1;
         p.nextGate = 0;
         p.wasInStart = true;
+        finishedInsideStart.remove(pilot.getUUID());
         runs.put(pilot.getUUID(), p);
         pilot.sendSystemMessage(finishPos != null
             ? Component.translatable("msg.fpv.race_start_straight")
@@ -267,6 +343,36 @@ public class RaceStartBlockEntity extends BlockEntity {
     }
 
     private int totalLaps() { return finishPos != null ? 1 : laps; }
+
+    private static boolean intersectsFrame(AABB box, Vec3 center, Vector3f normal, int size) {
+        Vector3f n = new Vector3f(normal).normalize();
+        Vector3f ref = Math.abs(n.y) > 0.99f ? new Vector3f(0, 0, 1) : new Vector3f(0, 1, 0);
+        Vector3f right = new Vector3f(ref).cross(n).normalize();
+        Vector3f up = new Vector3f(n).cross(right).normalize();
+        double boxCenterX = (box.minX + box.maxX) * 0.5;
+        double boxCenterY = (box.minY + box.maxY) * 0.5;
+        double boxCenterZ = (box.minZ + box.maxZ) * 0.5;
+        double ex = (box.maxX - box.minX) * 0.5;
+        double ey = (box.maxY - box.minY) * 0.5;
+        double ez = (box.maxZ - box.minZ) * 0.5;
+        double dx = boxCenterX - center.x;
+        double dy = boxCenterY - center.y;
+        double dz = boxCenterZ - center.z;
+        double along = dx * n.x + dy * n.y + dz * n.z;
+        double x = dx * right.x + dy * right.y + dz * right.z;
+        double y = dx * up.x + dy * up.y + dz * up.z;
+        double alongExtent = projectedExtent(ex, ey, ez, n);
+        double xExtent = projectedExtent(ex, ey, ez, right);
+        double yExtent = projectedExtent(ex, ey, ez, up);
+        double half = size / 2.0;
+        return Math.abs(along) <= START_PLANE_HALF_THICKNESS + alongExtent
+            && Math.abs(x) <= half + xExtent
+            && Math.abs(y) <= half + yExtent;
+    }
+
+    private static double projectedExtent(double ex, double ey, double ez, Vector3f axis) {
+        return ex * Math.abs(axis.x) + ey * Math.abs(axis.y) + ez * Math.abs(axis.z);
+    }
 
     private void pushHud(ServerPlayer pilot, Progress prog, boolean force) {
         if (!force && prog.lastSentLap == prog.lap && prog.lastSentGate == prog.nextGate) return;
@@ -316,6 +422,11 @@ public class RaceStartBlockEntity extends BlockEntity {
     public void load(CompoundTag tag) {
         super.load(tag);
         laps = Math.max(1, tag.getInt("Laps"));
+        if (tag.contains("Color")) color = tag.getInt("Color");
+        if (tag.contains("Size")) size = Math.max(2, Math.min(15, tag.getInt("Size")));
+        if (tag.contains("Yaw")) yaw = tag.getInt("Yaw");
+        if (tag.contains("Pitch")) pitch = tag.getInt("Pitch");
+        if (tag.contains("Offset")) offset = tag.getInt("Offset");
         results.clear();
         ListTag list = tag.getList("Results", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
@@ -332,6 +443,11 @@ public class RaceStartBlockEntity extends BlockEntity {
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         tag.putInt("Laps", laps);
+        tag.putInt("Color", color);
+        tag.putInt("Size", size);
+        tag.putInt("Yaw", yaw);
+        tag.putInt("Pitch", pitch);
+        tag.putInt("Offset", offset);
         ListTag list = new ListTag();
         for (Result r : results) {
             CompoundTag c = new CompoundTag();

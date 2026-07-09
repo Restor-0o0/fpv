@@ -13,6 +13,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.Vec3;
+import org.restor.fpv.Config;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.assembly.FrameSpec;
 import org.restor.fpv.assembly.FrameSpecs;
@@ -45,18 +46,33 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
     @Override
     public void render(DroneEntity entity, float yaw, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffer, int packedLight) {
-        // Real FPV: the pilot never sees their own quad — the camera is mounted on it.
-        // Rendering it inside the FPV view read as "drone desynced from camera": with a
-        // 35° camera uptilt the frame hangs nose-down in view during level flight.
-        // Covers riding (camera entity is the player in the drone) and remote control
-        // (camera entity IS the drone).
+        // FPV self-view: the WHOLE drone model is drawn LOCKED to the camera (parked a bit below
+        // and ahead — a "chase from the frame" look), not with its world attitude. Rendering it
+        // in world space desyncs because the model (modelQuat) and camera (attitudeQuat) use
+        // different, non-constant conventions, so it swings/freezes. Locked to the camera it sits
+        // steady in the goggles, props spin, and the whole thing tilts as the camera angle
+        // changes (applyFpvViewmodelPose folds cameraAngle in). Covers riding (camera is the
+        // player in the drone) and remote control (camera entity IS the drone).
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
         boolean fpvSelf = mc.getCameraEntity() != null
             && (mc.getCameraEntity() == entity || mc.getCameraEntity().getVehicle() == entity)
             && mc.options.getCameraType() == net.minecraft.client.CameraType.FIRST_PERSON;
-        if (fpvSelf && !showPropsInFpv(entity)) {
+        if (fpvSelf) {
+            if (Config.FPV_PROPS_IN_VIEW.get()) {
+                poseStack.pushPose();
+                applyFpvViewmodelPose(poseStack, entity, partialTick);
+                float s = getScale(entity) * Config.FPV_PROPS_SCALE.get().floatValue();
+                poseStack.scale(s, s, s);
+                renderAssembledDrone(entity, poseStack, buffer, packedLight, entity.tickCount + partialTick, false);
+                VertexConsumer c = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
+                renderPayload(entity, c, poseStack, packedLight);
+                poseStack.popPose();
+            }
             return;
         }
+
+        float scale = getScale(entity);
+
         super.render(entity, yaw, partialTick, poseStack, buffer, packedLight);
 
         poseStack.pushPose();
@@ -68,14 +84,46 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
             .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
         poseStack.mulPose(q);
 
-        float scale = getScale(entity);
         poseStack.scale(scale, scale, scale);
 
-        renderAssembledDrone(entity, poseStack, buffer, packedLight, entity.tickCount + partialTick, fpvSelf);
+        renderAssembledDrone(entity, poseStack, buffer, packedLight, entity.tickCount + partialTick, false);
         VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
-        if (!fpvSelf) renderPayload(entity, consumer, poseStack, packedLight);
+        renderPayload(entity, consumer, poseStack, packedLight);
 
         poseStack.popPose();
+    }
+
+    /**
+     * Locks the pose to the FPV camera so whatever is drawn after sits FIXED in the goggles
+     * (screen space), independent of the drone's attitude, then parks it low + ahead so the
+     * front props peek into the bottom of the view. Caller pushes/pops and draws props after.
+     *
+     * The camera view Minecraft builds from the FPV angles is Rz(roll)·Rx(pitch)·Ry(yaw+180)
+     * (see GameRenderer). We recover those exact angles from the same quaternion FPVOverlay
+     * feeds the camera, rebuild that rotation and cancel it — landing in true screen space.
+     */
+    public static void applyFpvViewmodelPose(PoseStack ps, DroneEntity e, float partialTick) {
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+        Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+        double ex = Mth.lerp(partialTick, e.xOld, e.getX());
+        double ey = Mth.lerp(partialTick, e.yOld, e.getY());
+        double ez = Mth.lerp(partialTick, e.zOld, e.getZ());
+
+        Quaternionf qCam = new Quaternionf(
+                DroneEntity.attitudeQuat(e.yRotO, e.xRotO, e.getPrevRoll()))
+            .slerp(DroneEntity.attitudeQuat(e.getYRot(), e.getXRot(), e.getRoll()), partialTick)
+            .rotateX((float) Math.toRadians(-e.getCameraAngle()));
+        float[] a = DroneEntity.decomposeAttitude(qCam);
+        Quaternionf rView = new Quaternionf()
+            .rotateZ((float) Math.toRadians(a[2]))
+            .rotateX((float) Math.toRadians(a[1]))
+            .rotateY((float) Math.toRadians(a[0] + 180f));
+
+        ps.translate(camPos.x - ex, camPos.y - ey, camPos.z - ez); // undo world placement → pose = view
+        ps.mulPose(rView.conjugate());                             // undo view rotation → screen space
+        ps.translate(0.0, Config.FPV_PROPS_DOWN.get(), -Config.FPV_PROPS_FORWARD.get());
+        // Tilt the prop disc by the camera uptilt so the props lie as the real camera sees them.
+        ps.mulPose(Axis.XP.rotationDegrees(e.getCameraAngle()));
     }
 
     // Same composition the old Axis-based code produced: Ry(yaw−180)·Rx(−pitch)·Rz(roll).
@@ -90,12 +138,6 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
         if (entity instanceof org.restor.fpv.entity.TinyWhoopDroneEntity) return 0.3f;
         if (entity instanceof org.restor.fpv.entity.CinewhoopDroneEntity) return 0.5f;
         return 0.6f;
-    }
-
-    private static boolean showPropsInFpv(DroneEntity entity) {
-        return entity instanceof org.restor.fpv.entity.RacingDroneEntity
-            || entity instanceof org.restor.fpv.entity.RemoteRacingDroneEntity
-            || entity instanceof org.restor.fpv.entity.KamikazeDroneEntity;
     }
 
     private void renderAssembledDrone(DroneEntity entity, PoseStack poseStack, MultiBufferSource buffer,

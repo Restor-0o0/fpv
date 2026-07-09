@@ -24,5 +24,7 @@ public class ModRenderers {
         event.registerEntityRenderer(ModEntities.PLANE_KAMIKAZE.get(), PlaneRenderer::new);
         event.registerBlockEntityRenderer(org.restor.fpv.block.entity.ModBlockEntities.RACE_GATE.get(),
             RaceGateRenderer::new);
+        event.registerBlockEntityRenderer(org.restor.fpv.block.entity.ModBlockEntities.RACE_START.get(),
+            RaceStartRenderer::new);
     }
 }
