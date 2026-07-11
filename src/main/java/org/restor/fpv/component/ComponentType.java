@@ -7,5 +7,7 @@ public enum ComponentType {
     PROPELLER,
     VTX,
     CAMERA,
-    FLIGHT_CONTROLLER
+    FLIGHT_CONTROLLER,
+    // Payload / utility module that mounts in the frame's module slot (FPV_IDEAS §4-5).
+    MODULE
 }

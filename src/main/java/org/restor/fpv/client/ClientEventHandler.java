@@ -183,6 +183,9 @@ public class ClientEventHandler {
             if (ModKeyBindings.CAMERA_DOWN.consumeClick()) {
                 ModNetworking.CHANNEL.sendToServer(new CameraAnglePacket(drone.getId(), -5f));
             }
+            if (ModKeyBindings.FIRE_PAYLOAD.consumeClick()) {
+                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.FirePayloadPacket(drone.getId()));
+            }
 
             if (hasKeyboardKeyInput()) {
                 keyboardControlTicks = 20;

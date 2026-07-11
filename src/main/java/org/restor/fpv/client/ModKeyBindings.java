@@ -79,6 +79,14 @@ public class ModKeyBindings {
         "key.categories.fpv"
     );
 
+    // Drone-only: drop one loaded payload charge (FPV_IDEAS §4 FIRE_PAYLOAD).
+    public static final KeyMapping FIRE_PAYLOAD = new KeyMapping(
+        "key.fpv.fire_payload",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_X,
+        "key.categories.fpv"
+    );
+
     @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
         event.register(CYCLE_MODE);
@@ -90,5 +98,6 @@ public class ModKeyBindings {
         event.register(PLANE_RESET_CAM);
         event.register(PLANE_ORBIT);
         event.register(PLANE_CALL_STRIKE);
+        event.register(FIRE_PAYLOAD);
     }
 }

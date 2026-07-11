@@ -69,6 +69,8 @@ public class DroneEntity extends Entity implements Pilotable {
     private static final EntityDataAccessor<Float>   DATA_RATE_YAW      = SynchedEntityData.defineId(DroneEntity.class, EntityDataSerializers.FLOAT);
     // 6-digit link code for the remote control station (synced so the code screen can prefill).
     private static final EntityDataAccessor<String>  DATA_LINK_CODE     = SynchedEntityData.defineId(DroneEntity.class, EntityDataSerializers.STRING);
+    // Loaded payload charges (FPV_IDEAS §4). Synced so the OSD and belly model reflect the count.
+    private static final EntityDataAccessor<Integer> DATA_PAYLOAD_AMMO  = SynchedEntityData.defineId(DroneEntity.class, EntityDataSerializers.INT);
 
     // Physics in SI units: 1 block = 1 m, 20 ticks/s. Velocities are stored in
     // blocks/tick, so accelerations (m/s²) convert as Δv_bt = a * dt / 20.
@@ -182,7 +184,22 @@ public class DroneEntity extends Entity implements Pilotable {
         entityData.define(DATA_RATE_ROLL,    1f);
         entityData.define(DATA_RATE_YAW,     1f);
         entityData.define(DATA_LINK_CODE,    "");
+        entityData.define(DATA_PAYLOAD_AMMO, 0);
     }
+
+    // ---- Payload (drop charge) ----
+    public static final int   MAX_PAYLOAD  = 4;      // charges a drone can carry
+    private static final float CHARGE_MASS = 0.10f;  // kg each — extra mass hurts the flight
+    private static final int   FIRE_COOLDOWN = 12;   // ticks between drops
+    private static final int   CHARGE_FUSE = 35;     // primed-TNT fuse before it detonates
+    private int payloadCooldown;
+
+    // ---- Companion / follow mode (FPV_IDEAS §3 "Добрые дроны игрока") ----
+    // Sneak-right-click with an empty hand toggles it: the drone auto-hovers at the owner's
+    // shoulder via simple fly-to-point movement (not ACRO physics) and, when a module says
+    // so, engages hostile mobs. While following, right-click opens storage instead of riding.
+    private boolean followMode;
+    private java.util.UUID companionOwnerId;
 
     // -------------------------------------------------------------------------
     //  Tick
@@ -217,6 +234,7 @@ public class DroneEntity extends Entity implements Pilotable {
     // -------------------------------------------------------------------------
 
     private void serverTick() {
+        if (payloadCooldown > 0) payloadCooldown--;
         ServerPlayer pilot = getControllingPassenger() instanceof ServerPlayer sp ? sp : resolveRemotePilot();
         activePilot = pilot;
         boolean hasPilot = pilot != null;
@@ -336,7 +354,12 @@ public class DroneEntity extends Entity implements Pilotable {
             }
         } else {
             pilotWasMounted = false;
-            idleFallback();
+            ServerPlayer owner = followMode ? resolveCompanionOwner() : null;
+            if (owner != null) {
+                companionTick(owner);   // hover at the owner's shoulder; no gravity/drag
+            } else {
+                idleFallback();         // owner offline/absent: motors cut, drone settles
+            }
             logTick = 0;
         }
 
@@ -795,7 +818,7 @@ public class DroneEntity extends Entity implements Pilotable {
     // thrust & drag accel, terminal fall speed, rotation inertia (via rotationResponsiveness),
     // impact damage and (via hover throttle) battery drain.
     private float mass() {
-        return Math.max(0.01f, droneData.mass);
+        return Math.max(0.01f, droneData.mass + getPayloadAmmo() * CHARGE_MASS);
     }
 
     // Max thrust in Newtons from this drone's build, times a global fine-test multiplier.
@@ -817,7 +840,25 @@ public class DroneEntity extends Entity implements Pilotable {
 
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
-        if (player.isSecondaryUseActive()) return InteractionResult.PASS;
+        // Sneak + drop charge in hand loads the payload slot; sneak + empty hand toggles
+        // companion (follow) mode.
+        if (player.isSecondaryUseActive()) {
+            net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
+            if (held.is(org.restor.fpv.item.ModItems.DROP_CHARGE.get())) {
+                if (!level().isClientSide) loadPayload(player, held);
+                return InteractionResult.sidedSuccess(level().isClientSide);
+            }
+            if (held.isEmpty()) {
+                if (!level().isClientSide) toggleFollow(player);
+                return InteractionResult.sidedSuccess(level().isClientSide);
+            }
+            return InteractionResult.PASS;
+        }
+        // While following, right-click opens the cargo box (storage module) instead of riding.
+        if (followMode) {
+            if (!level().isClientSide) openStorage(player);
+            return InteractionResult.sidedSuccess(level().isClientSide);
+        }
         if (!level().isClientSide) {
             if (!hasPassenger(player)) {
                 // Remember where the pilot boarded: a skin statue stands there for
@@ -979,6 +1020,10 @@ public class DroneEntity extends Entity implements Pilotable {
             entityData.set(DATA_RATE_YAW,   tag.getFloat("RateYaw"));
         }
         if (tag.contains("LinkCode")) entityData.set(DATA_LINK_CODE, tag.getString("LinkCode"));
+        if (tag.contains("PayloadAmmo")) entityData.set(DATA_PAYLOAD_AMMO,
+            Math.max(0, Math.min(MAX_PAYLOAD, tag.getInt("PayloadAmmo"))));
+        followMode = tag.getBoolean("Follow");
+        if (tag.hasUUID("CompanionOwner")) companionOwnerId = tag.getUUID("CompanionOwner");
         entityData.set(DATA_FLIGHT_MODE, flightController.getMode().ordinal());
     }
 
@@ -997,6 +1042,9 @@ public class DroneEntity extends Entity implements Pilotable {
         tag.putFloat("RateRoll",  entityData.get(DATA_RATE_ROLL));
         tag.putFloat("RateYaw",   entityData.get(DATA_RATE_YAW));
         tag.putString("LinkCode", entityData.get(DATA_LINK_CODE));
+        tag.putInt("PayloadAmmo", getPayloadAmmo());
+        tag.putBoolean("Follow", followMode);
+        if (companionOwnerId != null) tag.putUUID("CompanionOwner", companionOwnerId);
     }
 
     // -------------------------------------------------------------------------
@@ -1032,6 +1080,122 @@ public class DroneEntity extends Entity implements Pilotable {
 
     public float getRoll()     { return displayRoll; }
     public float getPrevRoll() { return rollO; }
+    // Server-authoritative roll (synced), valid on both sides — used for ghost recording
+    // where displayRoll (client-only) would read 0 on the server.
+    public float getSyncedRoll() { return entityData.get(DATA_ROLL); }
+
+    // -------------------------------------------------------------------------
+    //  Companion / follow mode — FPV_IDEAS §3
+    // -------------------------------------------------------------------------
+
+    public boolean isFollowing() { return followMode; }
+
+    private void toggleFollow(Player player) {
+        if (followMode) {
+            followMode = false;
+            companionOwnerId = null;
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.follow_off"), true);
+        } else {
+            followMode = true;
+            companionOwnerId = player.getUUID();
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.follow_on"), true);
+            playSound(net.minecraft.sounds.SoundEvents.NOTE_BLOCK_PLING.value(), 0.7f, 1.8f);
+        }
+    }
+
+    private ServerPlayer resolveCompanionOwner() {
+        if (companionOwnerId == null || level().getServer() == null) return null;
+        ServerPlayer p = level().getServer().getPlayerList().getPlayer(companionOwnerId);
+        return p != null && !p.isRemoved() && p.level() == level() ? p : null;
+    }
+
+    // Simple fly-to-point hover at the owner's shoulder (never ACRO physics — same reasoning
+    // as NPC drones: stable and cheap). Sets velocity directly; applyMovement() then moves us.
+    private void companionTick(ServerPlayer owner) {
+        flightController.armed = true;   // props spin via DATA_VISUAL_THR
+        throttleInput = 0.55f;
+
+        double yawRad = Math.toRadians(owner.getYRot());
+        Vec3 fwd = new Vec3(-Math.sin(yawRad), 0, Math.cos(yawRad));
+        Vec3 right = new Vec3(-fwd.z, 0, fwd.x);
+        Vec3 desired = owner.position().add(right.scale(1.4)).subtract(fwd.scale(1.2)).add(0, 2.2, 0);
+
+        Vec3 to = desired.subtract(position());
+        double dist = to.length();
+        if (dist > 24) {
+            // Left too far behind (teleport, fast elytra, …) — pop over to the owner.
+            setPos(desired.x, desired.y, desired.z);
+            setDeltaMovement(Vec3.ZERO);
+            return;
+        }
+        Vec3 targetVel = dist > 0.05 ? to.scale(Math.min(0.9, dist * 0.22) / dist) : Vec3.ZERO;
+        setDeltaMovement(getDeltaMovement().scale(0.62).add(targetVel.scale(0.38)));
+
+        // Face the owner's heading, hold level attitude.
+        setYRot(normalizeYaw(owner.getYRot()));
+        setXRot(0);
+        entityData.set(DATA_ROLL, entityData.get(DATA_ROLL) * 0.8f);
+
+        companionAttackTick(owner);
+    }
+
+    /** Module-driven combat hook: modular drones override (e.g. dart gun fires at monsters). */
+    protected void companionAttackTick(ServerPlayer owner) {}
+
+    /** Storage-module hook: modular drones override to open the cargo box. False = no storage. */
+    protected boolean openStorage(Player player) { return false; }
+
+    // -------------------------------------------------------------------------
+    //  Payload (drop charge) — FPV_IDEAS §4
+    // -------------------------------------------------------------------------
+
+    public int getPayloadAmmo() { return entityData.get(DATA_PAYLOAD_AMMO); }
+
+    // How many charges this drone can carry. Preset drones have a built-in rack; the
+    // modular drone overrides this — 0 without a Payload Bay module installed.
+    protected int payloadCapacity() { return MAX_PAYLOAD; }
+
+    // Loads as many charges as fit from the held stack (server-side).
+    private void loadPayload(Player player, net.minecraft.world.item.ItemStack held) {
+        if (payloadCapacity() <= 0) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.payload_no_bay"), true);
+            return;
+        }
+        int space = payloadCapacity() - getPayloadAmmo();
+        if (space <= 0) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.payload_full"), true);
+            return;
+        }
+        int take = Math.min(space, held.getCount());
+        entityData.set(DATA_PAYLOAD_AMMO, getPayloadAmmo() + take);
+        if (!player.getAbilities().instabuild) held.shrink(take);
+        player.displayClientMessage(
+            net.minecraft.network.chat.Component.translatable("msg.fpv.payload_loaded", getPayloadAmmo(), payloadCapacity()), true);
+        playSound(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC, 0.6f, 1.4f);
+    }
+
+    // Drops one charge (a primed TNT) from the belly, inheriting the drone's velocity so it
+    // lands where the drone is heading. Costs mass while carried and has a short fire cooldown.
+    public void firePayload(ServerPlayer pilot) {
+        if (level().isClientSide) return;
+        if (getPayloadAmmo() <= 0) {
+            pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.payload_empty"), true);
+            return;
+        }
+        if (payloadCooldown > 0) return;
+        payloadCooldown = FIRE_COOLDOWN;
+        entityData.set(DATA_PAYLOAD_AMMO, getPayloadAmmo() - 1);
+
+        double bx = getX(), by = getY() - getBbHeight() * 0.5 - 0.1, bz = getZ();
+        net.minecraft.world.entity.item.PrimedTnt tnt =
+            new net.minecraft.world.entity.item.PrimedTnt(level(), bx, by, bz, pilot);
+        tnt.setFuse(CHARGE_FUSE);
+        Vec3 vel = getDeltaMovement();
+        tnt.setDeltaMovement(vel.x, Math.min(vel.y, 0) - 0.1, vel.z);
+        level().addFreshEntity(tnt);
+        level().playSound(null, bx, by, bz, net.minecraft.sounds.SoundEvents.TNT_PRIMED,
+            net.minecraft.sounds.SoundSource.PLAYERS, 1.0f, 1.0f);
+    }
     // Last stick values the local client sent (works for both RC and keyboard paths) —
     // used by the OSD stick-position boxes and throttle readout.
     public float getPredThrottle() { return predThrottle; }

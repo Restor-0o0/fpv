@@ -14,6 +14,7 @@ public record FrameSpec(
     List<MountPoint> motorMounts,   // size == motorCount, order as documented above
     MountPoint batteryMount,        // battery sits on top of the frame plate
     MountPoint cameraMount,         // camera at the nose
+    MountPoint moduleMount,         // payload/utility module slot (under the belly)
     float armLength                 // center→motor distance in blocks (ground effect)
 ) {
     public FrameSpec {

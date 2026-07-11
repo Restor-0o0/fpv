@@ -31,6 +31,11 @@ public class ModItems {
     public static final RegistryObject<Item> MODULAR_DRONE = ITEMS.register("modular_drone",
         org.restor.fpv.assembly.ModularDroneItem::new);
 
+    // Payload module (FPV_IDEAS §4): sneak-right-click a drone with these to load its payload
+    // slot; the pilot drops one with the FIRE_PAYLOAD key. Each loaded charge adds mass.
+    public static final RegistryObject<Item> DROP_CHARGE = ITEMS.register("drop_charge",
+        () -> new Item(new Item.Properties()));
+
     public static final RegistryObject<Item> PLANE = ITEMS.register("plane",
         () -> new PlaneItem(org.restor.fpv.entity.ModEntities.PLANE));
 
@@ -39,4 +44,15 @@ public class ModItems {
 
     public static final RegistryObject<Item> PLANE_KAMIKAZE = ITEMS.register("plane_kamikaze",
         () -> new PlaneItem(org.restor.fpv.entity.ModEntities.PLANE_KAMIKAZE));
+
+    // Spawn eggs for the hostile NPC drones (FPV_IDEAS §3) — gunmetal shell, LED-coloured spots.
+    public static final RegistryObject<Item> HOSTILE_DRONE_SPAWN_EGG = ITEMS.register("hostile_drone_spawn_egg",
+        () -> new net.minecraftforge.common.ForgeSpawnEggItem(ModEntities.HOSTILE_DRONE,
+            0x2A2A30, 0xE02020, new Item.Properties()));
+    public static final RegistryObject<Item> PATROL_DRONE_SPAWN_EGG = ITEMS.register("patrol_drone_spawn_egg",
+        () -> new net.minecraftforge.common.ForgeSpawnEggItem(ModEntities.PATROL_DRONE,
+            0x2A2A30, 0xFF9E1A, new Item.Properties()));
+    public static final RegistryObject<Item> INTERCEPTOR_DRONE_SPAWN_EGG = ITEMS.register("interceptor_drone_spawn_egg",
+        () -> new net.minecraftforge.common.ForgeSpawnEggItem(ModEntities.INTERCEPTOR_DRONE,
+            0x2A2A30, 0x2673FF, new Item.Properties()));
 }

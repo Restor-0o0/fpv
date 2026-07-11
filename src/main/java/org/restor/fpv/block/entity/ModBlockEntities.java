@@ -27,4 +27,7 @@ public class ModBlockEntities {
 
     public static final RegistryObject<BlockEntityType<RaceGateBlockEntity>> RACE_GATE = TYPES.register("race_gate",
         () -> BlockEntityType.Builder.of(RaceGateBlockEntity::new, ModBlocks.RACE_GATE.get()).build(null));
+
+    public static final RegistryObject<BlockEntityType<DroneNestBlockEntity>> DRONE_NEST = TYPES.register("drone_nest",
+        () -> BlockEntityType.Builder.of(DroneNestBlockEntity::new, ModBlocks.DRONE_NEST.get()).build(null));
 }

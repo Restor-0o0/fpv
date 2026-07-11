@@ -77,4 +77,23 @@ public class ModEntities {
             .clientTrackingRange(1024)
             .updateInterval(1)
             .build("plane_kamikaze"));
+
+    // Hostile NPC drones (FPV_IDEAS §3) — real Mobs with simplified hover AI, not DroneEntity physics.
+    public static final RegistryObject<EntityType<HostileDroneEntity>> HOSTILE_DRONE = ENTITIES.register("hostile_drone",
+        () -> EntityType.Builder.<HostileDroneEntity>of(HostileDroneEntity::new, MobCategory.MONSTER)
+            .sized(0.7f, 0.35f)
+            .clientTrackingRange(64)
+            .build("hostile_drone"));
+
+    public static final RegistryObject<EntityType<PatrolDroneEntity>> PATROL_DRONE = ENTITIES.register("patrol_drone",
+        () -> EntityType.Builder.<PatrolDroneEntity>of(PatrolDroneEntity::new, MobCategory.MONSTER)
+            .sized(0.7f, 0.35f)
+            .clientTrackingRange(64)
+            .build("patrol_drone"));
+
+    public static final RegistryObject<EntityType<InterceptorDroneEntity>> INTERCEPTOR_DRONE = ENTITIES.register("interceptor_drone",
+        () -> EntityType.Builder.<InterceptorDroneEntity>of(InterceptorDroneEntity::new, MobCategory.MONSTER)
+            .sized(0.7f, 0.35f)
+            .clientTrackingRange(64)
+            .build("interceptor_drone"));
 }

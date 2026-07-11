@@ -880,6 +880,8 @@ public class PlaneEntity extends Entity implements Pilotable {
 
     public float getRoll() { return displayRoll; }
     public float getPrevRoll() { return rollO; }
+    // Server-authoritative roll (synced), valid on both sides — used for ghost recording.
+    public float getSyncedRoll() { return entityData.get(DATA_ROLL); }
     public float getVisualThrottle() { return entityData.get(DATA_THROTTLE); }
     public boolean isArmed() { return entityData.get(DATA_ARMED); }
     public float getPredThrottle() { return predThrottle; }

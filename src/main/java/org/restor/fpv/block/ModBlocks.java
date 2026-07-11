@@ -38,6 +38,9 @@ public class ModBlocks {
     public static final RegistryObject<Block> RACE_GATE = register("race_gate",
         () -> new RaceGateBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_BLUE).strength(2.5f).sound(SoundType.METAL)));
 
+    public static final RegistryObject<Block> DRONE_NEST = register("drone_nest",
+        () -> new DroneNestBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_BLACK).strength(4f).sound(SoundType.METAL)));
+
     private static <T extends Block> RegistryObject<T> register(String name, Supplier<T> block) {
         var obj = BLOCKS.register(name, block);
         BLOCK_ITEMS.register(name, () -> new BlockItem(obj.get(), new Item.Properties()));

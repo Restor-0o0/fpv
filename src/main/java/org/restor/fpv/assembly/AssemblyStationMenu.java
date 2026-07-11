@@ -28,7 +28,8 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
     public static final int SLOT_CAMERA = 2;
     public static final int SLOT_MOTOR_FIRST = 3;                                // 3..10
     public static final int SLOT_PROP_FIRST = SLOT_MOTOR_FIRST + DroneAssembly.MAX_MOTORS; // 11..18
-    public static final int SLOT_RESULT = SLOT_PROP_FIRST + DroneAssembly.MAX_MOTORS;      // 19
+    public static final int SLOT_MODULE = SLOT_PROP_FIRST + DroneAssembly.MAX_MOTORS;      // 19
+    public static final int SLOT_RESULT = SLOT_MODULE + 1;                                 // 20
     public static final int SLOT_COUNT = SLOT_RESULT + 1;
 
     private final Container container;
@@ -52,6 +53,9 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
             addSlot(new TypedSlot(container, SLOT_MOTOR_FIRST + i, right ? 128 : 32, y, ComponentType.MOTOR, i));
             addSlot(new TypedSlot(container, SLOT_PROP_FIRST + i, right ? 152 : 8, y, ComponentType.PROPELLER, i));
         }
+
+        // Module slot to the right of the frame — accepts any MODULE component (optional).
+        addSlot(new TypedSlot(container, SLOT_MODULE, 104, 55, ComponentType.MODULE, -1));
 
         addSlot(new Slot(container, SLOT_RESULT, 80, 119) {
             @Override public boolean mayPlace(ItemStack stack) {
@@ -92,6 +96,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         a.frame = container.getItem(SLOT_FRAME);
         a.battery = container.getItem(SLOT_BATTERY);
         a.camera = container.getItem(SLOT_CAMERA);
+        a.module = container.getItem(SLOT_MODULE);
         for (int i = 0; i < DroneAssembly.MAX_MOTORS; i++) {
             a.motors[i] = container.getItem(SLOT_MOTOR_FIRST + i);
             a.props[i] = container.getItem(SLOT_PROP_FIRST + i);
@@ -127,6 +132,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         container.setItem(SLOT_FRAME, a.frame.copy());
         container.setItem(SLOT_BATTERY, a.battery.copy());
         container.setItem(SLOT_CAMERA, a.camera.copy());
+        container.setItem(SLOT_MODULE, a.module.copy());
         for (int i = 0; i < spec.motorCount(); i++) {
             container.setItem(SLOT_MOTOR_FIRST + i, a.motors[i].copy());
             container.setItem(SLOT_PROP_FIRST + i, a.props[i].copy());
@@ -148,6 +154,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         shrinkSlot(SLOT_FRAME);
         shrinkSlot(SLOT_BATTERY);
         shrinkSlot(SLOT_CAMERA);
+        shrinkSlot(SLOT_MODULE);
         for (int i = 0; i < n; i++) {
             shrinkSlot(SLOT_MOTOR_FIRST + i);
             shrinkSlot(SLOT_PROP_FIRST + i);
@@ -182,6 +189,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
                 case CAMERA -> { from = SLOT_CAMERA; to = SLOT_CAMERA + 1; }
                 case MOTOR -> { from = SLOT_MOTOR_FIRST; to = SLOT_MOTOR_FIRST + DroneAssembly.MAX_MOTORS; }
                 case PROPELLER -> { from = SLOT_PROP_FIRST; to = SLOT_PROP_FIRST + DroneAssembly.MAX_MOTORS; }
+                case MODULE -> { from = SLOT_MODULE; to = SLOT_MODULE + 1; }
                 default -> { return ItemStack.EMPTY; }
             }
             moveItemStackTo(stack, from, to, false);

@@ -31,7 +31,16 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
         for (int i = 0; i < AssemblyStationMenu.SLOT_COUNT; i++) {
             var slot = menu.slots.get(i);
             if (!slot.isActive()) continue;
-            drawSlot(g, x + slot.x - 1, y + slot.y - 1, i == AssemblyStationMenu.SLOT_RESULT);
+            int sx = x + slot.x - 1;
+            int sy = y + slot.y - 1;
+            if (i == AssemblyStationMenu.SLOT_MODULE) {
+                // The "payload" square: amber frame + a parcel hint when empty.
+                g.fill(sx, sy, sx + 18, sy + 18, 0xFFFFB733);
+                g.fill(sx + 1, sy + 1, sx + 17, sy + 17, 0xFF17171D);
+                if (!slot.hasItem()) drawPayloadHint(g, sx, sy);
+            } else {
+                drawSlot(g, sx, sy, i == AssemblyStationMenu.SLOT_RESULT);
+            }
         }
         // Player inventory slots
         for (int i = AssemblyStationMenu.SLOT_COUNT; i < menu.slots.size(); i++) {
@@ -46,10 +55,25 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
         g.fill(x + 1, y + 1, x + 17, y + 17, 0xFF17171D);
     }
 
+    // Faint amber parcel drawn in the empty payload slot so it reads as "put a module here".
+    private void drawPayloadHint(GuiGraphics g, int x, int y) {
+        int c = 0x66FFB733;
+        int a = x + 5, b = y + 5, d = x + 13, e = y + 13;
+        g.fill(a, b, d, b + 1, c);      // top
+        g.fill(a, e - 1, d, e, c);      // bottom
+        g.fill(a, b, a + 1, e, c);      // left
+        g.fill(d - 1, b, d, e, c);      // right
+        g.fill(x + 8, b, x + 9, e, c);  // vertical strap
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         renderBackground(g);
         super.render(g, mouseX, mouseY, partialTick);
+        // Label the empty payload square on hover so its purpose is obvious.
+        if (hoveredSlot != null && hoveredSlot.index == AssemblyStationMenu.SLOT_MODULE && !hoveredSlot.hasItem()) {
+            g.renderTooltip(font, Component.translatable("screen.fpv.payload_slot"), mouseX, mouseY);
+        }
         renderTooltip(g, mouseX, mouseY);
     }
 }

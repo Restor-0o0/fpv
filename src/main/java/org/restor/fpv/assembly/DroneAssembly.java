@@ -23,6 +23,7 @@ public class DroneAssembly {
     public ItemStack frame = ItemStack.EMPTY;
     public ItemStack battery = ItemStack.EMPTY;
     public ItemStack camera = ItemStack.EMPTY;
+    public ItemStack module = ItemStack.EMPTY; // optional payload/utility module (FPV_IDEAS §4-5)
     public final ItemStack[] motors = new ItemStack[MAX_MOTORS];
     public final ItemStack[] props = new ItemStack[MAX_MOTORS];
 
@@ -38,6 +39,7 @@ public class DroneAssembly {
         tag.put("Frame", frame.save(new CompoundTag()));
         tag.put("Battery", battery.save(new CompoundTag()));
         tag.put("Camera", camera.save(new CompoundTag()));
+        if (!module.isEmpty()) tag.put("Module", module.save(new CompoundTag()));
         for (int i = 0; i < MAX_MOTORS; i++) {
             if (!motors[i].isEmpty()) tag.put("Motor" + i, motors[i].save(new CompoundTag()));
             if (!props[i].isEmpty())  tag.put("Prop" + i,  props[i].save(new CompoundTag()));
@@ -50,6 +52,7 @@ public class DroneAssembly {
         a.frame = ItemStack.of(tag.getCompound("Frame"));
         a.battery = ItemStack.of(tag.getCompound("Battery"));
         a.camera = ItemStack.of(tag.getCompound("Camera"));
+        if (tag.contains("Module")) a.module = ItemStack.of(tag.getCompound("Module"));
         for (int i = 0; i < MAX_MOTORS; i++) {
             if (tag.contains("Motor" + i)) a.motors[i] = ItemStack.of(tag.getCompound("Motor" + i));
             if (tag.contains("Prop" + i))  a.props[i]  = ItemStack.of(tag.getCompound("Prop" + i));
@@ -68,6 +71,9 @@ public class DroneAssembly {
         FrameSpec spec = frameSpec();
         if (spec == null || battery.isEmpty() || camera.isEmpty()) return false;
         if (!isCompatible(frame, battery) || !isCompatible(frame, camera)) return false;
+        // Module is OPTIONAL — but when one is installed it must fit this frame (guards
+        // against inserting a module and then swapping the frame to an incompatible one).
+        if (!module.isEmpty() && !isCompatible(frame, module)) return false;
         for (int i = 0; i < spec.motorCount(); i++) {
             if (stats(motors[i], ComponentType.MOTOR) == null) return false;
             if (stats(props[i], ComponentType.PROPELLER) == null) return false;
@@ -88,6 +94,7 @@ public class DroneAssembly {
             case PROPELLER -> compatibleProp(frameSize, stats);
             case BATTERY -> compatibleBattery(frameSize, stats);
             case CAMERA -> compatibleCamera(frameSize, stats);
+            case MODULE -> compatibleModule(frameSize, component);
             default -> true;
         };
     }
@@ -120,6 +127,23 @@ public class DroneAssembly {
         return frameSize > 2.0f || stats.weight() <= 8.0f;
     }
 
+    // Which modules fit which frames (FPV_IDEAS §4 "тяжелое оружие доступно только большим
+    // рамам"). Tiny whoops (≤2") carry no modules at all.
+    private static boolean compatibleModule(float frameSize, ItemStack module) {
+        if (!(module.getItem() instanceof org.restor.fpv.component.ModuleItem mi)) return false;
+        return switch (mi.getModuleType()) {
+            case PAYLOAD_BAY -> frameSize >= 3.5f;  // cinewhoop and up
+            case WARHEAD -> frameSize >= 5.0f;      // 5" and up — it's 150g of explosives
+            case DART_GUN -> frameSize >= 5.0f;     // recoil needs a 5"+ frame
+            case STORAGE -> frameSize >= 3.5f;      // cargo box needs some belly room
+        };
+    }
+
+    /** Installed module's type, or null when the slot is empty. */
+    public org.restor.fpv.component.ModuleType moduleType() {
+        return module.getItem() instanceof org.restor.fpv.component.ModuleItem mi ? mi.getModuleType() : null;
+    }
+
     private static ComponentStats stats(ItemStack stack, ComponentType type) {
         if (!stack.isEmpty() && stack.getItem() instanceof ComponentItem ci && ci.getComponentType() == type) {
             return ci.getStats();
@@ -135,7 +159,7 @@ public class DroneAssembly {
         // Electronics (FC, ESC, RX, wiring, VTX, mounts) scale with frame size — a whoop carries
         // a few grams, a 7" a full stack. A flat baseline made small builds absurdly heavy.
         float g = 8f + frameSize * 14f;
-        g += weight(frame) + weight(battery) + weight(camera);
+        g += weight(frame) + weight(battery) + weight(camera) + weight(module);
         for (int i = 0; i < MAX_MOTORS; i++) g += weight(motors[i]) + weight(props[i]);
         return Math.max(0.02f, g / 1000f);
     }

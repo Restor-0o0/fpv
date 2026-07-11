@@ -329,7 +329,10 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
     }
 
     private void renderPayload(DroneEntity entity, VertexConsumer consumer, PoseStack poseStack, int packedLight) {
-        if (!(entity instanceof org.restor.fpv.entity.KamikazeDroneEntity)) return;
+        if (!(entity instanceof org.restor.fpv.entity.KamikazeDroneEntity)) {
+            renderDropCharges(entity, consumer, poseStack, packedLight);
+            return;
+        }
         Matrix4f mat = poseStack.last().pose();
         // PG-7-style rocket grenade under the belly: olive warhead, dark motor tube, rear fins.
         renderBox(consumer, mat, packedLight, -0.11f, -0.24f, -0.42f, 0.11f, -0.08f, -0.16f, 0.32f, 0.42f, 0.16f);
@@ -339,6 +342,19 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
         renderBox(consumer, mat, packedLight, 0.04f, -0.28f, 0.22f, 0.16f, -0.16f, 0.34f, 0.22f, 0.22f, 0.20f);
         renderBox(consumer, mat, packedLight, -0.04f, -0.32f, 0.22f, 0.04f, -0.20f, 0.34f, 0.22f, 0.22f, 0.20f);
         renderBox(consumer, mat, packedLight, -0.04f, -0.08f, -0.10f, 0.04f, -0.04f, 0.08f, 0.04f, 0.04f, 0.04f);
+    }
+
+    // Small dark charges strapped under the belly, one per loaded payload (FPV_IDEAS §4).
+    private void renderDropCharges(DroneEntity entity, VertexConsumer consumer, PoseStack poseStack, int packedLight) {
+        int ammo = entity.getPayloadAmmo();
+        if (ammo <= 0) return;
+        Matrix4f mat = poseStack.last().pose();
+        float startX = -0.06f * (ammo - 1);
+        for (int i = 0; i < ammo; i++) {
+            float cx = startX + i * 0.12f;
+            renderBox(consumer, mat, packedLight, cx - 0.045f, -0.18f, -0.06f, cx + 0.045f, -0.09f, 0.06f,
+                0.55f, 0.15f, 0.12f);
+        }
     }
 
     private void renderBox(VertexConsumer consumer, Matrix4f mat, int packedLight,

@@ -52,15 +52,20 @@ public class Fpv {
                 output.accept(ModBlocks.RACE_START.get());
                 output.accept(ModBlocks.RACE_FINISH.get());
                 output.accept(ModBlocks.RACE_GATE.get());
+                output.accept(ModBlocks.DRONE_NEST.get());
                 output.accept(ModItems.CINEWHOOP.get());
                 output.accept(ModItems.RACING_DRONE.get());
                 output.accept(ModItems.TINY_WHOOP.get());
                 output.accept(ModItems.REMOTE_RACING_DRONE.get());
                 output.accept(ModItems.KAMIKAZE_DRONE.get());
                 output.accept(ModItems.MODULAR_DRONE.get());
+                output.accept(ModItems.DROP_CHARGE.get());
                 output.accept(ModItems.PLANE.get());
                 output.accept(ModItems.PLANE_SCOUT.get());
                 output.accept(ModItems.PLANE_KAMIKAZE.get());
+                output.accept(ModItems.HOSTILE_DRONE_SPAWN_EGG.get());
+                output.accept(ModItems.PATROL_DRONE_SPAWN_EGG.get());
+                output.accept(ModItems.INTERCEPTOR_DRONE_SPAWN_EGG.get());
                 output.accept(ModComponents.FRAME_5INCH.get());
                 output.accept(ModComponents.FRAME_7INCH.get());
                 output.accept(ModComponents.FRAME_TINY_WHOOP.get());
@@ -88,6 +93,10 @@ public class Fpv {
                 output.accept(ModComponents.CAMERA_WIDE.get());
                 output.accept(ModComponents.FC_F411.get());
                 output.accept(ModComponents.FC_H7.get());
+                output.accept(ModComponents.MODULE_PAYLOAD_BAY.get());
+                output.accept(ModComponents.MODULE_WARHEAD.get());
+                output.accept(ModComponents.MODULE_DART_GUN.get());
+                output.accept(ModComponents.MODULE_STORAGE.get());
             })
             .build());
 

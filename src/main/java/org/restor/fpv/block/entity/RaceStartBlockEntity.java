@@ -19,8 +19,12 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.PacketDistributor;
 import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.entity.PlaneEntity;
+import org.restor.fpv.network.GhostDataPacket;
 import org.restor.fpv.network.ModNetworking;
 import org.restor.fpv.network.RaceTimerPacket;
+import org.restor.fpv.race.GhostFrame;
+import org.restor.fpv.race.GhostRecording;
+import org.restor.fpv.race.GhostSavedData;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
@@ -47,6 +51,9 @@ public class RaceStartBlockEntity extends BlockEntity {
         boolean wasInFinish;
         int lastSentLap = -1;
         int lastSentGate = -1;
+        // Ghost telemetry recorded for this run (one frame per server tick from startTime).
+        int modelType;
+        final List<GhostFrame> frames = new ArrayList<>();
     }
 
     private int laps = 3;
@@ -250,7 +257,7 @@ public class RaceStartBlockEntity extends BlockEntity {
             if (!inStart) finishedInsideStart.remove(pilot.getUUID());
             boolean entering = inStart && !finishedInsideStart.contains(pilot.getUUID()) && (prog == null || !prog.wasInStart);
             if (entering) {
-                onCrossStart(level, pilot, prog);
+                onCrossStart(level, pilot, prog, v);
                 prog = runs.get(pilot.getUUID());
                 if (prog == null) continue;
             }
@@ -263,13 +270,17 @@ public class RaceStartBlockEntity extends BlockEntity {
                 }
                 prog.wasInStart = inStart;
                 pushHud(pilot, prog, false);
+                // Record one telemetry frame per tick while the run is live (see FPV_IDEAS §1-2).
+                if (runs.containsKey(pilot.getUUID()) && prog.frames.size() < GhostRecording.MAX_FRAMES) {
+                    prog.frames.add(captureFrame(v));
+                }
             }
         }
     }
 
-    private void onCrossStart(ServerLevel level, ServerPlayer pilot, Progress prog) {
+    private void onCrossStart(ServerLevel level, ServerPlayer pilot, Progress prog, Entity vehicle) {
         if (prog == null) {
-            startRun(level, pilot);
+            startRun(level, pilot, vehicle);
             return;
         }
         if (finishPos != null) return;
@@ -284,7 +295,7 @@ public class RaceStartBlockEntity extends BlockEntity {
             }
         } else {
             // Crossed the line without clearing the whole route in order — fresh (re)start.
-            startRun(level, pilot);
+            startRun(level, pilot, vehicle);
         }
     }
 
@@ -295,6 +306,7 @@ public class RaceStartBlockEntity extends BlockEntity {
     private void finishRun(ServerLevel level, ServerPlayer pilot, Progress prog, int resultLaps) {
         int time = (int) (level.getGameTime() - prog.startTime);
         recordResult(new Result(pilot.getName().getString(), time, resultLaps));
+        saveGhostIfRecord(level, pilot, prog, time);
         runs.remove(pilot.getUUID());
         finishedInsideStart.add(pilot.getUUID());
         pilot.sendSystemMessage(Component.translatable("msg.fpv.race_finish", formatTime(time)));
@@ -302,18 +314,73 @@ public class RaceStartBlockEntity extends BlockEntity {
             new RaceTimerPacket(0, totalLaps(), prog.startTime, route.size(), route.size(), time));
     }
 
-    private void startRun(ServerLevel level, ServerPlayer pilot) {
+    private void startRun(ServerLevel level, ServerPlayer pilot, Entity vehicle) {
         Progress p = new Progress();
         p.startTime = level.getGameTime();
         p.lap = 1;
         p.nextGate = 0;
         p.wasInStart = true;
+        p.modelType = modelTypeOf(vehicle);
         finishedInsideStart.remove(pilot.getUUID());
         runs.put(pilot.getUUID(), p);
         pilot.sendSystemMessage(finishPos != null
             ? Component.translatable("msg.fpv.race_start_straight")
             : Component.translatable("msg.fpv.race_start", laps));
         pushHud(pilot, p, true);
+        sendGhosts(level, pilot, p.startTime);
+    }
+
+    // ---------------------------------------------------------------------
+    //  Ghost recording (FPV_IDEAS §1-2)
+    // ---------------------------------------------------------------------
+
+    // Stable identity of this course: dimension + start + finish + ordered gates + laps.
+    // Moving a gate or changing the lap count makes a new course, dropping old ghosts.
+    private String courseKey(ServerLevel level) {
+        StringBuilder sb = new StringBuilder(level.dimension().location().toString());
+        sb.append('@').append(worldPosition.asLong());
+        sb.append('#').append(finishPos != null ? finishPos.asLong() : 0L);
+        for (BlockPos p : route) sb.append('/').append(p.asLong());
+        sb.append('*').append(totalLaps());
+        return sb.toString();
+    }
+
+    private static int modelTypeOf(Entity v) {
+        if (v instanceof org.restor.fpv.entity.TinyWhoopDroneEntity) return 1;
+        if (v instanceof org.restor.fpv.entity.CinewhoopDroneEntity) return 2;
+        if (v instanceof PlaneEntity) return 3;
+        return 0;
+    }
+
+    private static GhostFrame captureFrame(Entity v) {
+        float roll = 0f, throttle = 0f;
+        if (v instanceof DroneEntity d) { roll = d.getSyncedRoll(); throttle = d.getVisualThrottle(); }
+        else if (v instanceof PlaneEntity p) { roll = p.getSyncedRoll(); throttle = p.getVisualThrottle(); }
+        return new GhostFrame(v.getX(), v.getY(), v.getZ(), v.getYRot(), v.getXRot(), roll, throttle);
+    }
+
+    private void saveGhostIfRecord(ServerLevel level, ServerPlayer pilot, Progress prog, int time) {
+        if (prog.frames.isEmpty()) return;
+        GhostRecording rec = GhostRecording.of(pilot.getName().getString(), pilot.getUUID(),
+            time, prog.modelType, prog.frames);
+        int r = GhostSavedData.get(level).submit(courseKey(level), pilot.getUUID(), rec);
+        if ((r & 2) != 0) {
+            pilot.sendSystemMessage(Component.translatable("msg.fpv.race_record_overall"));
+        } else if ((r & 1) != 0) {
+            pilot.sendSystemMessage(Component.translatable("msg.fpv.race_record_personal"));
+        }
+    }
+
+    // Sends the personal-best and overall-best ghosts for this course to the starting pilot.
+    // Always sent (even when empty) so a fresh run clears any ghosts from a previous course.
+    private void sendGhosts(ServerLevel level, ServerPlayer pilot, long startTime) {
+        String key = courseKey(level);
+        GhostSavedData data = GhostSavedData.get(level);
+        GhostRecording personal = data.personalBest(key, pilot.getUUID());
+        GhostRecording overall = data.overallBest(key);
+        boolean same = personal != null && personal == overall; // player owns the track record
+        ModNetworking.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pilot),
+            new GhostDataPacket(startTime, same, personal, same ? null : overall));
     }
 
     private AABB courseBounds() {

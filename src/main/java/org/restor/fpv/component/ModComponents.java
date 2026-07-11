@@ -76,4 +76,15 @@ public class ModComponents {
         () -> new ComponentItem(ComponentStats.fc("F411 FC", true, false, 6)));
     public static final RegistryObject<Item> FC_H7 = COMPONENTS.register("fc_h7",
         () -> new ComponentItem(ComponentStats.fc("H7 FC", true, true, 8)));
+
+    // Modules (mount in the frame's module slot, FPV_IDEAS §4-5). Frame compatibility
+    // rules live in DroneAssembly.compatibleModule.
+    public static final RegistryObject<Item> MODULE_PAYLOAD_BAY = COMPONENTS.register("module_payload_bay",
+        () -> new ModuleItem(ComponentStats.module("Payload Bay", 25), ModuleType.PAYLOAD_BAY));
+    public static final RegistryObject<Item> MODULE_WARHEAD = COMPONENTS.register("module_warhead",
+        () -> new ModuleItem(ComponentStats.module("Warhead", 150), ModuleType.WARHEAD));
+    public static final RegistryObject<Item> MODULE_DART_GUN = COMPONENTS.register("module_dart_gun",
+        () -> new ModuleItem(ComponentStats.module("Dart Gun", 45), ModuleType.DART_GUN));
+    public static final RegistryObject<Item> MODULE_STORAGE = COMPONENTS.register("module_storage",
+        () -> new ModuleItem(ComponentStats.module("Cargo Box", 60), ModuleType.STORAGE));
 }

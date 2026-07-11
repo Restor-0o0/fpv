@@ -78,6 +78,8 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
                 spec.batteryMount().x(), spec.batteryMount().y(), spec.batteryMount().z(), 0);
             renderPart(assembly.camera, poseStack, buffer, packedLight,
                 spec.cameraMount().x(), spec.cameraMount().y(), spec.cameraMount().z(), 0);
+            renderPart(assembly.module, poseStack, buffer, packedLight,
+                spec.moduleMount().x(), spec.moduleMount().y(), spec.moduleMount().z(), 0);
             float spin = (entity.tickCount + partialTick) * entity.getVisualThrottle() * 40f;
             for (int i = 0; i < spec.motorCount(); i++) {
                 MountPoint m = spec.motorMounts().get(i);

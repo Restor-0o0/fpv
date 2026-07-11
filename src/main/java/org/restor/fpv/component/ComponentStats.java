@@ -64,4 +64,11 @@ public record ComponentStats(
         return new ComponentStats(ComponentType.FLIGHT_CONTROLLER, name, weight, 0,0,
             0,0,0, 0,0,0, 0,0,0,0, 0,0, 0,0, hasOsd,hasBlackbox);
     }
+
+    // Payload / utility module. Only carries a name + weight for now; which frames accept it
+    // and what it does are defined in a later step (FPV_IDEAS §4-5).
+    public static ComponentStats module(String name, float weight) {
+        return new ComponentStats(ComponentType.MODULE, name, weight, 0,0,
+            0,0,0, 0,0,0, 0,0,0,0, 0,0, 0,0, false,false);
+    }
 }

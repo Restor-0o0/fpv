@@ -245,6 +245,13 @@ public class FPVOverlay {
             graphics.drawString(font, rssiStr, margin, y, rssi > 0.3f ? color : 0xFFFF0000);
             y += lineHeight;
 
+            // Payload charges (only shown when carrying)
+            int payload = drone.getPayloadAmmo();
+            if (payload > 0) {
+                graphics.drawString(font, "PAYLOAD: " + payload, margin, y, 0xFFFFC040);
+                y += lineHeight;
+            }
+
             // Altitude above terrain
             int surfaceY = MC.level.getHeight(Heightmap.Types.MOTION_BLOCKING,
                 drone.blockPosition().getX(), drone.blockPosition().getZ());

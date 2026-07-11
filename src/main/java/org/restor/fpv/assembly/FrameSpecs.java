@@ -33,6 +33,7 @@ public final class FrameSpecs {
         MountPoint.fromBlockbench(2.5f, 8.5f, 13.5f),
         MountPoint.fromBlockbench(8f, 11f, 8f),          // battery (top plate)
         MountPoint.fromBlockbench(8f, 9f, 1.5f),         // camera (nose)
+        MountPoint.fromBlockbench(8f, 5f, 8f),           // module (belly)
         0.49f);
 
     // 7-inch long-range: wider X.
@@ -43,6 +44,7 @@ public final class FrameSpecs {
         MountPoint.fromBlockbench(1f, 8.5f, 15f),
         MountPoint.fromBlockbench(8f, 11.5f, 8f),
         MountPoint.fromBlockbench(8f, 9f, 0.5f),
+        MountPoint.fromBlockbench(8f, 5f, 8f),
         0.62f);
 
     // Tiny whoop: tight square.
@@ -53,6 +55,7 @@ public final class FrameSpecs {
         MountPoint.fromBlockbench(4.5f, 8f, 11.5f),
         MountPoint.fromBlockbench(8f, 10f, 8f),
         MountPoint.fromBlockbench(8f, 9f, 4f),
+        MountPoint.fromBlockbench(8f, 5.5f, 8f),
         0.31f);
 
     // Cinewhoop: square with ducts.
@@ -63,6 +66,7 @@ public final class FrameSpecs {
         MountPoint.fromBlockbench(3.5f, 8.5f, 12.5f),
         MountPoint.fromBlockbench(8f, 11f, 8f),
         MountPoint.fromBlockbench(8f, 9f, 2.5f),
+        MountPoint.fromBlockbench(8f, 5f, 8f),
         0.40f);
 
     public static final FrameSpec FRAME_HEXA_6INCH = new FrameSpec(6, List.of(
@@ -74,6 +78,7 @@ public final class FrameSpecs {
         MountPoint.fromBlockbench(1.5f, 8.5f, 14f)),
         MountPoint.fromBlockbench(8f, 11.5f, 8f),
         MountPoint.fromBlockbench(8f, 9f, -0.5f),
+        MountPoint.fromBlockbench(8f, 5f, 8f),
         0.56f);
 
     public static final FrameSpec FRAME_OCTO_8INCH = new FrameSpec(8, List.of(
@@ -87,11 +92,12 @@ public final class FrameSpecs {
         MountPoint.fromBlockbench(0.5f, 8.5f, 15.5f)),
         MountPoint.fromBlockbench(8f, 12f, 8f),
         MountPoint.fromBlockbench(8f, 9f, -1f),
+        MountPoint.fromBlockbench(8f, 5f, 8f),
         0.72f);
 
     private static FrameSpec quad(MountPoint fr, MountPoint fl, MountPoint rr, MountPoint rl,
-                                  MountPoint battery, MountPoint camera, float armLength) {
-        return new FrameSpec(4, List.of(fr, fl, rr, rl), battery, camera, armLength);
+                                  MountPoint battery, MountPoint camera, MountPoint module, float armLength) {
+        return new FrameSpec(4, List.of(fr, fl, rr, rl), battery, camera, module, armLength);
     }
 
     /** Frame item → its layout. Null if the item is not a known frame. */

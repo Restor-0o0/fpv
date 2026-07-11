@@ -60,6 +60,7 @@ public class ComponentItem extends Item {
                 if (stats.fcHasBlackbox()) tooltip.add(Component.literal("§8Has Blackbox"));
                 tooltip.add(Component.literal("§8Weight: " + stats.weight() + "g"));
             }
+            case MODULE -> tooltip.add(Component.literal("§8Weight: " + stats.weight() + "g"));
         }
     }
 
@@ -72,6 +73,7 @@ public class ComponentItem extends Item {
             case VTX -> "VTX";
             case CAMERA -> "Camera";
             case FLIGHT_CONTROLLER -> "Flight Controller";
+            case MODULE -> "Module";
         };
     }
 }

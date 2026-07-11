@@ -22,6 +22,9 @@ public class ModRenderers {
         event.registerEntityRenderer(ModEntities.PLANE.get(), PlaneRenderer::new);
         event.registerEntityRenderer(ModEntities.PLANE_SCOUT.get(), PlaneRenderer::new);
         event.registerEntityRenderer(ModEntities.PLANE_KAMIKAZE.get(), PlaneRenderer::new);
+        event.registerEntityRenderer(ModEntities.HOSTILE_DRONE.get(), HostileDroneRenderer::new);
+        event.registerEntityRenderer(ModEntities.PATROL_DRONE.get(), HostileDroneRenderer::new);
+        event.registerEntityRenderer(ModEntities.INTERCEPTOR_DRONE.get(), HostileDroneRenderer::new);
         event.registerBlockEntityRenderer(org.restor.fpv.block.entity.ModBlockEntities.RACE_GATE.get(),
             RaceGateRenderer::new);
         event.registerBlockEntityRenderer(org.restor.fpv.block.entity.ModBlockEntities.RACE_START.get(),
