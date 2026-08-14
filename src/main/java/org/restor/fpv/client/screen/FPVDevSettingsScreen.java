@@ -81,22 +81,22 @@ public class FPVDevSettingsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, 16, 0xFFFFFF);
         graphics.drawCenteredString(font, Component.translatable("screen.fpv.dev_hint"), width / 2, 27, 0xAAAAAA);
         super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int old = scrollOffset;
-        scrollOffset = (int) Math.max(0, Math.min(maxScroll, scrollOffset - delta * 18));
+        scrollOffset = (int) Math.max(0, Math.min(maxScroll, scrollOffset - scrollY * 18));
         if (scrollOffset != old) {
             clearWidgets();
             init();
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override

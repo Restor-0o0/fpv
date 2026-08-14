@@ -1,13 +1,13 @@
 package org.restor.fpv.entity;
 
-import net.minecraftforge.event.entity.EntityAttributeCreationEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import org.restor.fpv.Fpv;
 
 // Attribute registration for the mod's living (Mob) entities. Vehicle drones are plain
 // Entities and don't need attributes — only AI mobs like HostileDroneEntity do.
-@Mod.EventBusSubscriber(modid = Fpv.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Fpv.MODID, bus = EventBusSubscriber.Bus.MOD)
 public class ModEntityAttributes {
     @SubscribeEvent
     public static void onAttributeCreation(EntityAttributeCreationEvent event) {

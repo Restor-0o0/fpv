@@ -1,8 +1,8 @@
 package org.restor.fpv.block;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -20,13 +20,20 @@ import org.restor.fpv.block.entity.ModBlockEntities;
 // Right-click: spawn a kamikaze drone on top and take control; a new one launches
 // automatically after each detonation. Sneak exits the loop.
 public class KamikazeStationBlock extends BaseEntityBlock {
+    private static final MapCodec<KamikazeStationBlock> CODEC = simpleCodec(KamikazeStationBlock::new);
+
     public KamikazeStationBlock(Properties props) {
         super(props);
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
+    @Override
+    public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+                                 BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer sp
             && level.getBlockEntity(pos) instanceof KamikazeStationBlockEntity be) {
             be.startSession(sp);

@@ -1,6 +1,7 @@
 package org.restor.fpv.block.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -70,12 +71,12 @@ public class WorkbenchBlockEntity extends BlockEntity implements Container, Menu
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        ContainerHelper.saveAllItems(tag, inventory);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        ContainerHelper.saveAllItems(tag, inventory, registries);
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        ContainerHelper.loadAllItems(tag, inventory);
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        ContainerHelper.loadAllItems(tag, inventory, registries);
     }
 }

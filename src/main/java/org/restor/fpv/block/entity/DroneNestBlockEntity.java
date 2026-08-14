@@ -1,6 +1,7 @@
 package org.restor.fpv.block.entity;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -64,20 +65,20 @@ public class DroneNestBlockEntity extends BlockEntity {
         double z = worldPosition.getZ() + 0.5 + (level.random.nextDouble() * 2 - 1) * 2.0;
         drone.setPos(x, y, z);
         drone.setAnchor(worldPosition.above(2)); // patrol around the nest, not the launch offset
-        drone.finalizeSpawn(level, level.getCurrentDifficultyAt(worldPosition), MobSpawnType.SPAWNER, null, null);
+        drone.finalizeSpawn(level, level.getCurrentDifficultyAt(worldPosition), MobSpawnType.SPAWNER, null);
         level.addFreshEntity(drone);
         level.playSound(null, worldPosition, SoundEvents.BEEHIVE_EXIT, SoundSource.BLOCKS, 1.0f, 0.8f);
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         if (tag.contains("Cooldown")) cooldown = tag.getInt("Cooldown");
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         tag.putInt("Cooldown", cooldown);
     }
 }

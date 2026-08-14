@@ -2,38 +2,37 @@ package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.DroneEntity;
 
-import java.util.function.Supplier;
+public record SetDroneCodePacket(int droneId, String code) implements CustomPacketPayload {
+    public static final Type<SetDroneCodePacket> TYPE =
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "set_drone_code"));
 
-public class SetDroneCodePacket {
-    private final int droneId;
-    private final String code;
+    public static final StreamCodec<FriendlyByteBuf, SetDroneCodePacket> STREAM_CODEC = StreamCodec.of(
+        (buf, pkt) -> {
+            buf.writeInt(pkt.droneId);
+            buf.writeUtf(pkt.code, 6);
+        },
+        buf -> new SetDroneCodePacket(buf.readInt(), buf.readUtf(6))
+    );
 
-    public SetDroneCodePacket(int droneId, String code) {
-        this.droneId = droneId;
-        this.code = code;
-    }
+    @Override
+    public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    public SetDroneCodePacket(FriendlyByteBuf buf) {
-        this.droneId = buf.readInt();
-        this.code = buf.readUtf(6);
-    }
-
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeInt(droneId);
-        buf.writeUtf(code, 6);
-    }
-
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
+    public static void handle(SetDroneCodePacket pkt, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            ServerPlayer player = context.player() instanceof ServerPlayer sp ? sp : null;
+            String code = pkt.code();
             // Empty code = clear the drone's link code.
             if (player == null || !(code.isEmpty() || code.matches("\\d{6}"))) return;
-            Entity entity = player.level().getEntity(droneId);
+            Entity entity = player.level().getEntity(pkt.droneId());
             if (entity instanceof DroneEntity drone && drone.isRemoteControllable()
                 && drone.distanceTo(player) < 8) {
                 drone.setLinkCode(code);
@@ -42,6 +41,5 @@ public class SetDroneCodePacket {
                     : Component.translatable("msg.fpv.code_set", code));
             }
         });
-        ctx.get().setPacketHandled(true);
     }
 }

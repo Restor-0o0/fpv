@@ -1,66 +1,66 @@
 package org.restor.fpv;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public class Config {
-    private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
-    public static final ForgeConfigSpec.DoubleValue KEYBOARD_YAW_SENSITIVITY;
-    public static final ForgeConfigSpec.DoubleValue MOUSE_PITCH_SENSITIVITY;
-    public static final ForgeConfigSpec.DoubleValue MOUSE_ROLL_SENSITIVITY;
-    public static final ForgeConfigSpec.DoubleValue MOUSE_SMOOTHING;
-    public static final ForgeConfigSpec.DoubleValue MOUSE_DEADBAND;
+    public static final ModConfigSpec.DoubleValue KEYBOARD_YAW_SENSITIVITY;
+    public static final ModConfigSpec.DoubleValue MOUSE_PITCH_SENSITIVITY;
+    public static final ModConfigSpec.DoubleValue MOUSE_ROLL_SENSITIVITY;
+    public static final ModConfigSpec.DoubleValue MOUSE_SMOOTHING;
+    public static final ModConfigSpec.DoubleValue MOUSE_DEADBAND;
 
-    public static final ForgeConfigSpec.DoubleValue RC_DEADBAND;
-    public static final ForgeConfigSpec.DoubleValue RC_EXPO;
-    public static final ForgeConfigSpec.DoubleValue RC_PITCH_RATE;
-    public static final ForgeConfigSpec.DoubleValue RC_ROLL_RATE;
-    public static final ForgeConfigSpec.DoubleValue RC_YAW_RATE;
-    public static final ForgeConfigSpec.DoubleValue RC_THROTTLE_MID;
-    public static final ForgeConfigSpec.IntValue RC_AXIS_THROTTLE;
-    public static final ForgeConfigSpec.IntValue RC_AXIS_YAW;
-    public static final ForgeConfigSpec.IntValue RC_AXIS_PITCH;
-    public static final ForgeConfigSpec.IntValue RC_AXIS_ROLL;
-    public static final ForgeConfigSpec.BooleanValue RC_INVERT_THROTTLE;
-    public static final ForgeConfigSpec.BooleanValue RC_INVERT_YAW;
-    public static final ForgeConfigSpec.BooleanValue RC_INVERT_PITCH;
-    public static final ForgeConfigSpec.BooleanValue RC_INVERT_ROLL;
-    public static final ForgeConfigSpec.BooleanValue RC_TX_DEFAULTS_APPLIED;
-    public static final ForgeConfigSpec.BooleanValue RC_TX_DEFAULTS_V2;
-    public static final ForgeConfigSpec.BooleanValue RC_TX_DEFAULTS_V3;
-    public static final ForgeConfigSpec.BooleanValue RC_TX_DEFAULTS_V4;
+    public static final ModConfigSpec.DoubleValue RC_DEADBAND;
+    public static final ModConfigSpec.DoubleValue RC_EXPO;
+    public static final ModConfigSpec.DoubleValue RC_PITCH_RATE;
+    public static final ModConfigSpec.DoubleValue RC_ROLL_RATE;
+    public static final ModConfigSpec.DoubleValue RC_YAW_RATE;
+    public static final ModConfigSpec.DoubleValue RC_THROTTLE_MID;
+    public static final ModConfigSpec.IntValue RC_AXIS_THROTTLE;
+    public static final ModConfigSpec.IntValue RC_AXIS_YAW;
+    public static final ModConfigSpec.IntValue RC_AXIS_PITCH;
+    public static final ModConfigSpec.IntValue RC_AXIS_ROLL;
+    public static final ModConfigSpec.BooleanValue RC_INVERT_THROTTLE;
+    public static final ModConfigSpec.BooleanValue RC_INVERT_YAW;
+    public static final ModConfigSpec.BooleanValue RC_INVERT_PITCH;
+    public static final ModConfigSpec.BooleanValue RC_INVERT_ROLL;
+    public static final ModConfigSpec.BooleanValue RC_TX_DEFAULTS_APPLIED;
+    public static final ModConfigSpec.BooleanValue RC_TX_DEFAULTS_V2;
+    public static final ModConfigSpec.BooleanValue RC_TX_DEFAULTS_V3;
+    public static final ModConfigSpec.BooleanValue RC_TX_DEFAULTS_V4;
 
-    public static final ForgeConfigSpec.ConfigValue<String> DEFAULT_LINK_CODE;
+    public static final ModConfigSpec.ConfigValue<String> DEFAULT_LINK_CODE;
 
-    public static final ForgeConfigSpec.DoubleValue DEV_POWER_MULT;
-    public static final ForgeConfigSpec.DoubleValue DEV_DRAG_MULT;
-    public static final ForgeConfigSpec.DoubleValue DEV_MAX_SPEED;
-    public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_POWER;
-    public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_BLOCK_BREAK_PERCENT;
-    public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_BLOCK_FLING_PERCENT;
-    public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_MOB_DAMAGE_MULT;
-    public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_CAMERA_BACKSTEP;
-    public static final ForgeConfigSpec.DoubleValue DEV_EXPLOSION_CAMERA_SECONDS;
-    public static final ForgeConfigSpec.IntValue DEV_CHUNK_RADIUS;
-    public static final ForgeConfigSpec.DoubleValue DEV_HITBOX_SCALE;
-    public static final ForgeConfigSpec.DoubleValue DEV_HITBOX_Y_OFFSET;
+    public static final ModConfigSpec.DoubleValue DEV_POWER_MULT;
+    public static final ModConfigSpec.DoubleValue DEV_DRAG_MULT;
+    public static final ModConfigSpec.DoubleValue DEV_MAX_SPEED;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_POWER;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_BLOCK_BREAK_PERCENT;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_BLOCK_FLING_PERCENT;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_MOB_DAMAGE_MULT;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_CAMERA_BACKSTEP;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_CAMERA_SECONDS;
+    public static final ModConfigSpec.IntValue DEV_CHUNK_RADIUS;
+    public static final ModConfigSpec.DoubleValue DEV_HITBOX_SCALE;
+    public static final ModConfigSpec.DoubleValue DEV_HITBOX_Y_OFFSET;
 
-    public static final ForgeConfigSpec.DoubleValue FPV_CAMERA_HEIGHT;
-    public static final ForgeConfigSpec.BooleanValue FPV_PROPS_IN_VIEW;
-    public static final ForgeConfigSpec.DoubleValue FPV_PROPS_FORWARD;
-    public static final ForgeConfigSpec.DoubleValue FPV_PROPS_DOWN;
-    public static final ForgeConfigSpec.DoubleValue FPV_PROPS_SCALE;
+    public static final ModConfigSpec.DoubleValue FPV_CAMERA_HEIGHT;
+    public static final ModConfigSpec.BooleanValue FPV_PROPS_IN_VIEW;
+    public static final ModConfigSpec.DoubleValue FPV_PROPS_FORWARD;
+    public static final ModConfigSpec.DoubleValue FPV_PROPS_DOWN;
+    public static final ModConfigSpec.DoubleValue FPV_PROPS_SCALE;
 
-    public static final ForgeConfigSpec.BooleanValue HUD_HINTS;
-    public static final ForgeConfigSpec.BooleanValue HUD_TELEMETRY;
-    public static final ForgeConfigSpec.BooleanValue HUD_STICKS;
-    public static final ForgeConfigSpec.BooleanValue HUD_ROLL_LINE;
-    public static final ForgeConfigSpec.BooleanValue HUD_PITCH_LADDER;
-    public static final ForgeConfigSpec.BooleanValue HUD_THROTTLE_BAR;
-    public static final ForgeConfigSpec.BooleanValue HUD_CROSSHAIR;
-    public static final ForgeConfigSpec.BooleanValue HUD_HEADING;
+    public static final ModConfigSpec.BooleanValue HUD_HINTS;
+    public static final ModConfigSpec.BooleanValue HUD_TELEMETRY;
+    public static final ModConfigSpec.BooleanValue HUD_STICKS;
+    public static final ModConfigSpec.BooleanValue HUD_ROLL_LINE;
+    public static final ModConfigSpec.BooleanValue HUD_PITCH_LADDER;
+    public static final ModConfigSpec.BooleanValue HUD_THROTTLE_BAR;
+    public static final ModConfigSpec.BooleanValue HUD_CROSSHAIR;
+    public static final ModConfigSpec.BooleanValue HUD_HEADING;
 
-    public static final ForgeConfigSpec SPEC;
+    public static final ModConfigSpec SPEC;
 
     static {
         BUILDER.push("keyboard_mouse");

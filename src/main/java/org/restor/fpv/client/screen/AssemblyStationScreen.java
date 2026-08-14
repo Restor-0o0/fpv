@@ -68,7 +68,7 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g);
+        renderBackground(g, mouseX, mouseY, partialTick);
         super.render(g, mouseX, mouseY, partialTick);
         // Label the empty payload square on hover so its purpose is obvious.
         if (hoveredSlot != null && hoveredSlot.index == AssemblyStationMenu.SLOT_MODULE && !hoveredSlot.hasItem()) {

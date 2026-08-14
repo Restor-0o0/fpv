@@ -164,27 +164,27 @@ public class DroneEntity extends Entity implements Pilotable {
     }
 
     @Override
-    protected void defineSynchedData() {
-        entityData.define(DATA_ROLL,        0f);
-        entityData.define(DATA_VISUAL_THR,  0f);
-        entityData.define(DATA_FLIGHT_MODE, 0);
-        entityData.define(DATA_ARMED,       false);
-        entityData.define(DATA_BATTERY,     1f);
-        entityData.define(DATA_RSSI,        1f);
-        entityData.define(DATA_VEL_X,       0f);
-        entityData.define(DATA_VEL_Y,       0f);
-        entityData.define(DATA_VEL_Z,       0f);
-        entityData.define(DATA_YAW_SYNC,    0f);
-        entityData.define(DATA_PITCH_SYNC,  0f);
-        entityData.define(DATA_CAMERA_ANGLE, 0f);
-        entityData.define(DATA_ANGVEL_ROLL,  0f);
-        entityData.define(DATA_ANGVEL_PITCH, 0f);
-        entityData.define(DATA_ANGVEL_YAW,   0f);
-        entityData.define(DATA_RATE_PITCH,   1f);
-        entityData.define(DATA_RATE_ROLL,    1f);
-        entityData.define(DATA_RATE_YAW,     1f);
-        entityData.define(DATA_LINK_CODE,    "");
-        entityData.define(DATA_PAYLOAD_AMMO, 0);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        builder.define(DATA_ROLL,        0f);
+        builder.define(DATA_VISUAL_THR,  0f);
+        builder.define(DATA_FLIGHT_MODE, 0);
+        builder.define(DATA_ARMED,       false);
+        builder.define(DATA_BATTERY,     1f);
+        builder.define(DATA_RSSI,        1f);
+        builder.define(DATA_VEL_X,       0f);
+        builder.define(DATA_VEL_Y,       0f);
+        builder.define(DATA_VEL_Z,       0f);
+        builder.define(DATA_YAW_SYNC,    0f);
+        builder.define(DATA_PITCH_SYNC,  0f);
+        builder.define(DATA_CAMERA_ANGLE, 0f);
+        builder.define(DATA_ANGVEL_ROLL,  0f);
+        builder.define(DATA_ANGVEL_PITCH, 0f);
+        builder.define(DATA_ANGVEL_YAW,   0f);
+        builder.define(DATA_RATE_PITCH,   1f);
+        builder.define(DATA_RATE_ROLL,    1f);
+        builder.define(DATA_RATE_YAW,     1f);
+        builder.define(DATA_LINK_CODE,    "");
+        builder.define(DATA_PAYLOAD_AMMO, 0);
     }
 
     // ---- Payload (drop charge) ----
@@ -902,17 +902,6 @@ public class DroneEntity extends Entity implements Pilotable {
     protected boolean canRide(Entity entity) { return entity instanceof Player; }
 
     @Override
-    public double getPassengersRidingOffset() { return 0.0; }
-
-    // Remote-control view: the camera IS this entity, so its eye height sets the camera's vertical
-    // spot. Match the ridden camera (FPV_CAMERA_HEIGHT fraction of the frame) so both views agree.
-    @Override
-    protected float getEyeHeight(net.minecraft.world.entity.Pose pose,
-                                 net.minecraft.world.entity.EntityDimensions dimensions) {
-        return dimensions.height * (float) org.restor.fpv.Config.FPV_CAMERA_HEIGHT.get().doubleValue();
-    }
-
-    @Override
     protected void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
         if (hasPassenger(passenger)) {
             // Camera position: forward from center along the drone's heading (yaw only).
@@ -937,11 +926,16 @@ public class DroneEntity extends Entity implements Pilotable {
     @Override
     public boolean isPickable() { return true; }
 
+    // Remote-control view: the camera IS this entity, so its eye height sets the camera's vertical
+    // spot. Match the ridden camera (FPV_CAMERA_HEIGHT fraction of the frame) so both views agree.
     @Override
     public net.minecraft.world.entity.EntityDimensions getDimensions(net.minecraft.world.entity.Pose pose) {
         net.minecraft.world.entity.EntityDimensions d = super.getDimensions(pose);
         float s = (float) org.restor.fpv.Config.DEV_HITBOX_SCALE.get().doubleValue();
-        return net.minecraft.world.entity.EntityDimensions.scalable(d.width * s, d.height * s);
+        float w = d.width() * s;
+        float h = d.height() * s;
+        float eyeHeight = h * (float) org.restor.fpv.Config.FPV_CAMERA_HEIGHT.get().doubleValue();
+        return net.minecraft.world.entity.EntityDimensions.scalable(w, h).withEyeHeight(eyeHeight);
     }
 
     @Override
@@ -954,8 +948,8 @@ public class DroneEntity extends Entity implements Pilotable {
     public boolean isPushable() { return false; }
 
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return new ClientboundAddEntityPacket(this);
+    public Packet<ClientGamePacketListener> getAddEntityPacket(net.minecraft.server.level.ServerEntity entity) {
+        return new ClientboundAddEntityPacket(this, entity);
     }
 
     @Override
@@ -1171,7 +1165,7 @@ public class DroneEntity extends Entity implements Pilotable {
         if (!player.getAbilities().instabuild) held.shrink(take);
         player.displayClientMessage(
             net.minecraft.network.chat.Component.translatable("msg.fpv.payload_loaded", getPayloadAmmo(), payloadCapacity()), true);
-        playSound(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC, 0.6f, 1.4f);
+        playSound(net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_GENERIC.value(), 0.6f, 1.4f);
     }
 
     // Drops one charge (a primed TNT) from the belly, inheriting the drone's velocity so it
@@ -1479,12 +1473,12 @@ public class DroneEntity extends Entity implements Pilotable {
     // let vanilla snap position/rotation at 20Hz over the smooth local simulation —
     // that was visible as yaw-stutter. Stash the position and blend in clientTick.
     @Override
-    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps, boolean teleport) {
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
         if (level().isClientSide && predAge <= 5) {
             serverSyncPos = new Vec3(x, y, z);
             return;
         }
-        super.lerpTo(x, y, z, yRot, xRot, steps, teleport);
+        super.lerpTo(x, y, z, yRot, xRot, steps);
     }
 
     // Called client-side by ClientEventHandler with the same values it sends to the

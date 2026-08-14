@@ -91,8 +91,7 @@ public class RaceGateBlockEntity extends BlockEntity {
         return size * 0.55;
     }
 
-    @Override
-    public AABB getRenderBoundingBox() {
+    public AABB renderBoundingBox() {
         Vec3 c = center();
         double frameReach = size * 0.75 + Math.abs(offset) + 2.0;
         AABB box = new AABB(
@@ -111,8 +110,8 @@ public class RaceGateBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         if (tag.contains("Size"))  size = tag.getInt("Size");
         if (tag.contains("Color")) color = tag.getInt("Color");
         if (tag.contains("Yaw"))   yaw = tag.getInt("Yaw");
@@ -124,8 +123,8 @@ public class RaceGateBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         tag.putInt("Size", size);
         tag.putInt("Color", color);
         tag.putInt("Yaw", yaw);
@@ -137,8 +136,8 @@ public class RaceGateBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag() {
-        return saveWithoutMetadata();
+    public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        return saveWithoutMetadata(registries);
     }
 
     @Override

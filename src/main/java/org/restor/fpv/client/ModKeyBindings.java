@@ -2,14 +2,14 @@ package org.restor.fpv.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import org.lwjgl.glfw.GLFW;
 import org.restor.fpv.Fpv;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
 public class ModKeyBindings {
     public static final KeyMapping CYCLE_MODE = new KeyMapping(
         "key.fpv.cycle_mode",

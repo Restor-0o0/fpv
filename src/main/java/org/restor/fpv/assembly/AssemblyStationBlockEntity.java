@@ -1,6 +1,7 @@
 package org.restor.fpv.assembly;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.MenuProvider;
@@ -39,20 +40,20 @@ public class AssemblyStationBlockEntity extends BlockEntity implements MenuProvi
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         var list = tag.getList("Items", 10);
         for (int i = 0; i < list.size() && i < items.getContainerSize(); i++) {
-            items.setItem(i, ItemStack.of(list.getCompound(i)));
+            items.setItem(i, ItemStack.parseOptional(registries, list.getCompound(i)));
         }
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         var list = new net.minecraft.nbt.ListTag();
         for (int i = 0; i < items.getContainerSize(); i++) {
-            list.add(items.getItem(i).save(new CompoundTag()));
+            list.add(items.getItem(i).saveOptional(registries));
         }
         tag.put("Items", list);
     }

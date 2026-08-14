@@ -7,8 +7,8 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.block.entity.ControlStationBlockEntity;
-import org.restor.fpv.network.ModNetworking;
 import org.restor.fpv.network.StationCodesPacket;
 import org.restor.fpv.network.StartRemoteControlPacket;
 
@@ -62,14 +62,14 @@ public class StationScreen extends Screen {
     }
 
     private void fly(String code) {
-        ModNetworking.CHANNEL.sendToServer(new StartRemoteControlPacket(code));
+        PacketDistributor.sendToServer(new StartRemoteControlPacket(code));
         onClose();
     }
 
     private void addCode() {
         String code = codeBox.getValue();
         if (code.length() != 6) return;
-        ModNetworking.CHANNEL.sendToServer(new StationCodesPacket(pos, code, true));
+        PacketDistributor.sendToServer(new StationCodesPacket(pos, code, true));
         // Optimistic local update so the list refreshes immediately (server re-syncs).
         if (minecraft.level.getBlockEntity(pos) instanceof ControlStationBlockEntity be) {
             be.addCode(code);
@@ -78,7 +78,7 @@ public class StationScreen extends Screen {
     }
 
     private void removeCode(String code) {
-        ModNetworking.CHANNEL.sendToServer(new StationCodesPacket(pos, code, false));
+        PacketDistributor.sendToServer(new StationCodesPacket(pos, code, false));
         if (minecraft.level.getBlockEntity(pos) instanceof ControlStationBlockEntity be) {
             be.removeCode(code);
         }
@@ -96,7 +96,7 @@ public class StationScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, 14, 0xFFFFFF);
         graphics.drawCenteredString(font, Component.translatable("screen.fpv.station_hint"), width / 2, 26, 0xAAAAAA);
         if (codes().isEmpty()) {

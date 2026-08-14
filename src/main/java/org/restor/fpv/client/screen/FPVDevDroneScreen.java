@@ -7,8 +7,8 @@ import net.minecraft.network.chat.Component;
 import org.restor.fpv.assembly.DroneAssembly;
 import org.restor.fpv.client.DevDroneBuild;
 import org.restor.fpv.data.DroneData;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.network.DevDroneGivePacket;
-import org.restor.fpv.network.ModNetworking;
 
 /**
  * Dev tool: assemble a drone from modules and see its derived flight stats live, then "Give"
@@ -62,7 +62,7 @@ public class FPVDevDroneScreen extends Screen {
 
         // Give + back.
         addRenderableWidget(Button.builder(Component.translatable("screen.fpv.dev_drone.give"),
-                b -> ModNetworking.CHANNEL.sendToServer(new DevDroneGivePacket(DevDroneBuild.buildAssembly().save())))
+                b -> PacketDistributor.sendToServer(new DevDroneGivePacket(DevDroneBuild.buildAssembly().save())))
             .bounds(cx - 154, height - 28, 150, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.back"), b -> onClose())
             .bounds(cx + 4, height - 28, 150, 20).build());
@@ -70,7 +70,7 @@ public class FPVDevDroneScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g);
+        renderBackground(g, mouseX, mouseY, partialTick);
         int cx = width / 2;
         g.drawCenteredString(font, title, cx, 18, 0xFFFFFF);
 

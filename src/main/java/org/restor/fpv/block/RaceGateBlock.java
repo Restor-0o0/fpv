@@ -1,8 +1,8 @@
 package org.restor.fpv.block;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -24,8 +24,6 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.phys.BlockHitResult;
 import org.joml.Vector3f;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 import org.jetbrains.annotations.Nullable;
 import org.restor.fpv.block.entity.RaceGateBlockEntity;
 
@@ -33,6 +31,7 @@ import org.restor.fpv.block.entity.RaceGateBlockEntity;
 // was placed on and seeds the frame orientation; fine yaw/pitch angle is set in the screen.
 public class RaceGateBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
+    private static final MapCodec<RaceGateBlock> CODEC = simpleCodec(RaceGateBlock::new);
 
     public RaceGateBlock(Properties props) {
         super(props);
@@ -40,11 +39,15 @@ public class RaceGateBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
+    @Override
+    public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+                                 BlockHitResult hit) {
         if (level.isClientSide) {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> org.restor.fpv.client.RaceMarkingClient.onGateClicked(pos));
+            org.restor.fpv.client.RaceMarkingClient.onGateClicked(pos);
         }
         return InteractionResult.SUCCESS;
     }

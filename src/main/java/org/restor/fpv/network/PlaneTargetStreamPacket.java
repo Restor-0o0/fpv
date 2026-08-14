@@ -1,54 +1,43 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.PlaneEntity;
 
-import java.util.function.Supplier;
+public record PlaneTargetStreamPacket(int planeId, boolean active, double x, double y,
+                                       double z) implements CustomPacketPayload {
+    public static final Type<PlaneTargetStreamPacket> TYPE =
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "plane_target_stream"));
 
-public class PlaneTargetStreamPacket {
-    private final int planeId;
-    private final boolean active;
-    private final double x;
-    private final double y;
-    private final double z;
+    public static final StreamCodec<FriendlyByteBuf, PlaneTargetStreamPacket> STREAM_CODEC = StreamCodec.of(
+        (buf, pkt) -> {
+            buf.writeInt(pkt.planeId);
+            buf.writeBoolean(pkt.active);
+            buf.writeDouble(pkt.x);
+            buf.writeDouble(pkt.y);
+            buf.writeDouble(pkt.z);
+        },
+        buf -> new PlaneTargetStreamPacket(buf.readInt(), buf.readBoolean(), buf.readDouble(), buf.readDouble(),
+            buf.readDouble())
+    );
 
-    public PlaneTargetStreamPacket(int planeId, boolean active, double x, double y, double z) {
-        this.planeId = planeId;
-        this.active = active;
-        this.x = x;
-        this.y = y;
-        this.z = z;
-    }
+    @Override
+    public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    public PlaneTargetStreamPacket(FriendlyByteBuf buf) {
-        planeId = buf.readInt();
-        active = buf.readBoolean();
-        x = buf.readDouble();
-        y = buf.readDouble();
-        z = buf.readDouble();
-    }
-
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeInt(planeId);
-        buf.writeBoolean(active);
-        buf.writeDouble(x);
-        buf.writeDouble(y);
-        buf.writeDouble(z);
-    }
-
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
-            if (player == null) return;
-            Entity e = player.level().getEntity(planeId);
+    public static void handle(PlaneTargetStreamPacket pkt, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)) return;
+            Entity e = player.level().getEntity(pkt.planeId());
             if (e instanceof PlaneEntity plane && plane.hasPassenger(player)) {
-                plane.setTargetStreaming(active ? new Vec3(x, y, z) : null);
+                plane.setTargetStreaming(pkt.active() ? new Vec3(pkt.x(), pkt.y(), pkt.z()) : null);
             }
         });
-        ctx.get().setPacketHandled(true);
     }
 }

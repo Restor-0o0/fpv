@@ -9,7 +9,7 @@ import org.restor.fpv.Fpv;
 import org.restor.fpv.menu.WorkbenchMenu;
 
 public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(Fpv.MODID, "textures/gui/workbench.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "textures/gui/workbench.png");
     private static final int LABEL_COLOR = 0xFFAAAAAA;
 
     public WorkbenchScreen(WorkbenchMenu menu, Inventory inv, Component title) {
@@ -44,7 +44,7 @@ public class WorkbenchScreen extends AbstractContainerScreen<WorkbenchMenu> {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
         renderTooltip(graphics, mouseX, mouseY);
     }

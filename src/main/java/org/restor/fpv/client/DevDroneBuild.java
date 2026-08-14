@@ -2,7 +2,7 @@ package org.restor.fpv.client;
 
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import org.restor.fpv.assembly.DroneAssembly;
 import org.restor.fpv.assembly.FrameSpec;
 import org.restor.fpv.component.ModComponents;
@@ -20,28 +20,28 @@ public final class DevDroneBuild {
     private DevDroneBuild() {}
 
     // Available modules per slot (the ones already registered in ModComponents).
-    public static final List<RegistryObject<Item>> FRAMES = List.of(
+    public static final List<DeferredHolder<Item, Item>> FRAMES = List.of(
         ModComponents.FRAME_TINY_WHOOP, ModComponents.FRAME_CINEWHOOP,
         ModComponents.FRAME_5INCH, ModComponents.FRAME_7INCH,
         ModComponents.FRAME_HEXA_6INCH, ModComponents.FRAME_OCTO_8INCH);
-    public static final List<RegistryObject<Item>> MOTORS = List.of(
+    public static final List<DeferredHolder<Item, Item>> MOTORS = List.of(
         ModComponents.MOTOR_1103_8000, ModComponents.MOTOR_1404_4500,
         ModComponents.MOTOR_2207_2450, ModComponents.MOTOR_2306_1700,
         ModComponents.MOTOR_2806_1300, ModComponents.MOTOR_3115_900);
-    public static final List<RegistryObject<Item>> PROPS = List.of(
+    public static final List<DeferredHolder<Item, Item>> PROPS = List.of(
         ModComponents.PROP_65MM, ModComponents.PROP_3X2X3,
         ModComponents.PROP_5X4X2, ModComponents.PROP_5X4X3);
-    public static final List<RegistryObject<Item>> BATTERIES = List.of(
+    public static final List<DeferredHolder<Item, Item>> BATTERIES = List.of(
         ModComponents.BATTERY_1S_300, ModComponents.BATTERY_4S_650,
         ModComponents.BATTERY_4S_1300, ModComponents.BATTERY_6S_1100);
-    public static final List<RegistryObject<Item>> CAMERAS = List.of(
+    public static final List<DeferredHolder<Item, Item>> CAMERAS = List.of(
         ModComponents.CAMERA_STANDARD, ModComponents.CAMERA_WIDE);
 
     // Slots: 0 frame, 1 motor, 2 prop, 3 battery, 4 camera.
     public static final int SLOTS = 5;
     private static final int[] idx = {2, 2, 3, 2, 0}; // default ≈ a 5" quad
 
-    private static List<RegistryObject<Item>> list(int slot) {
+    private static List<DeferredHolder<Item, Item>> list(int slot) {
         return switch (slot) {
             case 0 -> FRAMES;
             case 1 -> MOTORS;

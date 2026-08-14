@@ -5,7 +5,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 import net.minecraft.client.gui.screens.Screen;
-import org.restor.fpv.network.ModNetworking;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.network.SetDroneCodePacket;
 
 // Opened by right-clicking a remote-controllable drone: set its 6-digit link code.
@@ -37,7 +37,7 @@ public class DroneCodeScreen extends Screen {
         addRenderableWidget(Button.builder(Component.translatable("screen.fpv.set_code_remember"), b -> save(true))
             .bounds(cx - 75, cy + 32, 150, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.fpv.set_code_clear"), b -> {
-                ModNetworking.CHANNEL.sendToServer(new SetDroneCodePacket(droneId, ""));
+                PacketDistributor.sendToServer(new SetDroneCodePacket(droneId, ""));
                 onClose();
             })
             .bounds(cx - 75, cy + 56, 72, 20).build());
@@ -48,7 +48,7 @@ public class DroneCodeScreen extends Screen {
     private void save(boolean remember) {
         String code = codeBox.getValue();
         if (code.length() == 6) {
-            ModNetworking.CHANNEL.sendToServer(new SetDroneCodePacket(droneId, code));
+            PacketDistributor.sendToServer(new SetDroneCodePacket(droneId, code));
             if (remember) {
                 // Remembered code is auto-assigned to newly placed remote drones.
                 org.restor.fpv.Config.DEFAULT_LINK_CODE.set(code);
@@ -69,7 +69,7 @@ public class DroneCodeScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, height / 2 - 45, 0xFFFFFF);
         graphics.drawCenteredString(font, Component.translatable("screen.fpv.set_code_hint"),
             width / 2, height / 2 - 33, 0xAAAAAA);

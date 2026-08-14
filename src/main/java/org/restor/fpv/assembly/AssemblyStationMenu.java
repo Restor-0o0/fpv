@@ -1,6 +1,8 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -8,6 +10,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import org.restor.fpv.component.ComponentItem;
 import org.restor.fpv.component.ComponentType;
 import org.restor.fpv.item.ModItems;
@@ -109,7 +112,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         DroneAssembly a = buildAssembly();
         if (a.isComplete()) {
             ItemStack result = new ItemStack(ModItems.MODULAR_DRONE.get());
-            result.getOrCreateTag().put("Assembly", a.save());
+            CustomData.update(DataComponents.CUSTOM_DATA, result, t -> t.put("Assembly", a.save()));
             container.setItem(SLOT_RESULT, result);
         } else {
             container.setItem(SLOT_RESULT, ItemStack.EMPTY);
@@ -117,16 +120,18 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
     }
 
     private boolean canDisassemble(ItemStack stack) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         return stack.getItem() == ModItems.MODULAR_DRONE.get()
-            && stack.hasTag()
-            && stack.getTag().contains("Assembly")
+            && data != null
+            && data.contains("Assembly")
             && isStationEmptyExceptResult();
     }
 
     private boolean tryDisassemble() {
         ItemStack stack = container.getItem(SLOT_RESULT);
         if (!canDisassemble(stack)) return false;
-        DroneAssembly a = DroneAssembly.load(stack.getTag().getCompound("Assembly"));
+        CompoundTag tag = stack.get(DataComponents.CUSTOM_DATA).copyTag();
+        DroneAssembly a = DroneAssembly.load(tag.getCompound("Assembly"));
         FrameSpec spec = a.frameSpec();
         if (spec == null) return false;
         container.setItem(SLOT_FRAME, a.frame.copy());

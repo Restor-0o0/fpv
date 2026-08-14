@@ -1,10 +1,12 @@
 package org.restor.fpv.item;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -44,8 +46,9 @@ public class DroneItem extends Item {
         if (drone != null) {
             drone.setPos(spawnPos);
             drone.setYRot(player != null ? player.getYRot() : 0);
-            if (usesNbt && stack.hasTag()) {
-                drone.readFromItemTag(stack.getTag());
+            CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+            if (usesNbt && data != null) {
+                drone.readFromItemTag(data.copyTag());
             }
             // Newly placed remote drones adopt the remembered link code (if any).
             if (drone.isRemoteControllable()) {

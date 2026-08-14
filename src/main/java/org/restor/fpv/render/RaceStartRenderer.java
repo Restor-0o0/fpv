@@ -25,6 +25,11 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
     }
 
     @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(RaceStartBlockEntity start) {
+        return start.renderBoundingBox();
+    }
+
+    @Override
     public void render(RaceStartBlockEntity start, float partialTick, PoseStack pose,
                        MultiBufferSource buffer, int packedLight, int packedOverlay) {
         if (start.getRouteSize() <= 0) return;
@@ -127,8 +132,10 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
         float dx = p2.x - p1.x, dy = p2.y - p1.y, dz = p2.z - p1.z;
         float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (len < 1e-4f) len = 1f;
-        vc.vertex(mat, p1.x, p1.y, p1.z).color(r, g, b, a).normal(nrm, dx / len, dy / len, dz / len).endVertex();
-        vc.vertex(mat, p2.x, p2.y, p2.z).color(r, g, b, a).normal(nrm, dx / len, dy / len, dz / len).endVertex();
+        float nx = dx / len, ny = dy / len, nz = dz / len;
+        Vector3f n = nrm.transform(new Vector3f(nx, ny, nz));
+        vc.addVertex(mat, p1.x, p1.y, p1.z).setColor(r, g, b, a).setNormal(n.x, n.y, n.z);
+        vc.addVertex(mat, p2.x, p2.y, p2.z).setColor(r, g, b, a).setNormal(n.x, n.y, n.z);
     }
 
     private static Vec3 routeCenter(Level level, BlockPos pos, Vec3 fallback) {

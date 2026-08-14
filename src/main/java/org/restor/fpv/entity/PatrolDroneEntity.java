@@ -10,6 +10,7 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
@@ -83,7 +84,7 @@ public class PatrolDroneEntity extends NpcDroneEntity {
         }
 
         private void shootDart(LivingEntity t) {
-            Arrow dart = new Arrow(level(), PatrolDroneEntity.this);
+            Arrow dart = new Arrow(level(), PatrolDroneEntity.this, ItemStack.EMPTY, null);
             dart.setBaseDamage(1.5);
             dart.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
             Vec3 to = new Vec3(t.getX() - getX(), t.getEyeY() - 0.4 - dart.getY(), t.getZ() - getZ());

@@ -7,7 +7,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import org.restor.fpv.block.entity.RaceStartBlockEntity;
-import org.restor.fpv.network.ModNetworking;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.network.RaceStartConfigPacket;
 
 import java.util.List;
@@ -86,7 +86,7 @@ public class RaceStartScreen extends Screen {
             .bounds(cx - 90, y + 168, 180, 20).build());
 
         addRenderableWidget(Button.builder(Component.translatable("screen.fpv.race_clear"), b -> {
-            ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, laps, true));
+            PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, true));
         }).bounds(cx - 90, height - 52, 180, 20).build());
 
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
@@ -100,7 +100,7 @@ public class RaceStartScreen extends Screen {
     private void changeLaps(int d) {
         laps = Math.max(1, Math.min(50, laps + d));
         lapsButton.setMessage(lapsLabel());
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, laps, false));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, false));
     }
 
     private void changeColor() {
@@ -111,35 +111,35 @@ public class RaceStartScreen extends Screen {
             if (org.restor.fpv.block.entity.RaceGateBlockEntity.PALETTE[i] == color) { idx = i; break; }
         }
         color = org.restor.fpv.block.entity.RaceGateBlockEntity.PALETTE[(idx + 1) % org.restor.fpv.block.entity.RaceGateBlockEntity.PALETTE.length];
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, laps, false, true));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, false, true));
     }
 
     private void changeSize(int value) {
         size = Math.max(2, Math.min(15, value));
         RaceStartBlockEntity be = be();
         if (be != null) be.setSize(size);
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_SIZE, size));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_SIZE, size));
     }
 
     private void changeYaw(int delta) {
         yaw = Math.floorMod(yaw + delta, 360);
         RaceStartBlockEntity be = be();
         if (be != null) be.adjustYaw(delta);
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_YAW, delta));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_YAW, delta));
     }
 
     private void changePitch(int delta) {
         pitch = Math.max(-90, Math.min(90, pitch + delta));
         RaceStartBlockEntity be = be();
         if (be != null) be.adjustPitch(delta);
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_PITCH, delta));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_PITCH, delta));
     }
 
     private void changeOffset(int value) {
         offset = Math.max(0, Math.min(12, value));
         RaceStartBlockEntity be = be();
         if (be != null) be.setOffset(offset);
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_OFFSET, offset));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_OFFSET, offset));
     }
 
     private void flipNormal() {
@@ -147,12 +147,12 @@ public class RaceStartScreen extends Screen {
         pitch = -pitch;
         RaceStartBlockEntity be = be();
         if (be != null) be.flipNormal();
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.FLIP_NORMAL, 0));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.FLIP_NORMAL, 0));
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, 16, 0xFFFFFF);
         graphics.fill(width / 2 - 20, 28, width / 2 + 20, 40, 0xFF000000 | color);
 

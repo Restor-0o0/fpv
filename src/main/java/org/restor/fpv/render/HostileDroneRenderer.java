@@ -17,7 +17,7 @@ import org.restor.fpv.entity.NpcDroneEntity;
 // Box-composed hostile quad: dark gunmetal body, red LED "eye" at the nose, four arms with
 // always-spinning props (it is always powered). Yaw-only orientation — the AI flies level.
 public class HostileDroneRenderer extends EntityRenderer<NpcDroneEntity> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(Fpv.MODID, "textures/entity/drone.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "textures/entity/drone.png");
 
     public HostileDroneRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
@@ -86,10 +86,10 @@ public class HostileDroneRenderer extends EntityRenderer<NpcDroneEntity> {
                              float ax, float ay, float az, float bx, float by, float bz,
                              float cx, float cy, float cz, float dx, float dy, float dz,
                              float r, float g, float b, float nx, float ny, float nz) {
-        c.vertex(mat, ax, ay, az).color(r, g, b, 1f).uv(0, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(nx, ny, nz).endVertex();
-        c.vertex(mat, bx, by, bz).color(r, g, b, 1f).uv(1, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(nx, ny, nz).endVertex();
-        c.vertex(mat, cx, cy, cz).color(r, g, b, 1f).uv(1, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(nx, ny, nz).endVertex();
-        c.vertex(mat, dx, dy, dz).color(r, g, b, 1f).uv(0, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(nx, ny, nz).endVertex();
+        c.addVertex(mat, ax, ay, az).setColor(r, g, b, 1f).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(nx, ny, nz);
+        c.addVertex(mat, bx, by, bz).setColor(r, g, b, 1f).setUv(1, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(nx, ny, nz);
+        c.addVertex(mat, cx, cy, cz).setColor(r, g, b, 1f).setUv(1, 1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(nx, ny, nz);
+        c.addVertex(mat, dx, dy, dz).setColor(r, g, b, 1f).setUv(0, 1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(nx, ny, nz);
     }
 
     @Override

@@ -60,8 +60,8 @@ public abstract class NpcDroneEntity extends Monster {
 
     // Shot down: drop scrap electronics (copper/redstone per the §6 material logic).
     @Override
-    protected void dropCustomDeathLoot(DamageSource source, int looting, boolean hitByPlayer) {
-        super.dropCustomDeathLoot(source, looting, hitByPlayer);
+    protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, DamageSource source, boolean hitByPlayer) {
+        super.dropCustomDeathLoot(level, source, hitByPlayer);
         if (hitByPlayer) {
             spawnAtLocation(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.REDSTONE,
                 random.nextInt(2) + 1));

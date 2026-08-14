@@ -58,8 +58,8 @@ public class OperatorDummyEntity extends Entity {
     }
 
     @Override
-    protected void defineSynchedData() {
-        entityData.define(DATA_PILOT, "");
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        builder.define(DATA_PILOT, "");
     }
 
     @Override
@@ -81,7 +81,7 @@ public class OperatorDummyEntity extends Entity {
     }
 
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return new ClientboundAddEntityPacket(this);
+    public Packet<ClientGamePacketListener> getAddEntityPacket(net.minecraft.server.level.ServerEntity entity) {
+        return new ClientboundAddEntityPacket(this, entity);
     }
 }

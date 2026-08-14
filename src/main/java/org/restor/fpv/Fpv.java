@@ -5,23 +5,25 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterGuiOverlaysEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.common.util.TriState;
 import org.restor.fpv.block.ModBlocks;
 import org.restor.fpv.block.entity.ModBlockEntities;
 import org.restor.fpv.component.ModComponents;
@@ -40,7 +42,7 @@ public class Fpv {
 
     public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
-    public static final RegistryObject<CreativeModeTab> FPV_TAB = CREATIVE_TABS.register("fpv_tab",
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> FPV_TAB = CREATIVE_TABS.register("fpv_tab",
         () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.fpv"))
             .icon(() -> new ItemStack(ModItems.CINEWHOOP.get()))
@@ -100,9 +102,8 @@ public class Fpv {
             })
             .build());
 
-    public Fpv() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, Config.SPEC);
+    public Fpv(IEventBus modEventBus, ModContainer modContainer) {
+        modContainer.registerConfig(ModConfig.Type.CLIENT, Config.SPEC);
 
         ModEntities.ENTITIES.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
@@ -115,19 +116,19 @@ public class Fpv {
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::onRegisterOverlays);
+        modEventBus.addListener(ModNetworking::register);
 
-        MinecraftForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.register(this);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        ModNetworking.register();
         LOGGER.info("FPV Drones mod initialized!");
     }
 
-    private void onRegisterOverlays(RegisterGuiOverlaysEvent event) {
-        event.registerAbove(VanillaGuiOverlay.CROSSHAIR.id(), "fpv_overlay",
-            (gui, graphics, partialTick, width, height) ->
-                FPVOverlay.renderOverlay(graphics, partialTick));
+    private void onRegisterOverlays(RegisterGuiLayersEvent event) {
+        event.registerAbove(VanillaGuiLayers.CROSSHAIR, ResourceLocation.fromNamespaceAndPath(MODID, "fpv_overlay"),
+            (graphics, deltaTracker) ->
+                FPVOverlay.renderOverlay(graphics, deltaTracker.getGameTimeDeltaPartialTick(true)));
     }
 
     @SubscribeEvent
@@ -138,15 +139,15 @@ public class Fpv {
     // The pilot's real (invisible) body follows the drone via riding or the server-side
     // camera-follow teleport, so it physically overlaps ground items along the flight path.
     @SubscribeEvent
-    public void onItemPickup(EntityItemPickupEvent event) {
-        if (event.getEntity().getVehicle() instanceof DroneEntity
-            || event.getEntity().getVehicle() instanceof org.restor.fpv.entity.PlaneEntity
-            || (event.getEntity() instanceof ServerPlayer sp && sp.getCamera() instanceof DroneEntity)) {
-            event.setCanceled(true);
+    public void onItemPickup(ItemEntityPickupEvent.Pre event) {
+        if (event.getPlayer().getVehicle() instanceof DroneEntity
+            || event.getPlayer().getVehicle() instanceof org.restor.fpv.entity.PlaneEntity
+            || (event.getPlayer() instanceof ServerPlayer sp && sp.getCamera() instanceof DroneEntity)) {
+            event.setCanPickup(TriState.FALSE);
         }
     }
 
-    @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
     public static class ClientModEvents {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {

@@ -1,5 +1,6 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -7,6 +8,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.restor.fpv.component.ComponentItem;
@@ -42,9 +44,9 @@ public class ModularDroneEntity extends DroneEntity {
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        entityData.define(DATA_ASSEMBLY, new CompoundTag());
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_ASSEMBLY, new CompoundTag());
     }
 
     public DroneAssembly getAssembly() {
@@ -118,7 +120,7 @@ public class ModularDroneEntity extends DroneEntity {
 
         dartCooldown = 18;
         net.minecraft.world.entity.projectile.Arrow dart = new net.minecraft.world.entity.projectile.Arrow(
-            level(), getX(), getY() - 0.1, getZ());
+            level(), getX(), getY() - 0.1, getZ(), ItemStack.EMPTY, null);
         dart.setOwner(owner);
         dart.setBaseDamage(2.0);
         dart.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
@@ -251,7 +253,7 @@ public class ModularDroneEntity extends DroneEntity {
             setAssembly(DroneAssembly.load(tag.getCompound("Assembly")));
         }
         if (tag.contains("Cargo")) {
-            cargo.fromTag(tag.getList("Cargo", net.minecraft.nbt.Tag.TAG_COMPOUND));
+            cargo.fromTag(tag.getList("Cargo", net.minecraft.nbt.Tag.TAG_COMPOUND), level().registryAccess());
         }
     }
 
@@ -259,7 +261,7 @@ public class ModularDroneEntity extends DroneEntity {
     protected void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.put("Assembly", assembly.save());
-        tag.put("Cargo", cargo.createTag());
+        tag.put("Cargo", cargo.createTag(level().registryAccess()));
     }
 
     @Override
@@ -270,7 +272,7 @@ public class ModularDroneEntity extends DroneEntity {
     @Override
     protected ItemStack getDropStack() {
         ItemStack stack = new ItemStack(ModItems.MODULAR_DRONE.get());
-        stack.getOrCreateTag().put("Assembly", assembly.save());
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, t -> t.put("Assembly", assembly.save()));
         return stack;
     }
 }

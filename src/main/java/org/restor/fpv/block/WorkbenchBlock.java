@@ -1,8 +1,8 @@
 package org.restor.fpv.block;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -11,22 +11,28 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.network.NetworkHooks;
 import org.jetbrains.annotations.Nullable;
 import org.restor.fpv.block.entity.WorkbenchBlockEntity;
 
 public class WorkbenchBlock extends BaseEntityBlock {
+    private static final MapCodec<WorkbenchBlock> CODEC = simpleCodec(WorkbenchBlock::new);
+
     public WorkbenchBlock(Properties props) {
         super(props);
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
+    @Override
+    public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+                                 BlockHitResult hit) {
         if (!level.isClientSide) {
             var be = level.getBlockEntity(pos);
             if (be instanceof WorkbenchBlockEntity wbe) {
-                NetworkHooks.openScreen((ServerPlayer) player, wbe, pos);
+                ((ServerPlayer) player).openMenu(wbe, buf -> buf.writeBlockPos(pos));
             }
         }
         return InteractionResult.SUCCESS;

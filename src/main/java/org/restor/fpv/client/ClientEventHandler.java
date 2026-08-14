@@ -3,13 +3,13 @@ package org.restor.fpv.client;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.client.event.ViewportEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.Config;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.client.screen.FPVSettingsScreen;
@@ -19,12 +19,11 @@ import org.restor.fpv.entity.PlaneEntity;
 import org.restor.fpv.network.CameraAnglePacket;
 import org.restor.fpv.network.ControllerPacket;
 import org.restor.fpv.network.CycleModePacket;
-import org.restor.fpv.network.ModNetworking;
 import org.restor.fpv.network.PlaneControllerPacket;
 import org.restor.fpv.render.FPVOverlay;
 import org.slf4j.Logger;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public class ClientEventHandler {
     private static final Minecraft MC = Minecraft.getInstance();
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -84,8 +83,7 @@ public class ClientEventHandler {
     private static float fpvZoom = 1f;
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(ClientTickEvent.Post event) {
         if (MC.player == null || MC.level == null) return;
 
         // Scan for controller periodically (always, even while riding)
@@ -178,13 +176,13 @@ public class ClientEventHandler {
             }
 
             if (ModKeyBindings.CAMERA_UP.consumeClick()) {
-                ModNetworking.CHANNEL.sendToServer(new CameraAnglePacket(drone.getId(), 5f));
+                PacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), 5f));
             }
             if (ModKeyBindings.CAMERA_DOWN.consumeClick()) {
-                ModNetworking.CHANNEL.sendToServer(new CameraAnglePacket(drone.getId(), -5f));
+                PacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), -5f));
             }
             if (ModKeyBindings.FIRE_PAYLOAD.consumeClick()) {
-                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.FirePayloadPacket(drone.getId()));
+                PacketDistributor.sendToServer(new org.restor.fpv.network.FirePayloadPacket(drone.getId()));
             }
 
             if (hasKeyboardKeyInput()) {
@@ -205,7 +203,7 @@ public class ClientEventHandler {
 
             boolean cycleDown = ModKeyBindings.CYCLE_MODE.isDown();
             if (cycleDown && !prevCycleKey) {
-                ModNetworking.CHANNEL.sendToServer(new CycleModePacket(drone.getId()));
+                PacketDistributor.sendToServer(new CycleModePacket(drone.getId()));
             }
             prevCycleKey = cycleDown;
             return;
@@ -269,7 +267,7 @@ public class ClientEventHandler {
             if (target != null) {
                 planeLockTarget = target;
                 planeRawLockTarget = target;
-                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneStrikePacket(
+                PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneStrikePacket(
                     plane.getId(), target.x, target.y, target.z));
             } else {
                 MC.player.displayClientMessage(
@@ -433,7 +431,7 @@ public class ClientEventHandler {
         // Always send controller input to maintain controller mode
         // (prevents fallback to keyboard input which causes yaw feedback loops)
         drone.setClientPredictedInputs(throttle, pitch, roll, yaw);
-        ModNetworking.CHANNEL.sendToServer(new ControllerPacket(
+        PacketDistributor.sendToServer(new ControllerPacket(
             drone.getId(), throttle, pitch, roll, yaw, arm, mode
         ));
         return true;
@@ -484,7 +482,7 @@ public class ClientEventHandler {
         boolean arm = keyboardThrottle > 0.05f;
 
         drone.setClientPredictedInputs(keyboardThrottle, pitch, roll, yaw);
-        ModNetworking.CHANNEL.sendToServer(new ControllerPacket(
+        PacketDistributor.sendToServer(new ControllerPacket(
             drone.getId(), keyboardThrottle, pitch, roll, yaw, arm, false
         ));
     }
@@ -522,7 +520,7 @@ public class ClientEventHandler {
         }
 
         plane.setClientPredictedInputs(throttle, pitch, roll, yaw);
-        ModNetworking.CHANNEL.sendToServer(new PlaneControllerPacket(
+        PacketDistributor.sendToServer(new PlaneControllerPacket(
             plane.getId(), throttle, pitch, roll, yaw, arm
         ));
         return true;
@@ -555,7 +553,7 @@ public class ClientEventHandler {
         planeOrbitTarget = center;
         planeOrbitSyncGrace = 10;
         plane.setOrbit(true, center, radius);
-        ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
+        PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
             plane.getId(), true, center.x, center.y, center.z, radius));
     }
 
@@ -566,7 +564,7 @@ public class ClientEventHandler {
         if (plane != null) {
             plane.setOrbit(false, net.minecraft.world.phys.Vec3.ZERO, 0);
             if (notifyServer) {
-                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
+                PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
                     plane.getId(), false, 0, 0, 0, 0));
             }
         }
@@ -592,7 +590,7 @@ public class ClientEventHandler {
             : planeOrbitTarget;
         if (target == null) {
             if (planeTargetStreamActive) {
-                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
+                PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
                     plane.getId(), false, 0, 0, 0));
                 planeTargetStreamActive = false;
             }
@@ -600,7 +598,7 @@ public class ClientEventHandler {
             return;
         }
         if (!planeTargetStreamActive || planeTargetStreamTicks-- <= 0) {
-            ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
+            PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
                 plane.getId(), true, target.x, target.y, target.z));
             planeTargetStreamActive = true;
             planeTargetStreamTicks = 10;
@@ -681,7 +679,7 @@ public class ClientEventHandler {
 
         boolean arm = planeThrottle > 0.05f;
         plane.setClientPredictedInputs(planeThrottle, pitch, roll, yaw);
-        ModNetworking.CHANNEL.sendToServer(new PlaneControllerPacket(
+        PacketDistributor.sendToServer(new PlaneControllerPacket(
             plane.getId(), planeThrottle, pitch, roll, yaw, arm
         ));
     }
@@ -731,9 +729,9 @@ public class ClientEventHandler {
     }
 
     @SubscribeEvent
-    public static void onMouseScroll(net.minecraftforge.client.event.InputEvent.MouseScrollingEvent event) {
+    public static void onMouseScroll(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent event) {
         if (MC.screen != null || !fpvActive()) return;
-        fpvZoom = (float) Math.max(1.0, Math.min(8.0, fpvZoom + event.getScrollDelta() * 0.5));
+        fpvZoom = (float) Math.max(1.0, Math.min(8.0, fpvZoom + event.getScrollDeltaY() * 0.5));
         event.setCanceled(true); // don't also scroll the hotbar
     }
 
@@ -784,7 +782,7 @@ public class ClientEventHandler {
     }
 
     @SubscribeEvent
-    public static void onRenderPlayer(net.minecraftforge.client.event.RenderPlayerEvent.Pre event) {
+    public static void onRenderPlayer(net.neoforged.neoforge.client.event.RenderPlayerEvent.Pre event) {
         // Pilots ride inside the FPV entity/camera-follow body; don't render their player
         // model clipped into the drone/plane for any client in multiplayer.
         if (event.getEntity().getVehicle() instanceof DroneEntity
@@ -797,7 +795,7 @@ public class ClientEventHandler {
     }
 
     @SubscribeEvent
-    public static void onRenderHand(net.minecraftforge.client.event.RenderHandEvent event) {
+    public static void onRenderHand(net.neoforged.neoforge.client.event.RenderHandEvent event) {
         // Piloting a drone (riding or remote) shows the drone's own FPV camera feed —
         // the player's held item/arm should never appear in front of it.
         if (MC.player != null
@@ -808,7 +806,7 @@ public class ClientEventHandler {
     }
 
     @SubscribeEvent
-    public static void onMovementInput(net.minecraftforge.client.event.MovementInputUpdateEvent event) {
+    public static void onMovementInput(net.neoforged.neoforge.client.event.MovementInputUpdateEvent event) {
         // While remote-controlling (camera on a drone, not riding), the player's body
         // stands at the station — WASD must fly the drone, not walk the body.
         // shiftKeyDown is deliberately kept: vanilla uses it to exit the camera.
@@ -826,16 +824,16 @@ public class ClientEventHandler {
     }
 
     @SubscribeEvent
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Pre event) {
+    public static void onRenderOverlay(RenderGuiLayerEvent.Pre event) {
         FPVOverlay.onRenderGuiOverlay(event);
     }
 
     @SubscribeEvent
-    public static void onRenderGui(net.minecraftforge.client.event.RenderGuiEvent.Post event) {
+    public static void onRenderGui(net.neoforged.neoforge.client.event.RenderGuiEvent.Post event) {
         // Render FPV OSD once per frame after the whole GUI pass. This event fires
         // unconditionally — hanging the OSD on RenderGuiOverlayEvent.Post(HOTBAR) never
         // fired because our own Pre handler cancels the hotbar overlay (canceled Pre
         // suppresses Post), so the OSD was invisible.
-        FPVOverlay.renderOverlay(event.getGuiGraphics(), event.getPartialTick());
+        FPVOverlay.renderOverlay(event.getGuiGraphics(), event.getPartialTick().getGameTimeDeltaPartialTick(true));
     }
 }

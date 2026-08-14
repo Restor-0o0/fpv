@@ -16,11 +16,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.entity.PlaneEntity;
 import org.restor.fpv.network.GhostDataPacket;
-import org.restor.fpv.network.ModNetworking;
 import org.restor.fpv.network.RaceTimerPacket;
 import org.restor.fpv.race.GhostFrame;
 import org.restor.fpv.race.GhostRecording;
@@ -130,8 +129,7 @@ public class RaceStartBlockEntity extends BlockEntity {
     public int getRouteSize() { return route.size(); }
     public List<Result> getResults() { return List.copyOf(results); }
 
-    @Override
-    public AABB getRenderBoundingBox() {
+    public AABB renderBoundingBox() {
         Vec3 c = frameCenter();
         double frameReach = size * 0.75 + Math.abs(offset) + 2.0;
         AABB box = new AABB(c.x - frameReach, c.y - frameReach, c.z - frameReach,
@@ -310,7 +308,7 @@ public class RaceStartBlockEntity extends BlockEntity {
         runs.remove(pilot.getUUID());
         finishedInsideStart.add(pilot.getUUID());
         pilot.sendSystemMessage(Component.translatable("msg.fpv.race_finish", formatTime(time)));
-        ModNetworking.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pilot),
+        PacketDistributor.sendToPlayer(pilot,
             new RaceTimerPacket(0, totalLaps(), prog.startTime, route.size(), route.size(), time));
     }
 
@@ -379,7 +377,7 @@ public class RaceStartBlockEntity extends BlockEntity {
         GhostRecording personal = data.personalBest(key, pilot.getUUID());
         GhostRecording overall = data.overallBest(key);
         boolean same = personal != null && personal == overall; // player owns the track record
-        ModNetworking.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pilot),
+        PacketDistributor.sendToPlayer(pilot,
             new GhostDataPacket(startTime, same, personal, same ? null : overall));
     }
 
@@ -445,7 +443,7 @@ public class RaceStartBlockEntity extends BlockEntity {
         if (!force && prog.lastSentLap == prog.lap && prog.lastSentGate == prog.nextGate) return;
         prog.lastSentLap = prog.lap;
         prog.lastSentGate = prog.nextGate;
-        ModNetworking.CHANNEL.send(PacketDistributor.PLAYER.with(() -> pilot),
+        PacketDistributor.sendToPlayer(pilot,
             new RaceTimerPacket(prog.lap, totalLaps(), prog.startTime, prog.nextGate, route.size(), -1));
     }
 
@@ -486,8 +484,8 @@ public class RaceStartBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         laps = Math.max(1, tag.getInt("Laps"));
         if (tag.contains("Color")) color = tag.getInt("Color");
         if (tag.contains("Size")) size = Math.max(2, Math.min(15, tag.getInt("Size")));
@@ -507,8 +505,8 @@ public class RaceStartBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         tag.putInt("Laps", laps);
         tag.putInt("Color", color);
         tag.putInt("Size", size);
@@ -531,8 +529,8 @@ public class RaceStartBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag() {
-        return saveWithoutMetadata();
+    public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        return saveWithoutMetadata(registries);
     }
 
     @Override

@@ -3,8 +3,12 @@ package org.restor.fpv.network;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.restor.fpv.Fpv;
 import org.restor.fpv.block.ModBlocks;
 import org.restor.fpv.block.entity.RaceGateBlockEntity;
 import org.restor.fpv.block.entity.RaceStartBlockEntity;
@@ -14,11 +18,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 
 // Client -> server race-route marking. BEGIN clears and opens the route on a start block,
 // ADD appends the given gate, FINISH saves it.
-public class RaceMarkPacket {
+public record RaceMarkPacket(BlockPos startPos, int action, BlockPos gatePos) implements CustomPacketPayload {
     public static final int BEGIN = 0;
     public static final int ADD = 1;
     public static final int FINISH = 2;
@@ -35,49 +38,40 @@ public class RaceMarkPacket {
         }
     }
 
-    private final BlockPos startPos;
-    private final int action;
-    private final BlockPos gatePos;
+    public static final Type<RaceMarkPacket> TYPE =
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "race_mark"));
 
-    public RaceMarkPacket(BlockPos startPos, int action, BlockPos gatePos) {
-        this.startPos = startPos;
-        this.action = action;
-        this.gatePos = gatePos;
-    }
+    public static final StreamCodec<FriendlyByteBuf, RaceMarkPacket> STREAM_CODEC = StreamCodec.of(
+        (buf, pkt) -> {
+            buf.writeBlockPos(pkt.startPos);
+            buf.writeInt(pkt.action);
+            buf.writeBlockPos(pkt.gatePos);
+        },
+        buf -> new RaceMarkPacket(buf.readBlockPos(), buf.readInt(), buf.readBlockPos())
+    );
 
-    public RaceMarkPacket(FriendlyByteBuf buf) {
-        this.startPos = buf.readBlockPos();
-        this.action = buf.readInt();
-        this.gatePos = buf.readBlockPos();
-    }
+    @Override
+    public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeBlockPos(startPos);
-        buf.writeInt(action);
-        buf.writeBlockPos(gatePos);
-    }
-
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
-            if (player == null) return;
-            switch (action) {
-                case BEGIN -> begin(player);
-                case ADD -> add(player);
-                case FINISH -> finish(player);
+    public static void handle(RaceMarkPacket pkt, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)) return;
+            switch (pkt.action()) {
+                case BEGIN -> begin(player, pkt.startPos());
+                case ADD -> add(player, pkt.startPos(), pkt.gatePos());
+                case FINISH -> finish(player, pkt.startPos(), pkt.gatePos());
             }
         });
-        ctx.get().setPacketHandled(true);
     }
 
-    private void begin(ServerPlayer player) {
+    private static void begin(ServerPlayer player, BlockPos startPos) {
         if (!isCloseEnough(player, startPos)) return;
         if (!(player.level().getBlockEntity(startPos) instanceof RaceStartBlockEntity be)) return;
         MARKING_SESSIONS.put(player.getUUID(), new MarkingSession(startPos));
         be.beginMarking(player);
     }
 
-    private void add(ServerPlayer player) {
+    private static void add(ServerPlayer player, BlockPos startPos, BlockPos gatePos) {
         MarkingSession session = MARKING_SESSIONS.get(player.getUUID());
         if (session == null || !session.startPos.equals(startPos)) return;
         if (!isCloseEnough(player, gatePos)) return;
@@ -94,7 +88,7 @@ public class RaceMarkPacket {
         player.sendSystemMessage(Component.translatable("msg.fpv.race_mark_add", session.route.size()));
     }
 
-    private void finish(ServerPlayer player) {
+    private static void finish(ServerPlayer player, BlockPos startPos, BlockPos gatePos) {
         if (!isCloseEnough(player, gatePos)) return;
         MarkingSession session = MARKING_SESSIONS.remove(player.getUUID());
         if (session == null || !session.startPos.equals(startPos)) return;

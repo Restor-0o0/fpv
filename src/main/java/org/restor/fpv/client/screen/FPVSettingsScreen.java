@@ -7,12 +7,12 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.Config;
 import org.restor.fpv.client.ModKeyBindings;
 import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.network.DroneRatesPacket;
-import org.restor.fpv.network.ModNetworking;
 
 public class FPVSettingsScreen extends Screen {
     private static final int ROW_HEIGHT = 20;
@@ -200,7 +200,7 @@ public class FPVSettingsScreen extends Screen {
         return y + (twoColumns ? ROW_GAP : ROW_GAP * 2);
     }
 
-    private int addTogglePair(int left, int y, int w, int colGap, boolean twoColumns, String labelA, ForgeConfigSpec.BooleanValue valueA, String labelB, ForgeConfigSpec.BooleanValue valueB) {
+    private int addTogglePair(int left, int y, int w, int colGap, boolean twoColumns, String labelA, ModConfigSpec.BooleanValue valueA, String labelB, ModConfigSpec.BooleanValue valueB) {
         int right = twoColumns ? left + w + colGap : left;
         addContentWidget(toggleButton(left, y, w, ROW_HEIGHT, labelA, valueA));
         addContentWidget(toggleButton(right, twoColumns ? y : y + ROW_GAP, w, ROW_HEIGHT, labelB, valueB));
@@ -230,7 +230,7 @@ public class FPVSettingsScreen extends Screen {
         }).bounds(x, y, w, ROW_HEIGHT).build());
     }
 
-    private Button toggleButton(int x, int y, int w, int h, String label, ForgeConfigSpec.BooleanValue value) {
+    private Button toggleButton(int x, int y, int w, int h, String label, ModConfigSpec.BooleanValue value) {
         return Button.builder(toggleMessage(label, value.get()), button -> {
             value.set(!value.get());
             Config.save();
@@ -284,10 +284,10 @@ public class FPVSettingsScreen extends Screen {
     // and to the server (which owns the value and re-syncs it).
     private static void setDroneRate(DroneEntity drone, int axis, float value) {
         drone.setRateMultiplier(axis, value);
-        ModNetworking.CHANNEL.sendToServer(new DroneRatesPacket(drone.getId(), axis, value));
+        PacketDistributor.sendToServer(new DroneRatesPacket(drone.getId(), axis, value));
     }
 
-    private Button axisButton(int x, int y, int w, int h, String label, net.minecraftforge.common.ForgeConfigSpec.IntValue value) {
+    private Button axisButton(int x, int y, int w, int h, String label, ModConfigSpec.IntValue value) {
         return Button.builder(axisMessage(label, value.get()), button -> {
             value.set(value.get() >= 7 ? -1 : value.get() + 1);
             Config.save();
@@ -295,7 +295,7 @@ public class FPVSettingsScreen extends Screen {
         }).bounds(x, y, w, h).build();
     }
 
-    private Button invertButton(int x, int y, int w, int h, String label, net.minecraftforge.common.ForgeConfigSpec.BooleanValue value) {
+    private Button invertButton(int x, int y, int w, int h, String label, ModConfigSpec.BooleanValue value) {
         return Button.builder(invertMessage(label, value.get()), button -> {
             value.set(!value.get());
             Config.save();
@@ -313,22 +313,22 @@ public class FPVSettingsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         if (maxScroll <= 0) {
-            return super.mouseScrolled(mouseX, mouseY, delta);
+            return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
         }
         int old = scrollOffset;
-        scrollOffset = (int) Math.max(0, Math.min(maxScroll, scrollOffset - delta * 22));
+        scrollOffset = (int) Math.max(0, Math.min(maxScroll, scrollOffset - scrollY * 22));
         if (scrollOffset != old) {
             refreshWidgets();
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, 14, 0xFFFFFF);
         graphics.drawCenteredString(font, selectedTab == Tab.DEV
             ? Component.translatable("screen.fpv.dev_hint")
@@ -378,7 +378,7 @@ public class FPVSettingsScreen extends Screen {
         }
 
         DoubleSlider(int x, int y, int w, int h, String label,
-                     net.minecraftforge.common.ForgeConfigSpec.DoubleValue config, double min, double max) {
+                     ModConfigSpec.DoubleValue config, double min, double max) {
             this(x, y, w, h, label, config.get(), min, max, v -> {
                 config.set(v);
                 Config.save();

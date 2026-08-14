@@ -1,5 +1,6 @@
 package org.restor.fpv.block;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
@@ -15,8 +16,15 @@ import org.restor.fpv.block.entity.ModBlockEntities;
 // player is near, capped by how many of its drones are still alive around it. Break the
 // nest to stop the swarm.
 public class DroneNestBlock extends BaseEntityBlock {
+    private static final MapCodec<DroneNestBlock> CODEC = simpleCodec(DroneNestBlock::new);
+
     public DroneNestBlock(Properties props) {
         super(props);
+    }
+
+    @Override
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
     }
 
     @Override

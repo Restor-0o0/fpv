@@ -1,50 +1,43 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.KamikazeWingEntity;
 import org.restor.fpv.entity.ModEntities;
 import org.restor.fpv.entity.ScoutPlaneEntity;
 
-import java.util.function.Supplier;
+public record PlaneStrikePacket(int scoutId, double tx, double ty, double tz) implements CustomPacketPayload {
+    public static final Type<PlaneStrikePacket> TYPE =
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "plane_strike"));
 
-public class PlaneStrikePacket {
-    private final int scoutId;
-    private final double tx, ty, tz;
+    public static final StreamCodec<FriendlyByteBuf, PlaneStrikePacket> STREAM_CODEC = StreamCodec.of(
+        (buf, pkt) -> {
+            buf.writeInt(pkt.scoutId);
+            buf.writeDouble(pkt.tx);
+            buf.writeDouble(pkt.ty);
+            buf.writeDouble(pkt.tz);
+        },
+        buf -> new PlaneStrikePacket(buf.readInt(), buf.readDouble(), buf.readDouble(), buf.readDouble())
+    );
 
-    public PlaneStrikePacket(int scoutId, double tx, double ty, double tz) {
-        this.scoutId = scoutId;
-        this.tx = tx;
-        this.ty = ty;
-        this.tz = tz;
-    }
+    @Override
+    public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    public PlaneStrikePacket(FriendlyByteBuf buf) {
-        scoutId = buf.readInt();
-        tx = buf.readDouble();
-        ty = buf.readDouble();
-        tz = buf.readDouble();
-    }
-
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeInt(scoutId);
-        buf.writeDouble(tx);
-        buf.writeDouble(ty);
-        buf.writeDouble(tz);
-    }
-
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
-            if (player == null || !(player.level() instanceof ServerLevel sl)) return;
-            Entity e = sl.getEntity(scoutId);
+    public static void handle(PlaneStrikePacket pkt, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player) || !(player.level() instanceof ServerLevel sl)) return;
+            Entity e = sl.getEntity(pkt.scoutId());
             if (!(e instanceof ScoutPlaneEntity scout) || !scout.hasPassenger(player)) return;
 
-            Vec3 target = new Vec3(tx, ty, tz);
+            Vec3 target = new Vec3(pkt.tx(), pkt.ty(), pkt.tz());
             Vec3 toTarget = target.subtract(scout.position());
             Vec3 approach = new Vec3(toTarget.x, 0, toTarget.z);
             if (approach.lengthSqr() < 1.0e-4) {
@@ -61,6 +54,5 @@ public class PlaneStrikePacket {
             wing.beginAttackRun(target, spawn);
             sl.addFreshEntity(wing);
         });
-        ctx.get().setPacketHandled(true);
     }
 }

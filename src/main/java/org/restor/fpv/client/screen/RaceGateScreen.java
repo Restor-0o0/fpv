@@ -7,7 +7,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import org.restor.fpv.block.entity.RaceGateBlockEntity;
-import org.restor.fpv.network.ModNetworking;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.network.RaceGateConfigPacket;
 
 // Race gate config: frame size, colour, and orientation (yaw / pitch angle).
@@ -80,7 +80,7 @@ public class RaceGateScreen extends Screen {
     }
 
     private void send(int action, int value) {
-        ModNetworking.CHANNEL.sendToServer(new RaceGateConfigPacket(pos, action, value));
+        PacketDistributor.sendToServer(new RaceGateConfigPacket(pos, action, value));
     }
 
     private void updateSize(int value) {
@@ -130,7 +130,7 @@ public class RaceGateScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, 16, 0xFFFFFF);
 
         int cx = width / 2;

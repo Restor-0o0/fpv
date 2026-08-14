@@ -1,58 +1,44 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.PlaneEntity;
 
-import java.util.function.Supplier;
+public record PlaneControllerPacket(int planeId, float throttle, float pitch, float roll, float yaw,
+                                     boolean arm) implements CustomPacketPayload {
+    public static final Type<PlaneControllerPacket> TYPE =
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "plane_controller"));
 
-public class PlaneControllerPacket {
-    private final int planeId;
-    private final float throttle;
-    private final float pitch;
-    private final float roll;
-    private final float yaw;
-    private final boolean arm;
+    public static final StreamCodec<FriendlyByteBuf, PlaneControllerPacket> STREAM_CODEC = StreamCodec.of(
+        (buf, pkt) -> {
+            buf.writeInt(pkt.planeId);
+            buf.writeFloat(pkt.throttle);
+            buf.writeFloat(pkt.pitch);
+            buf.writeFloat(pkt.roll);
+            buf.writeFloat(pkt.yaw);
+            buf.writeBoolean(pkt.arm);
+        },
+        buf -> new PlaneControllerPacket(buf.readInt(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
+            buf.readFloat(), buf.readBoolean())
+    );
 
-    public PlaneControllerPacket(int planeId, float throttle, float pitch, float roll, float yaw, boolean arm) {
-        this.planeId = planeId;
-        this.throttle = throttle;
-        this.pitch = pitch;
-        this.roll = roll;
-        this.yaw = yaw;
-        this.arm = arm;
-    }
+    @Override
+    public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    public PlaneControllerPacket(FriendlyByteBuf buf) {
-        this.planeId = buf.readInt();
-        this.throttle = buf.readFloat();
-        this.pitch = buf.readFloat();
-        this.roll = buf.readFloat();
-        this.yaw = buf.readFloat();
-        this.arm = buf.readBoolean();
-    }
-
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeInt(planeId);
-        buf.writeFloat(throttle);
-        buf.writeFloat(pitch);
-        buf.writeFloat(roll);
-        buf.writeFloat(yaw);
-        buf.writeBoolean(arm);
-    }
-
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
-            if (player != null) {
-                Entity entity = player.level().getEntity(planeId);
+    public static void handle(PlaneControllerPacket pkt, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (context.player() instanceof ServerPlayer player) {
+                Entity entity = player.level().getEntity(pkt.planeId());
                 if (entity instanceof PlaneEntity plane && plane.hasPassenger(player)) {
-                    plane.setControllerInput(throttle, pitch, roll, yaw, arm);
+                    plane.setControllerInput(pkt.throttle(), pkt.pitch(), pkt.roll(), pkt.yaw(), pkt.arm());
                 }
             }
         });
-        ctx.get().setPacketHandled(true);
     }
 }

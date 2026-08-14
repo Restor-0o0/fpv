@@ -24,7 +24,7 @@ import org.restor.fpv.entity.DroneEntity;
  * it is rendered assembled — no code changes needed.
  */
 public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation("fpv", "textures/entity/drone.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("fpv", "textures/entity/drone.png");
 
     public ModularDroneRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);

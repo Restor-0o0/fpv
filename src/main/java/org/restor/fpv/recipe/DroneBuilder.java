@@ -1,9 +1,11 @@
 package org.restor.fpv.recipe;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
 import org.restor.fpv.component.ComponentStats;
 import org.restor.fpv.component.ComponentType;
 import org.restor.fpv.item.ModItems;
@@ -19,7 +21,7 @@ public class DroneBuilder {
 
     public static ItemStack assemble(Map<ComponentType, ComponentStats> parts) {
         ItemStack stack = new ItemStack(ModItems.ASSEMBLED_DRONE.get());
-        CompoundTag tag = stack.getOrCreateTag();
+        CompoundTag tag = new CompoundTag();
         CompoundTag components = new CompoundTag();
 
         for (var entry : parts.entrySet()) {
@@ -46,6 +48,8 @@ public class DroneBuilder {
         }
         if (motor != null) tag.putFloat("MotorPower", motor.motorPower());
         if (prop != null) tag.putFloat("PropEfficiency", prop.propEfficiency());
+
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, t -> t.merge(tag));
 
         return stack;
     }

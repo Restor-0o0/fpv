@@ -145,21 +145,21 @@ public class PlaneEntity extends Entity implements Pilotable {
     }
 
     @Override
-    protected void defineSynchedData() {
-        entityData.define(DATA_ROLL,         0f);
-        entityData.define(DATA_THROTTLE,     0f);
-        entityData.define(DATA_ARMED,        false);
-        entityData.define(DATA_YAW_SYNC,     0f);
-        entityData.define(DATA_PITCH_SYNC,   0f);
-        entityData.define(DATA_ANGVEL_ROLL,  0f);
-        entityData.define(DATA_ANGVEL_PITCH, 0f);
-        entityData.define(DATA_ANGVEL_YAW,   0f);
-        entityData.define(DATA_ORBIT,        false);
-        entityData.define(DATA_ORB_CX,       0f);
-        entityData.define(DATA_ORB_CZ,       0f);
-        entityData.define(DATA_ORB_R,        12f);
-        entityData.define(DATA_ORB_DIR,      1f);
-        entityData.define(DATA_ORB_Y,        0f);
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        builder.define(DATA_ROLL,         0f);
+        builder.define(DATA_THROTTLE,     0f);
+        builder.define(DATA_ARMED,        false);
+        builder.define(DATA_YAW_SYNC,     0f);
+        builder.define(DATA_PITCH_SYNC,   0f);
+        builder.define(DATA_ANGVEL_ROLL,  0f);
+        builder.define(DATA_ANGVEL_PITCH, 0f);
+        builder.define(DATA_ANGVEL_YAW,   0f);
+        builder.define(DATA_ORBIT,        false);
+        builder.define(DATA_ORB_CX,       0f);
+        builder.define(DATA_ORB_CZ,       0f);
+        builder.define(DATA_ORB_R,        12f);
+        builder.define(DATA_ORB_DIR,      1f);
+        builder.define(DATA_ORB_Y,        0f);
     }
 
     @Override
@@ -376,7 +376,7 @@ public class PlaneEntity extends Entity implements Pilotable {
         return up;
     }
 
-    private void applyGravity() {
+    protected void applyGravity() {
         setDeltaMovement(getDeltaMovement().add(0, -GRAVITY * MS2_TO_BT, 0));
         Vec3 vel = getDeltaMovement();
         double max = maxSpeedBt;
@@ -499,12 +499,12 @@ public class PlaneEntity extends Entity implements Pilotable {
     }
 
     @Override
-    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps, boolean teleport) {
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
         if (level().isClientSide && (predAge <= 5 || entityData.get(DATA_ORBIT))) {
             serverSyncPos = new Vec3(x, y, z);
             return;
         }
-        super.lerpTo(x, y, z, yRot, xRot, steps, teleport);
+        super.lerpTo(x, y, z, yRot, xRot, steps);
     }
 
     public void setClientPredictedInputs(float throttle, float pitch, float roll, float yaw) {
@@ -809,9 +809,6 @@ public class PlaneEntity extends Entity implements Pilotable {
     protected boolean canRide(Entity entity) { return entity instanceof Player; }
 
     @Override
-    public double getPassengersRidingOffset() { return 0.0; }
-
-    @Override
     public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
         return mountReturnPos != null ? mountReturnPos : position().add(0, 1.5, 0);
     }
@@ -944,7 +941,7 @@ public class PlaneEntity extends Entity implements Pilotable {
     }
 
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return new ClientboundAddEntityPacket(this);
+    public Packet<ClientGamePacketListener> getAddEntityPacket(net.minecraft.server.level.ServerEntity entity) {
+        return new ClientboundAddEntityPacket(this, entity);
     }
 }

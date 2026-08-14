@@ -1,7 +1,11 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.restor.fpv.component.ComponentItem;
 import org.restor.fpv.component.ComponentStats;
 import org.restor.fpv.component.ComponentType;
@@ -36,28 +40,41 @@ public class DroneAssembly {
 
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
-        tag.put("Frame", frame.save(new CompoundTag()));
-        tag.put("Battery", battery.save(new CompoundTag()));
-        tag.put("Camera", camera.save(new CompoundTag()));
-        if (!module.isEmpty()) tag.put("Module", module.save(new CompoundTag()));
+        putStack(tag, "Frame", frame);
+        putStack(tag, "Battery", battery);
+        putStack(tag, "Camera", camera);
+        if (!module.isEmpty()) putStack(tag, "Module", module);
         for (int i = 0; i < MAX_MOTORS; i++) {
-            if (!motors[i].isEmpty()) tag.put("Motor" + i, motors[i].save(new CompoundTag()));
-            if (!props[i].isEmpty())  tag.put("Prop" + i,  props[i].save(new CompoundTag()));
+            if (!motors[i].isEmpty()) putStack(tag, "Motor" + i, motors[i]);
+            if (!props[i].isEmpty())  putStack(tag, "Prop" + i,  props[i]);
         }
         return tag;
     }
 
+    // Component ItemStacks carry no per-stack state (stats live on the static ComponentStats
+    // tied to the Item), so only the registry id needs to survive the round trip.
+    private static void putStack(CompoundTag tag, String key, ItemStack stack) {
+        tag.putString(key, BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
+    }
+
     public static DroneAssembly load(CompoundTag tag) {
         DroneAssembly a = new DroneAssembly();
-        a.frame = ItemStack.of(tag.getCompound("Frame"));
-        a.battery = ItemStack.of(tag.getCompound("Battery"));
-        a.camera = ItemStack.of(tag.getCompound("Camera"));
-        if (tag.contains("Module")) a.module = ItemStack.of(tag.getCompound("Module"));
+        a.frame = readStack(tag, "Frame");
+        a.battery = readStack(tag, "Battery");
+        a.camera = readStack(tag, "Camera");
+        if (tag.contains("Module")) a.module = readStack(tag, "Module");
         for (int i = 0; i < MAX_MOTORS; i++) {
-            if (tag.contains("Motor" + i)) a.motors[i] = ItemStack.of(tag.getCompound("Motor" + i));
-            if (tag.contains("Prop" + i))  a.props[i]  = ItemStack.of(tag.getCompound("Prop" + i));
+            if (tag.contains("Motor" + i)) a.motors[i] = readStack(tag, "Motor" + i);
+            if (tag.contains("Prop" + i))  a.props[i]  = readStack(tag, "Prop" + i);
         }
         return a;
+    }
+
+    private static ItemStack readStack(CompoundTag tag, String key) {
+        if (!tag.contains(key)) return ItemStack.EMPTY;
+        ResourceLocation id = ResourceLocation.tryParse(tag.getString(key));
+        Item item = id != null ? BuiltInRegistries.ITEM.get(id) : Items.AIR;
+        return item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
     }
 
     // ---------------------------------------------------------------- structure

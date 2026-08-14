@@ -10,10 +10,9 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.client.event.ViewportEvent;
-import net.minecraftforge.common.Tags;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.controller.RCController;
 import org.restor.fpv.entity.DroneEntity;
@@ -151,11 +150,11 @@ public class FPVOverlay {
     }
 
     @SubscribeEvent
-    public static void onRenderGuiOverlay(RenderGuiOverlayEvent.Pre event) {
+    public static void onRenderGuiOverlay(RenderGuiLayerEvent.Pre event) {
         if (!isFPVActive()) return;
-        if (event.getOverlay() == null) return;
+        if (event.getName() == null) return;
 
-        String overlayPath = event.getOverlay().id().toString();
+        String overlayPath = event.getName().toString();
         if (overlayPath.contains("player_list") || overlayPath.contains("chat_panel")
             || overlayPath.contains("debug_overlay") || overlayPath.contains("subtitles")) {
             return;

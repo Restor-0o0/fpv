@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.DefaultPlayerSkin;
+import net.minecraft.client.resources.PlayerSkin;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import org.restor.fpv.entity.OperatorDummyEntity;
@@ -37,8 +38,8 @@ public class OperatorDummyRenderer extends EntityRenderer<OperatorDummyEntity> {
         super.render(entity, yaw, partialTick, poseStack, buffer, packedLight);
 
         PlayerInfo info = resolvePilot(entity);
-        boolean slim = info != null && "slim".equals(info.getModelName());
-        ResourceLocation skin = info != null ? info.getSkinLocation() : DefaultPlayerSkin.getDefaultSkin();
+        boolean slim = info != null && info.getSkin().model() == PlayerSkin.Model.SLIM;
+        ResourceLocation skin = info != null ? info.getSkin().texture() : DefaultPlayerSkin.getDefaultTexture();
         PlayerModel<AbstractClientPlayer> m = slim ? slimModel : model;
 
         poseStack.pushPose();
@@ -49,7 +50,7 @@ public class OperatorDummyRenderer extends EntityRenderer<OperatorDummyEntity> {
 
         pose(m);
         var vc = buffer.getBuffer(RenderType.entityTranslucent(skin));
-        m.renderToBuffer(poseStack, vc, packedLight, OverlayTexture.NO_OVERLAY, 1f, 1f, 1f, 1f);
+        m.renderToBuffer(poseStack, vc, packedLight, OverlayTexture.NO_OVERLAY);
         poseStack.popPose();
     }
 
@@ -81,6 +82,6 @@ public class OperatorDummyRenderer extends EntityRenderer<OperatorDummyEntity> {
     @Override
     public ResourceLocation getTextureLocation(OperatorDummyEntity entity) {
         PlayerInfo info = resolvePilot(entity);
-        return info != null ? info.getSkinLocation() : DefaultPlayerSkin.getDefaultSkin();
+        return info != null ? info.getSkin().texture() : DefaultPlayerSkin.getDefaultTexture();
     }
 }

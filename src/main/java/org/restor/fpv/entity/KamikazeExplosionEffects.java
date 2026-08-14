@@ -22,7 +22,7 @@ public final class KamikazeExplosionEffects {
 
         double spread = Math.max(1.5, power * 0.8);
         burst(sl, x, y, z, spread);
-        sl.playSound(null, x, y, z, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE,
+        sl.playSound(null, x, y, z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE,
             Math.min(4.0f, 1.4f + power * 0.18f), 0.75f);
         sl.playSound(null, x, y, z, SoundEvents.FIRECHARGE_USE, SoundSource.HOSTILE,
             1.8f, 0.55f);
@@ -168,8 +168,7 @@ public final class KamikazeExplosionEffects {
         sendForced(sl, ParticleTypes.POOF, x, ey, z, 340, spread * 1.65, spread * 1.15, spread * 1.65, 0.20);
         sendForced(sl, ParticleTypes.FLAME, x, ey - 0.35, z, 170, spread * 1.00, spread * 0.70, spread * 1.00, 0.13);
         sendForced(sl, ParticleTypes.LAVA, x, ey - 0.35, z, 80, spread * 0.70, spread * 0.60, spread * 0.70, 0.27);
-        org.restor.fpv.network.ModNetworking.CHANNEL.send(
-            net.minecraftforge.network.PacketDistributor.ALL.noArg(),
+        net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(
             new org.restor.fpv.network.ExplosionParticlesPacket(x, y, z, (float) spread));
     }
 

@@ -4,7 +4,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import org.restor.fpv.Config;
 
 public class FPVHudSettingsScreen extends Screen {
@@ -42,7 +42,7 @@ public class FPVHudSettingsScreen extends Screen {
             .bounds(width / 2 - 75, y, 150, 20).build());
     }
 
-    private void addToggle(int x, int y, int w, int h, String label, ForgeConfigSpec.BooleanValue value) {
+    private void addToggle(int x, int y, int w, int h, String label, ModConfigSpec.BooleanValue value) {
         addRenderableWidget(Button.builder(toggleMessage(label, value.get()), button -> {
             value.set(!value.get());
             Config.save();
@@ -57,7 +57,7 @@ public class FPVHudSettingsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        renderBackground(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, 16, 0xFFFFFF);
         super.render(graphics, mouseX, mouseY, partialTick);
     }

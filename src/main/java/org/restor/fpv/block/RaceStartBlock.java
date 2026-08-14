@@ -1,8 +1,8 @@
 package org.restor.fpv.block;
 
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -20,8 +20,6 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 import org.jetbrains.annotations.Nullable;
 import org.restor.fpv.block.entity.ModBlockEntities;
 import org.restor.fpv.block.entity.RaceStartBlockEntity;
@@ -29,6 +27,7 @@ import org.restor.fpv.block.entity.RaceStartBlockEntity;
 // Race start / finish line. Right-click opens the course screen (lap count + leaderboard).
 public class RaceStartBlock extends BaseEntityBlock {
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
+    private static final MapCodec<RaceStartBlock> CODEC = simpleCodec(RaceStartBlock::new);
 
     public RaceStartBlock(Properties props) {
         super(props);
@@ -36,11 +35,15 @@ public class RaceStartBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
+    @Override
+    public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
+                                 BlockHitResult hit) {
         if (level.isClientSide) {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> org.restor.fpv.client.RaceMarkingClient.onStartClicked(pos));
+            org.restor.fpv.client.RaceMarkingClient.onStartClicked(pos);
         }
         return InteractionResult.SUCCESS;
     }

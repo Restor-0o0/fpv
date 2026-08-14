@@ -28,6 +28,11 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
     }
 
     @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(RaceGateBlockEntity gate) {
+        return gate.renderBoundingBox();
+    }
+
+    @Override
     public void render(RaceGateBlockEntity gate, float partialTick, PoseStack pose,
                        MultiBufferSource buffer, int packedLight, int packedOverlay) {
         if (!FPVOverlay.raceActive()) return;
@@ -83,8 +88,9 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
         float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (len < 1e-4f) len = 1f;
         float nx = dx / len, ny = dy / len, nz = dz / len;
-        vc.vertex(mat, p1.x, p1.y, p1.z).color(r, g, b, a).normal(nrm, nx, ny, nz).endVertex();
-        vc.vertex(mat, p2.x, p2.y, p2.z).color(r, g, b, a).normal(nrm, nx, ny, nz).endVertex();
+        Vector3f n = nrm.transform(new Vector3f(nx, ny, nz));
+        vc.addVertex(mat, p1.x, p1.y, p1.z).setColor(r, g, b, a).setNormal(n.x, n.y, n.z);
+        vc.addVertex(mat, p2.x, p2.y, p2.z).setColor(r, g, b, a).setNormal(n.x, n.y, n.z);
     }
 
     private static void thickLine(VertexConsumer vc, Matrix4f mat, Matrix3f nrm, Vector3f p1, Vector3f p2,
