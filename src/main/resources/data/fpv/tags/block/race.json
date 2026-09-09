@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:race_start",
+    "fpv:race_finish",
+    "fpv:race_gate"
+  ]
+}

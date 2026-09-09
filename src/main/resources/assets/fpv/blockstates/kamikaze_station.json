@@ -1,5 +1,19 @@
 {
   "variants": {
-    "": { "model": "fpv:block/kamikaze_station" }
+    "facing=north": {
+      "model": "fpv:block/kamikaze_station"
+    },
+    "facing=east": {
+      "model": "fpv:block/kamikaze_station",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "fpv:block/kamikaze_station",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "fpv:block/kamikaze_station",
+      "y": 270
+    }
   }
 }

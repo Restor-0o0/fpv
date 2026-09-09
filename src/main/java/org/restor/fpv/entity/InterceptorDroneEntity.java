@@ -1,6 +1,9 @@
 package org.restor.fpv.entity;
 
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -18,6 +21,8 @@ import java.util.List;
  * aren't LivingEntities, targeting bypasses the vanilla goal system and runs in tick().
  */
 public class InterceptorDroneEntity extends NpcDroneEntity {
+    private static final EntityDataAccessor<Boolean> DATA_HUNTING =
+        SynchedEntityData.defineId(InterceptorDroneEntity.class, EntityDataSerializers.BOOLEAN);
     private static final double SCAN_RADIUS = 32.0;
     private static final double HIT_DIST_SQR = 2.0;
     private static final int SCAN_INTERVAL = 10;
@@ -39,6 +44,15 @@ public class InterceptorDroneEntity extends NpcDroneEntity {
     }
 
     @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_HUNTING, false);
+    }
+
+    @Override
+    protected NpcDroneBuilds.Role buildRole() { return NpcDroneBuilds.Role.INTERCEPTOR; }
+
+    @Override
     protected void registerGoals() {
         goalSelector.addGoal(3, new PatrolGoal());
         // No target selector: prey (a non-living DroneEntity) is tracked manually below.
@@ -53,26 +67,34 @@ public class InterceptorDroneEntity extends NpcDroneEntity {
         if (prey != null && (!prey.isAlive() || !prey.hasAnyPilot())) {
             prey = null;
             beeped = false;
+            setHunting(false);
         }
         if (prey == null && tickCount % SCAN_INTERVAL == 0) {
             prey = findPreyDrone();
+            setHunting(prey != null);
         }
         if (prey == null) return;
 
         if (!beeped) {
             beeped = true;
-            playSound(SoundEvents.BEE_LOOP_AGGRESSIVE, 1.2f, 2.0f);
+            playSound(org.restor.fpv.sound.ModSounds.DETECTOR_ALERT.get(), 1.2f, 2.0f);
         }
         // Intercept course: aim slightly ahead of the drone's velocity.
         var lead = prey.position().add(prey.getDeltaMovement().scale(6));
-        moveControl.setWantedPosition(lead.x, lead.y, lead.z, 1.6);
+        setFlightTarget(lead, 1.6);
 
         if (distanceToSqr(prey) < HIT_DIST_SQR) {
             // Any real damage breaks a drone (its hurt() drops the item and discards).
             prey.hurt(damageSources().mobAttack(this), 5.0f);
-            playSound(SoundEvents.ITEM_BREAK, 1.0f, 0.8f);
+            playSound(org.restor.fpv.sound.ModSounds.CRASH.get(), 1.0f, 0.8f);
+            if (hasModule(org.restor.fpv.component.ModuleType.WARHEAD)) {
+                WarheadDetonation.detonate(level(), this, position(), org.restor.fpv.warhead.WarheadType.FRAG);
+                discard();
+                return;
+            }
             prey = null;
             beeped = false;
+            setHunting(false);
         }
     }
 
@@ -99,12 +121,18 @@ public class InterceptorDroneEntity extends NpcDroneEntity {
         if (result) {
             prey = null;
             beeped = false;
+            setHunting(false);
         }
         return result;
     }
 
-    /** Whether this interceptor is actively chasing a drone (renderer shows a hot LED). */
     public boolean isHunting() {
-        return prey != null;
+        return entityData.get(DATA_HUNTING);
+    }
+
+    private void setHunting(boolean hunting) {
+        if (!level().isClientSide && entityData.get(DATA_HUNTING) != hunting) {
+            entityData.set(DATA_HUNTING, hunting);
+        }
     }
 }

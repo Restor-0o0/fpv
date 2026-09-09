@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:motor_2207_2450kv",
+    "fpv:motor_2306_1700kv",
+    "fpv:motor_1103_8000kv",
+    "fpv:motor_1404_4500kv",
+    "fpv:motor_2806_1300kv",
+    "fpv:motor_3115_900kv"
+  ]
+}

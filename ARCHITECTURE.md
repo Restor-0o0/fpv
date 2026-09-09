@@ -54,8 +54,3 @@ Minecraft Forge 1.20.1, Java 17. Сборка: `.\gradlew.bat build`, депло
    по слотам даёт постоянный увод по тангажу/крену/рысканью, пропорциональный
    газу (хуки `trim*Rate()` в `DroneEntity.integrateRotation`).
 
-## Легаси
-
-`WorkbenchBlock/Menu/Screen`, `DroneBuilder`, `ComponentDroneEntity` — старый
-конструктор (один слот пропов). Новый путь — станция сборки (`.assembly`).
-Можно удалить, когда новый конструктор устроит.

@@ -1,0 +1,15 @@
+{
+  "gate_count": 8,
+  "radius": 42,
+  "height": 8,
+  "gate_size": 6,
+  "laps": 3,
+  "candidate_attempts": 16,
+  "radial_jitter": 0.14,
+  "angular_jitter": 0.12,
+  "max_slope": 0.45,
+  "start_platform_radius": 3,
+  "start_flatness": 1,
+  "clearance_radius": 2.0,
+  "segment_sample_step": 1.5
+}

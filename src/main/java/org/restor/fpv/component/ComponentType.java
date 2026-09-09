@@ -9,5 +9,7 @@ public enum ComponentType {
     CAMERA,
     FLIGHT_CONTROLLER,
     // Payload / utility module that mounts in the frame's module slot (FPV_IDEAS §4-5).
-    MODULE
+    MODULE,
+    // Firmware chip in the FC's own slot: gives the drone autonomous modes.
+    FIRMWARE
 }

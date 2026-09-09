@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SBS",
+    "MPM",
+    "SCS"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:stick"
+    },
+    "B": {
+      "item": "minecraft:chest"
+    },
+    "M": {
+      "item": "fpv:motor_2207_2450kv"
+    },
+    "P": {
+      "item": "fpv:plane"
+    },
+    "C": {
+      "item": "fpv:battery_6s_1100"
+    }
+  },
+  "result": {
+    "id": "fpv:plane_cargo"
+  }
+}

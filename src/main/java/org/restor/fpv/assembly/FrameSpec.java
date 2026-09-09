@@ -15,11 +15,30 @@ public record FrameSpec(
     MountPoint batteryMount,        // battery sits on top of the frame plate
     MountPoint cameraMount,         // camera at the nose
     MountPoint moduleMount,         // payload/utility module slot (under the belly)
-    float armLength                 // center→motor distance in blocks (ground effect)
+    float armLength,                // center→motor distance in blocks (ground effect)
+    FrameKind kind,
+    FrameTuning tuning,
+    FrameRole role
 ) {
     public FrameSpec {
         if (motorMounts.size() != motorCount) {
             throw new IllegalArgumentException("motorMounts size must equal motorCount");
         }
+    }
+
+    public FrameSpec(int motorCount, List<MountPoint> motorMounts, MountPoint batteryMount,
+                     MountPoint cameraMount, MountPoint moduleMount, float armLength,
+                     FrameKind kind, FrameTuning tuning) {
+        this(motorCount, motorMounts, batteryMount, cameraMount, moduleMount, armLength,
+            kind, tuning, FrameRole.STANDARD);
+    }
+
+    public boolean isFixedWing() {
+        return kind == FrameKind.FIXED_WING;
+    }
+
+    /** Six motors and up: an agricultural/heavy-lift rig, not an FPV racer. */
+    public boolean isHeavyLift() {
+        return kind == FrameKind.MULTIROTOR && motorCount >= 6;
     }
 }

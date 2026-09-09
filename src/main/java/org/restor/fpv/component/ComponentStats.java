@@ -71,4 +71,9 @@ public record ComponentStats(
         return new ComponentStats(ComponentType.MODULE, name, weight, 0,0,
             0,0,0, 0,0,0, 0,0,0,0, 0,0, 0,0, false,false);
     }
+
+    public static ComponentStats firmware(String name, float weight) {
+        return new ComponentStats(ComponentType.FIRMWARE, name, weight, 0,0,
+            0,0,0, 0,0,0, 0,0,0,0, 0,0, 0,0, false,false);
+    }
 }

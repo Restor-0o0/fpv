@@ -1,0 +1,6 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["S S", " I ", "S S"],
+  "key": { "S": { "item": "minecraft:slime_ball" }, "I": { "item": "minecraft:iron_ingot" } },
+  "result": { "id": "fpv:prop_5x4x2", "count": 4 }
+}

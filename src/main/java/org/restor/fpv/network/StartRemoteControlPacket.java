@@ -34,9 +34,12 @@ public record StartRemoteControlPacket(String code) implements CustomPacketPaylo
             for (Entity e : player.serverLevel().getAllEntities()) {
                 if (e instanceof DroneEntity drone && drone.isRemoteControllable()
                     && code.equals(drone.getLinkCode())
+                    && drone.canPlayerAccess(player)
                     && !drone.hasRemotePilot() && drone.getControllingPassenger() == null) {
-                    drone.beginRemoteControl(player);
-                    player.sendSystemMessage(Component.translatable("msg.fpv.control_started"));
+                    boolean fpv = org.restor.fpv.item.RcLink.hasGoggles(player);
+                    drone.beginRemoteControl(player, fpv);
+                    player.sendSystemMessage(Component.translatable(
+                        fpv ? "msg.fpv.control_started" : "msg.fpv.tx_link_los"));
                     return;
                 }
             }

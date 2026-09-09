@@ -10,8 +10,14 @@ import org.restor.fpv.Fpv;
 public class ModMenus {
     public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(BuiltInRegistries.MENU, Fpv.MODID);
 
-    public static final DeferredHolder<MenuType<?>, MenuType<WorkbenchMenu>> WORKBENCH = MENUS.register("workbench",
-        () -> IMenuTypeExtension.create(WorkbenchMenu::new));
+    public static final DeferredHolder<MenuType<?>, MenuType<CarrierMenu>> CARRIER = MENUS.register("carrier",
+        () -> IMenuTypeExtension.create(CarrierMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<CargoBayMenu>> CARGO_BAY = MENUS.register("cargo_bay",
+        () -> IMenuTypeExtension.create(CargoBayMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<ChargingStationMenu>> CHARGING_STATION = MENUS.register("charging_station",
+        () -> IMenuTypeExtension.create(ChargingStationMenu::new));
 
     public static final DeferredHolder<MenuType<?>, MenuType<org.restor.fpv.assembly.AssemblyStationMenu>> ASSEMBLY_STATION = MENUS.register("assembly_station",
         () -> IMenuTypeExtension.create(org.restor.fpv.assembly.AssemblyStationMenu::new));

@@ -23,6 +23,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 import org.restor.fpv.block.entity.ModBlockEntities;
 import org.restor.fpv.block.entity.RaceStartBlockEntity;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 // Race start / finish line. Right-click opens the course screen (lap count + leaderboard).
 public class RaceStartBlock extends BaseEntityBlock {
@@ -84,5 +87,10 @@ public class RaceStartBlock extends BaseEntityBlock {
     @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+        return StationShapes.PEDESTAL;
     }
 }

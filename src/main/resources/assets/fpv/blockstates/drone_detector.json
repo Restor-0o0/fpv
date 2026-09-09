@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "lit=false": { "model": "fpv:block/drone_detector" },
+    "lit=true": { "model": "fpv:block/drone_detector_active" }
+  }
+}

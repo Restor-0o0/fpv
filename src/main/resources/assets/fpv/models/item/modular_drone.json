@@ -1,6 +1,41 @@
 {
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "fpv:item/racing_drone"
-  }
+  "parent": "fpv:item/assembled_drone_quad",
+  "overrides": [
+    {
+      "predicate": {
+        "fpv:frame": 1
+      },
+      "model": "fpv:item/assembled_drone_whoop"
+    },
+    {
+      "predicate": {
+        "fpv:frame": 2
+      },
+      "model": "fpv:item/assembled_drone_cinewhoop"
+    },
+    {
+      "predicate": {
+        "fpv:frame": 3
+      },
+      "model": "fpv:item/assembled_drone_longrange"
+    },
+    {
+      "predicate": {
+        "fpv:frame": 4
+      },
+      "model": "fpv:item/assembled_drone_hexa"
+    },
+    {
+      "predicate": {
+        "fpv:frame": 5
+      },
+      "model": "fpv:item/assembled_drone_octo"
+    },
+    {
+      "predicate": {
+        "fpv:frame": 6
+      },
+      "model": "fpv:item/assembled_drone_interceptor"
+    }
+  ]
 }

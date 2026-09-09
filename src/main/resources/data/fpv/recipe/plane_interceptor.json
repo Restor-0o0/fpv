@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " F ",
+    "MPM",
+    " B "
+  ],
+  "key": {
+    "F": {
+      "item": "fpv:warhead_frag"
+    },
+    "M": {
+      "item": "fpv:motor_2207_2450kv"
+    },
+    "P": {
+      "item": "fpv:plane_delta"
+    },
+    "B": {
+      "item": "fpv:battery_4s_1300"
+    }
+  },
+  "result": {
+    "id": "fpv:plane_interceptor"
+  }
+}

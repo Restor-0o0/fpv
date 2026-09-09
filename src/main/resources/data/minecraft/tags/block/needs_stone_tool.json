@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:assembly_station",
+    "fpv:charging_station",
+    "fpv:drone_nest",
+    "fpv:drone_detector",
+    "fpv:drone_jammer"
+  ]
+}

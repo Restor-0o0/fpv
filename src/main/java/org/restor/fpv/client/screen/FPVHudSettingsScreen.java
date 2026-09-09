@@ -36,6 +36,7 @@ public class FPVHudSettingsScreen extends Screen {
         addToggle(left + 160, y, w, h, "settings.fpv.hud_crosshair",    Config.HUD_CROSSHAIR);
         y += gap;
         addToggle(left,       y, w, h, "settings.fpv.hud_heading",      Config.HUD_HEADING);
+        addToggle(left + 160, y, w, h, "settings.fpv.hud_damage",       Config.HUD_DAMAGE);
         y += gap + 8;
 
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())

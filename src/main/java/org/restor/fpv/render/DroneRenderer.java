@@ -46,13 +46,8 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
     @Override
     public void render(DroneEntity entity, float yaw, float partialTick, PoseStack poseStack,
                        MultiBufferSource buffer, int packedLight) {
-        // FPV self-view: the WHOLE drone model is drawn LOCKED to the camera (parked a bit below
-        // and ahead — a "chase from the frame" look), not with its world attitude. Rendering it
-        // in world space desyncs because the model (modelQuat) and camera (attitudeQuat) use
-        // different, non-constant conventions, so it swings/freezes. Locked to the camera it sits
-        // steady in the goggles, props spin, and the whole thing tilts as the camera angle
-        // changes (applyFpvViewmodelPose folds cameraAngle in). Covers riding (camera is the
-        // player in the drone) and remote control (camera entity IS the drone).
+        // FPV self-view only keeps the front motors and props visible. Drawing the frame,
+        // camera and payload here encloses the viewpoint inside the drone model.
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
         boolean fpvSelf = mc.getCameraEntity() != null
             && (mc.getCameraEntity() == entity || mc.getCameraEntity().getVehicle() == entity)
@@ -63,9 +58,7 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
                 applyFpvViewmodelPose(poseStack, entity, partialTick);
                 float s = getScale(entity) * Config.FPV_PROPS_SCALE.get().floatValue();
                 poseStack.scale(s, s, s);
-                renderAssembledDrone(entity, poseStack, buffer, packedLight, entity.tickCount + partialTick, false);
-                VertexConsumer c = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
-                renderPayload(entity, c, poseStack, packedLight);
+                renderAssembledDrone(entity, poseStack, buffer, packedLight, entity.tickCount + partialTick, true);
                 poseStack.popPose();
             }
             return;
@@ -135,29 +128,45 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
     }
 
     private float getScale(DroneEntity entity) {
-        if (entity instanceof org.restor.fpv.entity.TinyWhoopDroneEntity) return 0.3f;
-        if (entity instanceof org.restor.fpv.entity.CinewhoopDroneEntity) return 0.5f;
-        return 0.6f;
+        return defaultBuild(entity).visual().scale();
     }
 
     private void renderAssembledDrone(DroneEntity entity, PoseStack poseStack, MultiBufferSource buffer,
                                       int packedLight, float tick, boolean propsOnly) {
         DefaultBuild build = defaultBuild(entity);
         if (!propsOnly) {
-            renderPart(build.frame, poseStack, buffer, packedLight, 0, 0, 0, 0, build.frameScale);
+            renderPart(build.frame, poseStack, buffer, packedLight, 0, 0, 0, 0, build.visual().frameScale());
+            renderPart(build.flightController, poseStack, buffer, packedLight,
+                0, 0.03f, -0.01f, 0, build.visual().electronicsScale());
+            renderPart(build.videoTransmitter, poseStack, buffer, packedLight,
+                0, 0.04f, 0.12f, 0, build.visual().electronicsScale() * 0.9f);
             renderPart(build.battery, poseStack, buffer, packedLight,
-                build.spec.batteryMount().x(), build.spec.batteryMount().y(), build.spec.batteryMount().z(), 0, build.batteryScale);
-            renderPart(build.camera, poseStack, buffer, packedLight,
-                build.spec.cameraMount().x(), build.spec.cameraMount().y(), build.spec.cameraMount().z(), 0, build.cameraScale);
+                build.spec.batteryMount().x(), build.spec.batteryMount().y(), build.spec.batteryMount().z(), 0, build.visual().batteryScale());
+            renderCameraPart(build.camera, poseStack, buffer, packedLight,
+                build.spec.cameraMount().x(), build.spec.cameraMount().y(), build.spec.cameraMount().z(), build.visual().cameraScale());
+            if (!build.module.isEmpty()) {
+                renderPart(build.module, poseStack, buffer, packedLight,
+                    build.spec.moduleMount().x(), build.spec.moduleMount().y(), build.spec.moduleMount().z(), 0, build.visual().moduleScale());
+            }
         }
         float spin = entity.getVisualThrottle() * tick * 40f;
+        boolean axial = build.spec.role() == org.restor.fpv.assembly.FrameRole.INTERCEPTOR;
         for (int i = 0; i < build.spec.motorCount(); i++) {
             MountPoint m = build.spec.motorMounts().get(i);
-            float x = m.x() * build.armSpread;
-            float z = m.z() * build.armSpread;
+            float x = m.x() * build.visual().armSpread();
+            float z = m.z() * build.visual().armSpread();
             if (propsOnly && z > 0) continue;
-            renderPart(build.motor, poseStack, buffer, packedLight, x, m.y(), z, 0, build.motorScale);
-            renderPart(build.prop, poseStack, buffer, packedLight, x, m.y() + 0.06f, z, i % 2 == 0 ? spin : -spin, build.propScale);
+            float propSpin = i % 2 == 0 ? spin : -spin;
+            if (axial) {
+                renderRotorPart(build.motor, poseStack, buffer, packedLight, x, m.y(), z, 0,
+                    build.visual().motorScale());
+                renderRotorPart(build.prop, poseStack, buffer, packedLight,
+                    x, m.y(), z + build.visual().propLift(), propSpin, build.visual().propScale());
+                continue;
+            }
+            renderPart(build.motor, poseStack, buffer, packedLight, x, m.y(), z, 0, build.visual().motorScale());
+            renderPart(build.prop, poseStack, buffer, packedLight, x, m.y() + build.visual().propLift(), z,
+                propSpin, build.visual().propScale());
         }
         if (!propsOnly) renderTypeDetails(entity, build, poseStack, buffer, packedLight);
     }
@@ -178,6 +187,30 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
         poseStack.popPose();
     }
 
+    /** Lays a rotor on its side so its thrust axis runs along the fuselage. */
+    private void renderRotorPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+                                 int light, float x, float y, float z, float spinDeg, float scale) {
+        poseStack.pushPose();
+        poseStack.translate(x, y, z);
+        poseStack.mulPose(Axis.XP.rotationDegrees(90));
+        poseStack.scale(scale, scale, scale);
+        if (spinDeg != 0) poseStack.mulPose(Axis.YP.rotationDegrees(spinDeg));
+        net.minecraft.client.Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
+            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        poseStack.popPose();
+    }
+
+    private void renderCameraPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+                                  int light, float x, float y, float z, float scale) {
+        poseStack.pushPose();
+        poseStack.translate(x, y, z);
+        poseStack.mulPose(Axis.XP.rotationDegrees(22.5f));
+        poseStack.scale(scale, scale, scale);
+        net.minecraft.client.Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
+            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        poseStack.popPose();
+    }
+
     private void renderTypeDetails(DroneEntity entity, DefaultBuild build, PoseStack poseStack,
                                    MultiBufferSource buffer, int packedLight) {
         VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
@@ -185,7 +218,7 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
             || entity instanceof org.restor.fpv.entity.CinewhoopDroneEntity) {
             float radius = entity instanceof org.restor.fpv.entity.TinyWhoopDroneEntity ? 0.12f : 0.16f;
             for (MountPoint m : build.spec.motorMounts()) {
-                renderDuct(consumer, poseStack, packedLight, m.x() * build.armSpread, m.y() + 0.01f, m.z() * build.armSpread, radius);
+                renderDuct(consumer, poseStack, packedLight, m.x() * build.visual().armSpread(), m.y() + 0.01f, m.z() * build.visual().armSpread(), radius);
             }
         }
         if (entity instanceof org.restor.fpv.entity.RemoteRacingDroneEntity) {
@@ -207,7 +240,9 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
                 new ItemStack(ModComponents.PROP_65MM.get()),
                 new ItemStack(ModComponents.BATTERY_1S_300.get()),
                 new ItemStack(ModComponents.CAMERA_STANDARD.get()),
-                0.95f, 0.62f, 0.60f, 0.48f, 0.50f, 0.82f);
+                new ItemStack(ModComponents.FC_F411.get()),
+                new ItemStack(ModComponents.VTX_25MW.get()),
+                ItemStack.EMPTY);
         }
         if (entity instanceof org.restor.fpv.entity.CinewhoopDroneEntity) {
             return new DefaultBuild(FrameSpecs.FRAME_CINEWHOOP,
@@ -216,20 +251,31 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
                 new ItemStack(ModComponents.PROP_3X2X3.get()),
                 new ItemStack(ModComponents.BATTERY_4S_650.get()),
                 new ItemStack(ModComponents.CAMERA_WIDE.get()),
-                1.05f, 0.72f, 0.70f, 0.55f, 0.62f, 1.02f);
+                new ItemStack(ModComponents.FC_F411.get()),
+                new ItemStack(ModComponents.VTX_200MW.get()),
+                ItemStack.EMPTY);
         }
+        ItemStack stockModule = entity instanceof org.restor.fpv.entity.KamikazeDroneEntity
+            ? new ItemStack(ModComponents.MODULE_WARHEAD.get())
+            : new ItemStack(ModComponents.MODULE_PAYLOAD_BAY.get());
         return new DefaultBuild(FrameSpecs.FRAME_5INCH,
             new ItemStack(ModComponents.FRAME_5INCH.get()),
             new ItemStack(ModComponents.MOTOR_2207_2450.get()),
             new ItemStack(ModComponents.PROP_5X4X3.get()),
             new ItemStack(ModComponents.BATTERY_4S_1300.get()),
             new ItemStack(ModComponents.CAMERA_STANDARD.get()),
-            1.18f, 0.70f, 0.74f, 0.58f, 0.62f, 1.18f);
+            new ItemStack(ModComponents.FC_H7.get()),
+            new ItemStack(ModComponents.VTX_800MW.get()),
+            stockModule);
     }
 
     private record DefaultBuild(FrameSpec spec, ItemStack frame, ItemStack motor, ItemStack prop,
-                                ItemStack battery, ItemStack camera, float armSpread, float motorScale,
-                                float propScale, float batteryScale, float cameraScale, float frameScale) {}
+                                ItemStack battery, ItemStack camera, ItemStack flightController,
+                                ItemStack videoTransmitter, ItemStack module) {
+        org.restor.fpv.assembly.DroneVisual visual() {
+            return org.restor.fpv.assembly.DroneVisual.of(spec);
+        }
+    }
 
     private void renderFrame(DroneEntity entity, VertexConsumer consumer, PoseStack poseStack, int packedLight) {
         Matrix4f mat = poseStack.last().pose();
@@ -329,19 +375,11 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
     }
 
     private void renderPayload(DroneEntity entity, VertexConsumer consumer, PoseStack poseStack, int packedLight) {
+        // The fixed warhead is now the same painted item model used by modular builds.
+        // Preset drones with a payload bay still draw their currently loaded charges here.
         if (!(entity instanceof org.restor.fpv.entity.KamikazeDroneEntity)) {
             renderDropCharges(entity, consumer, poseStack, packedLight);
-            return;
         }
-        Matrix4f mat = poseStack.last().pose();
-        // PG-7-style rocket grenade under the belly: olive warhead, dark motor tube, rear fins.
-        renderBox(consumer, mat, packedLight, -0.11f, -0.24f, -0.42f, 0.11f, -0.08f, -0.16f, 0.32f, 0.42f, 0.16f);
-        renderBox(consumer, mat, packedLight, -0.08f, -0.21f, -0.54f, 0.08f, -0.11f, -0.42f, 0.40f, 0.50f, 0.20f);
-        renderBox(consumer, mat, packedLight, -0.06f, -0.20f, -0.16f, 0.06f, -0.12f, 0.34f, 0.12f, 0.12f, 0.10f);
-        renderBox(consumer, mat, packedLight, -0.16f, -0.28f, 0.22f, -0.04f, -0.16f, 0.34f, 0.22f, 0.22f, 0.20f);
-        renderBox(consumer, mat, packedLight, 0.04f, -0.28f, 0.22f, 0.16f, -0.16f, 0.34f, 0.22f, 0.22f, 0.20f);
-        renderBox(consumer, mat, packedLight, -0.04f, -0.32f, 0.22f, 0.04f, -0.20f, 0.34f, 0.22f, 0.22f, 0.20f);
-        renderBox(consumer, mat, packedLight, -0.04f, -0.08f, -0.10f, 0.04f, -0.04f, 0.08f, 0.04f, 0.04f, 0.04f);
     }
 
     // Small dark charges strapped under the belly, one per loaded payload (FPV_IDEAS §4).

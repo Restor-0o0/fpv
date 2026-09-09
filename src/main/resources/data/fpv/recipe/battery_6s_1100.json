@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["CBC", "QAQ", "CBC"],
+  "key": {
+    "C": { "item": "minecraft:coal_block" },
+    "B": { "item": "fpv:battery_4s_650" },
+    "Q": { "item": "minecraft:quartz" },
+    "A": { "item": "minecraft:amethyst_shard" }
+  },
+  "result": { "id": "fpv:battery_6s_1100" }
+}

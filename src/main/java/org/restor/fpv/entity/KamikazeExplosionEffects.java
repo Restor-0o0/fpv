@@ -22,9 +22,9 @@ public final class KamikazeExplosionEffects {
 
         double spread = Math.max(1.5, power * 0.8);
         burst(sl, x, y, z, spread);
-        sl.playSound(null, x, y, z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE,
+        sl.playSound(null, x, y, z, org.restor.fpv.sound.ModSounds.WARHEAD_DETONATE.get(), SoundSource.HOSTILE,
             Math.min(4.0f, 1.4f + power * 0.18f), 0.75f);
-        sl.playSound(null, x, y, z, SoundEvents.FIRECHARGE_USE, SoundSource.HOSTILE,
+        sl.playSound(null, x, y, z, org.restor.fpv.sound.ModSounds.WARHEAD_INCENDIARY.get(), SoundSource.HOSTILE,
             1.8f, 0.55f);
     }
 
@@ -33,8 +33,8 @@ public final class KamikazeExplosionEffects {
         double mult = org.restor.fpv.Config.DEV_EXPLOSION_MOB_DAMAGE_MULT.get();
         if (mult <= 0.0) return;
         Vec3 center = new Vec3(x, y, z);
-        double radius = Math.max(8.0, power * 2.0);
-        float maxDamage = (float) (Math.max(56.0f, power * 20.0f) * mult);
+        double radius = Math.max(4.0, power * 1.6);
+        float maxDamage = (float) ((6.0f + power * 7.0f) * mult);
         AABB box = new AABB(x - radius, y - radius, z - radius, x + radius, y + radius, z + radius);
         for (Mob mob : sl.getEntitiesOfClass(Mob.class, box, mob -> mob.isAlive() && mob != source)) {
             double dist = Math.sqrt(mob.distanceToSqr(center));
@@ -52,8 +52,8 @@ public final class KamikazeExplosionEffects {
         double percent = org.restor.fpv.Config.DEV_EXPLOSION_BLOCK_FLING_PERCENT.get();
         if (percent <= 0.0) return;
         Vec3 center = new Vec3(x, y, z);
-        int radius = (int) Math.max(3, Math.min(8, Math.ceil(power * 1.35)));
-        int maxBlocks = (int) (Math.max(120, Math.min(420, power * 75)) * percent / 100.0);
+        int radius = (int) Math.max(2, Math.min(6, Math.ceil(power * 1.6)));
+        int maxBlocks = (int) (Math.max(2, Math.min(35, power * power * 4)) * percent / 100.0);
         java.util.ArrayList<BlockPos> candidates = new java.util.ArrayList<>();
         BlockPos origin = BlockPos.containing(x, y, z);
 
@@ -92,7 +92,7 @@ public final class KamikazeExplosionEffects {
         double percent = org.restor.fpv.Config.DEV_EXPLOSION_BLOCK_BREAK_PERCENT.get();
         if (percent >= 100.0) return blocks;
 
-        int radius = (int) Math.max(3, Math.min(12, Math.ceil(power * 2.0)));
+        int radius = (int) Math.max(3, Math.min(10, Math.ceil(power * 2.0)));
         Vec3 center = new Vec3(x, y, z);
         BlockPos origin = BlockPos.containing(x, y, z);
         for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-radius, -radius, -radius), origin.offset(radius, radius, radius))) {
@@ -122,7 +122,7 @@ public final class KamikazeExplosionEffects {
     public static void removeFloatingBlocks(Level level, double x, double y, double z, float power) {
         if (!(level instanceof ServerLevel sl)) return;
         Vec3 center = new Vec3(x, y, z);
-        int radius = (int) Math.max(4, Math.min(12, Math.ceil(power * 2.1)));
+        int radius = (int) Math.max(3, Math.min(10, Math.ceil(power * 2.2)));
         BlockPos origin = BlockPos.containing(x, y, z);
         java.util.ArrayList<BlockPos> floating = new java.util.ArrayList<>();
 
@@ -161,13 +161,14 @@ public final class KamikazeExplosionEffects {
 
     private static void burst(ServerLevel sl, double x, double y, double z, double spread) {
         double ey = y + 0.85;
+        double f = Math.max(0.32, Math.min(1.0, spread / 4.0));
         sendForced(sl, ParticleTypes.EXPLOSION_EMITTER, x, ey, z, 4, 0.35, 0.35, 0.35, 0.0);
-        sendForced(sl, ParticleTypes.EXPLOSION, x, ey, z, 32, spread * 0.60, spread * 0.45, spread * 0.60, 0.06);
-        sendForced(sl, ParticleTypes.LARGE_SMOKE, x, ey, z, 520, spread * 1.55, spread * 1.10, spread * 1.55, 0.045);
-        sendForced(sl, ParticleTypes.CLOUD, x, ey + 0.2, z, 260, spread * 1.35, spread * 0.90, spread * 1.35, 0.055);
-        sendForced(sl, ParticleTypes.POOF, x, ey, z, 340, spread * 1.65, spread * 1.15, spread * 1.65, 0.20);
-        sendForced(sl, ParticleTypes.FLAME, x, ey - 0.35, z, 170, spread * 1.00, spread * 0.70, spread * 1.00, 0.13);
-        sendForced(sl, ParticleTypes.LAVA, x, ey - 0.35, z, 80, spread * 0.70, spread * 0.60, spread * 0.70, 0.27);
+        sendForced(sl, ParticleTypes.EXPLOSION, x, ey, z, (int) (32 * f), spread * 0.60, spread * 0.45, spread * 0.60, 0.06);
+        sendForced(sl, ParticleTypes.LARGE_SMOKE, x, ey, z, (int) (520 * f), spread * 1.55, spread * 1.10, spread * 1.55, 0.045);
+        sendForced(sl, ParticleTypes.CLOUD, x, ey + 0.2, z, (int) (260 * f), spread * 1.35, spread * 0.90, spread * 1.35, 0.055);
+        sendForced(sl, ParticleTypes.POOF, x, ey, z, (int) (340 * f), spread * 1.65, spread * 1.15, spread * 1.65, 0.20);
+        sendForced(sl, ParticleTypes.FLAME, x, ey - 0.35, z, (int) (170 * f), spread * 1.00, spread * 0.70, spread * 1.00, 0.13);
+        sendForced(sl, ParticleTypes.LAVA, x, ey - 0.35, z, (int) (80 * f), spread * 0.70, spread * 0.60, spread * 0.70, 0.27);
         net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(
             new org.restor.fpv.network.ExplosionParticlesPacket(x, y, z, (float) spread));
     }
@@ -185,12 +186,18 @@ public final class KamikazeExplosionEffects {
         Vec3 impact = entity.position();
         if (backstep <= 0.0) return impact;
 
-        Vec3 lastStep = impact.subtract(entity.xo, entity.yo, entity.zo);
-        Vec3 vel = entity.getDeltaMovement();
-        Vec3 dir = lastStep.lengthSqr() > 1.0e-4 ? lastStep.normalize()
-            : vel.lengthSqr() > 1.0e-4 ? vel.normalize()
-            : entity.getLookAngle();
-        Vec3 cameraPos = impact.subtract(dir.scale(backstep));
+        Vec3 cameraPos;
+        if (entity instanceof DroneEntity drone) {
+            cameraPos = drone.cameraTrackBack(backstep);
+        } else {
+            // xo/yo/zo only carry the last step for entities the server still moves itself.
+            Vec3 lastStep = impact.subtract(entity.xo, entity.yo, entity.zo);
+            Vec3 vel = entity.getDeltaMovement();
+            Vec3 dir = lastStep.lengthSqr() > 1.0e-4 ? lastStep.normalize()
+                : vel.lengthSqr() > 1.0e-4 ? vel.normalize()
+                : entity.getLookAngle();
+            cameraPos = impact.subtract(dir.scale(backstep));
+        }
         entity.setPos(cameraPos.x, cameraPos.y, cameraPos.z);
         entity.setDeltaMovement(Vec3.ZERO);
         lookAt(entity, impact);

@@ -9,43 +9,49 @@ public class Config {
     public static final ModConfigSpec.DoubleValue MOUSE_PITCH_SENSITIVITY;
     public static final ModConfigSpec.DoubleValue MOUSE_ROLL_SENSITIVITY;
     public static final ModConfigSpec.DoubleValue MOUSE_SMOOTHING;
+    public static final ModConfigSpec.DoubleValue MOUSE_RETURN;
     public static final ModConfigSpec.DoubleValue MOUSE_DEADBAND;
 
     public static final ModConfigSpec.DoubleValue RC_DEADBAND;
     public static final ModConfigSpec.DoubleValue RC_EXPO;
-    public static final ModConfigSpec.DoubleValue RC_PITCH_RATE;
-    public static final ModConfigSpec.DoubleValue RC_ROLL_RATE;
-    public static final ModConfigSpec.DoubleValue RC_YAW_RATE;
+    public static final ModConfigSpec.DoubleValue RC_PITCH_RATE = CommonConfig.RC_PITCH_RATE;
+    public static final ModConfigSpec.DoubleValue RC_ROLL_RATE = CommonConfig.RC_ROLL_RATE;
+    public static final ModConfigSpec.DoubleValue RC_YAW_RATE = CommonConfig.RC_YAW_RATE;
     public static final ModConfigSpec.DoubleValue RC_THROTTLE_MID;
     public static final ModConfigSpec.IntValue RC_AXIS_THROTTLE;
     public static final ModConfigSpec.IntValue RC_AXIS_YAW;
     public static final ModConfigSpec.IntValue RC_AXIS_PITCH;
     public static final ModConfigSpec.IntValue RC_AXIS_ROLL;
+    public static final ModConfigSpec.IntValue RC_AXIS_ARM;
     public static final ModConfigSpec.BooleanValue RC_INVERT_THROTTLE;
     public static final ModConfigSpec.BooleanValue RC_INVERT_YAW;
     public static final ModConfigSpec.BooleanValue RC_INVERT_PITCH;
     public static final ModConfigSpec.BooleanValue RC_INVERT_ROLL;
+    public static final ModConfigSpec.BooleanValue RC_INVERT_ARM;
     public static final ModConfigSpec.BooleanValue RC_TX_DEFAULTS_APPLIED;
     public static final ModConfigSpec.BooleanValue RC_TX_DEFAULTS_V2;
     public static final ModConfigSpec.BooleanValue RC_TX_DEFAULTS_V3;
     public static final ModConfigSpec.BooleanValue RC_TX_DEFAULTS_V4;
+    public static final ModConfigSpec.BooleanValue REALISTIC_BATTERY = CommonConfig.REALISTIC_BATTERY;
+    public static final ModConfigSpec.BooleanValue REALISTIC_RADIO = CommonConfig.REALISTIC_RADIO;
 
-    public static final ModConfigSpec.ConfigValue<String> DEFAULT_LINK_CODE;
+    public static final ModConfigSpec.ConfigValue<String> DEFAULT_LINK_CODE = CommonConfig.DEFAULT_LINK_CODE;
 
-    public static final ModConfigSpec.DoubleValue DEV_POWER_MULT;
-    public static final ModConfigSpec.DoubleValue DEV_DRAG_MULT;
-    public static final ModConfigSpec.DoubleValue DEV_MAX_SPEED;
-    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_POWER;
-    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_BLOCK_BREAK_PERCENT;
-    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_BLOCK_FLING_PERCENT;
-    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_MOB_DAMAGE_MULT;
-    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_CAMERA_BACKSTEP;
-    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_CAMERA_SECONDS;
-    public static final ModConfigSpec.IntValue DEV_CHUNK_RADIUS;
-    public static final ModConfigSpec.DoubleValue DEV_HITBOX_SCALE;
-    public static final ModConfigSpec.DoubleValue DEV_HITBOX_Y_OFFSET;
+    public static final ModConfigSpec.DoubleValue DEV_POWER_MULT = CommonConfig.DEV_POWER_MULT;
+    public static final ModConfigSpec.DoubleValue DEV_DRAG_MULT = CommonConfig.DEV_DRAG_MULT;
+    public static final ModConfigSpec.DoubleValue DEV_MAX_SPEED = CommonConfig.DEV_MAX_SPEED;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_POWER = CommonConfig.DEV_EXPLOSION_POWER;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_BLOCK_BREAK_PERCENT = CommonConfig.DEV_EXPLOSION_BLOCK_BREAK_PERCENT;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_BLOCK_FLING_PERCENT = CommonConfig.DEV_EXPLOSION_BLOCK_FLING_PERCENT;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_MOB_DAMAGE_MULT = CommonConfig.DEV_EXPLOSION_MOB_DAMAGE_MULT;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_CAMERA_BACKSTEP = CommonConfig.DEV_EXPLOSION_CAMERA_BACKSTEP;
+    public static final ModConfigSpec.DoubleValue DEV_EXPLOSION_CAMERA_SECONDS = CommonConfig.DEV_EXPLOSION_CAMERA_SECONDS;
+    public static final ModConfigSpec.IntValue DEV_CHUNK_RADIUS = CommonConfig.DEV_CHUNK_RADIUS;
+    public static final ModConfigSpec.DoubleValue DEV_HITBOX_SCALE = CommonConfig.DEV_HITBOX_SCALE;
+    public static final ModConfigSpec.DoubleValue DEV_HITBOX_Y_OFFSET = CommonConfig.DEV_HITBOX_Y_OFFSET;
+    public static final ModConfigSpec.BooleanValue DEV_VERBOSE_LOG = CommonConfig.DEV_VERBOSE_LOG;
 
-    public static final ModConfigSpec.DoubleValue FPV_CAMERA_HEIGHT;
+    public static final ModConfigSpec.DoubleValue FPV_CAMERA_HEIGHT = CommonConfig.FPV_CAMERA_HEIGHT;
     public static final ModConfigSpec.BooleanValue FPV_PROPS_IN_VIEW;
     public static final ModConfigSpec.DoubleValue FPV_PROPS_FORWARD;
     public static final ModConfigSpec.DoubleValue FPV_PROPS_DOWN;
@@ -59,6 +65,8 @@ public class Config {
     public static final ModConfigSpec.BooleanValue HUD_THROTTLE_BAR;
     public static final ModConfigSpec.BooleanValue HUD_CROSSHAIR;
     public static final ModConfigSpec.BooleanValue HUD_HEADING;
+    public static final ModConfigSpec.BooleanValue HUD_DAMAGE;
+    public static final ModConfigSpec.BooleanValue HUD_NETSTATS;
 
     public static final ModConfigSpec SPEC;
 
@@ -72,6 +80,8 @@ public class Config {
             .defineInRange("mouseRollSensitivity", 0.045, 0.005, 0.2);
         MOUSE_SMOOTHING = BUILDER.comment("Mouse input smoothing. 0 = raw, 0.85 = very smooth.")
             .defineInRange("mouseSmoothing", 0.55, 0.0, 0.85);
+        MOUSE_RETURN = BUILDER.comment("How fast the mouse sticks spring back to center. 0 = they hold their position (old behaviour).")
+            .defineInRange("mouseReturn", 0.25, 0.0, 1.0);
         MOUSE_DEADBAND = BUILDER.comment("Ignore tiny mouse input to prevent camera/attitude jitter.")
             .defineInRange("mouseDeadband", 0.025, 0.0, 0.2);
         BUILDER.pop();
@@ -81,12 +91,6 @@ public class Config {
             .defineInRange("deadband", 0.08, 0.0, 0.25);
         RC_EXPO = BUILDER.comment("RC expo. 0 = linear, 0.7 = softer center.")
             .defineInRange("expo", 0.25, 0.0, 0.8);
-        RC_PITCH_RATE = BUILDER.comment("Pitch rate multiplier. 1.0 = drone default, 0.5 = half, 2.0 = double. Applied to right stick vertical.")
-            .defineInRange("pitchRate", 1.0, 0.1, 3.0);
-        RC_ROLL_RATE = BUILDER.comment("Roll rate multiplier. 1.0 = drone default, 0.5 = half, 2.0 = double. Applied to right stick horizontal.")
-            .defineInRange("rollRate", 1.0, 0.1, 3.0);
-        RC_YAW_RATE = BUILDER.comment("Yaw rate multiplier. 1.0 = drone default, 0.5 = half, 2.0 = double. Applied to left stick horizontal.")
-            .defineInRange("yawRate", 1.0, 0.1, 3.0);
         RC_THROTTLE_MID = BUILDER.comment("Throttle output at 50% stick. 0.5 = linear (default). >0.5 = more precision around hover, hover needs less stick. <0.5 = more sensitivity above 50% stick (not recommended).")
             .defineInRange("throttleMid", 0.5, 0.1, 0.9);
         RC_AXIS_THROTTLE = BUILDER.comment("Throttle axis index. -1 disables this channel.")
@@ -97,6 +101,8 @@ public class Config {
             .defineInRange("axisPitch", 1, -1, 15);
         RC_AXIS_ROLL = BUILDER.comment("Roll axis index. -1 disables this channel.")
             .defineInRange("axisRoll", 0, -1, 15);
+        RC_AXIS_ARM = BUILDER.comment("Arm AUX channel index on RC transmitters (switch axis). -1 = auto-detect on first switch flip. Arm when the axis reads above center.")
+            .defineInRange("axisArm", -1, -1, 15);
         RC_INVERT_THROTTLE = BUILDER.comment("Invert throttle axis before mapping to 0..1.")
             .define("invertThrottle", false);
         RC_INVERT_YAW = BUILDER.comment("Invert yaw axis. Default true: RadioMaster Pocket left stick horizontal reports inverted sign in HID mode.")
@@ -105,6 +111,8 @@ public class Config {
             .define("invertPitch", false);
         RC_INVERT_ROLL = BUILDER.comment("Invert roll axis.")
             .define("invertRoll", false);
+        RC_INVERT_ARM = BUILDER.comment("Invert the arm AUX channel (use when your arm switch reads high while disarmed).")
+            .define("invertArm", false);
         RC_TX_DEFAULTS_APPLIED = BUILDER.comment("Internal flag: set to true after RC transmitter axis defaults are applied once on first connect.")
             .define("rcTxDefaultsApplied", false);
         RC_TX_DEFAULTS_V2 = BUILDER.comment("Internal flag: v2 migration that corrects invertPitch back to false.")
@@ -115,39 +123,8 @@ public class Config {
             .define("rcTxDefaultsV4", false);
         BUILDER.pop();
 
-        BUILDER.push("remote");
-        DEFAULT_LINK_CODE = BUILDER.comment("Remembered 6-digit link code, auto-assigned to newly placed remote drones. Empty = off.")
-            .define("defaultLinkCode", "");
-        BUILDER.pop();
-
         BUILDER.push("dev");
-        DEV_POWER_MULT = BUILDER.comment("Global fine thrust multiplier for quick testing (and battery drain). Mass and thrust themselves come from each drone's build (preset or assembled modules); leave at 1.0 normally.")
-            .defineInRange("powerMultiplier", 1.0, 0.2, 5.0);
-        DEV_DRAG_MULT = BUILDER.comment("Air-drag multiplier. Higher = the drone dumps its current momentum faster, so it brakes and reverses direction (flip 180 + full throttle) more sharply; lower = more glide/inertia.")
-            .defineInRange("dragMultiplier", 1.0, 0.1, 6.0);
-        DEV_MAX_SPEED = BUILDER.comment("Top-speed cap in m/s. Terminal velocity is normally set by drag, this is the hard upper clamp so the drone can't accelerate forever.")
-            .defineInRange("maxSpeed", 60.0, 10.0, 150.0);
-        DEV_EXPLOSION_POWER = BUILDER.comment("Kamikaze explosion power. 4.0 = TNT.")
-            .defineInRange("explosionPower", 4.0, 1.0, 100.0);
-        DEV_EXPLOSION_BLOCK_BREAK_PERCENT = BUILDER.comment("Percent of vanilla kamikaze block destruction to keep. 0 = no block breaking, 100 = normal explosion crater.")
-            .defineInRange("explosionBlockBreakPercent", 100.0, 0.0, 100.0);
-        DEV_EXPLOSION_BLOCK_FLING_PERCENT = BUILDER.comment("Percent of nearby blocks copied into flying debris before the kamikaze explosion.")
-            .defineInRange("explosionBlockFlingPercent", 100.0, 0.0, 200.0);
-        DEV_EXPLOSION_MOB_DAMAGE_MULT = BUILDER.comment("Extra kamikaze mob damage multiplier. 1.0 = default tuned damage.")
-            .defineInRange("explosionMobDamageMultiplier", 1.0, 0.0, 5.0);
-        DEV_EXPLOSION_CAMERA_BACKSTEP = BUILDER.comment("Before a kamikaze detonates, move its FPV camera this many blocks backward along the flight path so the blast is visible. 0 = off.")
-            .defineInRange("explosionCameraBackstep", 8.0, 0.0, 40.0);
-        DEV_EXPLOSION_CAMERA_SECONDS = BUILDER.comment("How long to keep the FPV camera watching the kamikaze blast after detonation.")
-            .defineInRange("explosionCameraSeconds", 2.0, 0.0, 6.0);
-        DEV_CHUNK_RADIUS = BUILDER.comment("Chunk streaming radius around a piloted drone (chunks are pushed to the pilot's client). 0 = off.")
-            .defineInRange("chunkRadius", 8, 0, 12);
-        DEV_HITBOX_SCALE = BUILDER.comment("Drone hitbox size multiplier.")
-            .defineInRange("hitboxScale", 1.0, 0.2, 3.0);
-        DEV_HITBOX_Y_OFFSET = BUILDER.comment("Drone hitbox vertical offset in blocks.")
-            .defineInRange("hitboxYOffset", 0.0, -1.0, 1.0);
-        FPV_CAMERA_HEIGHT = BUILDER.comment("FPV camera vertical position as a fraction of the drone's height. 0 = bottom of the model, 0.5 = center, 1.0 = top plate, >1 = above the frame.")
-            .defineInRange("fpvCameraHeight", 0.5, 0.0, 1.5);
-        FPV_PROPS_IN_VIEW = BUILDER.comment("Show your own drone model (frame, props, camera) locked into the FPV view, parked a bit below/ahead like an onboard chase cam.")
+        FPV_PROPS_IN_VIEW = BUILDER.comment("Show the front motors and propellers in the FPV view.")
             .define("fpvPropsInView", false);
         FPV_PROPS_FORWARD = BUILDER.comment("How far ahead of the camera the drone model sits (blocks). Bigger = further into the screen / smaller on screen.")
             .defineInRange("fpvPropsForward", 0.80, 0.0, 2.5);
@@ -174,6 +151,10 @@ public class Config {
             .define("showCrosshair", true);
         HUD_HEADING = BUILDER.comment("Show the compass heading.")
             .define("showHeading", true);
+        HUD_DAMAGE = BUILDER.comment("Show bottom-right damage badges for worn props, motors, frame, camera and battery.")
+            .define("showDamage", true);
+        HUD_NETSTATS = BUILDER.comment("Show LINK (control round-trip) and SRV (server tick time) on the telemetry column.")
+            .define("showNetStats", true);
         BUILDER.pop();
 
         SPEC = BUILDER.build();
@@ -181,5 +162,6 @@ public class Config {
 
     public static void save() {
         SPEC.save();
+        CommonConfig.SPEC.save();
     }
 }

@@ -35,9 +35,30 @@ public record PlaneStrikePacket(int scoutId, double tx, double ty, double tz) im
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer player) || !(player.level() instanceof ServerLevel sl)) return;
             Entity e = sl.getEntity(pkt.scoutId());
+            Vec3 point = new Vec3(pkt.tx(), pkt.ty(), pkt.tz());
+            if (!Double.isFinite(point.x) || !Double.isFinite(point.y) || !Double.isFinite(point.z)) return;
+
+            if (e instanceof org.restor.fpv.entity.CarrierPlaneEntity carrier && carrier.hasPassenger(player)) {
+                if (point.distanceToSqr(carrier.position()) > 1024.0 * 1024.0) return;
+                String released = carrier.releaseAt(point);
+                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                    released == null ? "msg.fpv.carrier_empty" : "msg.fpv.carrier_release_" + released), true);
+                return;
+            }
+
+            if (e instanceof org.restor.fpv.assembly.ModularPlaneEntity built && built.hasPassenger(player)) {
+                if (point.distanceToSqr(built.position()) > 1024.0 * 1024.0) return;
+                String released = built.releaseAt(point);
+                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                    released == null ? "msg.fpv.carrier_empty" : "msg.fpv.carrier_release_" + released), true);
+                return;
+            }
+
             if (!(e instanceof ScoutPlaneEntity scout) || !scout.hasPassenger(player)) return;
 
-            Vec3 target = new Vec3(pkt.tx(), pkt.ty(), pkt.tz());
+            Vec3 target = point;
+            if (!Double.isFinite(pkt.tx()) || !Double.isFinite(pkt.ty()) || !Double.isFinite(pkt.tz())
+                || target.distanceToSqr(scout.position()) > 1024.0 * 1024.0 || !scout.tryStartStrike()) return;
             Vec3 toTarget = target.subtract(scout.position());
             Vec3 approach = new Vec3(toTarget.x, 0, toTarget.z);
             if (approach.lengthSqr() < 1.0e-4) {

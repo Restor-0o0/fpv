@@ -1,4 +1,29 @@
-# Project exclude paths
+# Gradle
 /.gradle/
 /build/
-/build/classes/java/main/
+/buildSrc/build/
+gradle-app.setting
+
+# Runtime
+/run/
+/runs/
+/repo/
+
+# IDE
+/.idea/
+*.iml
+*.ipr
+*.iws
+/.vscode/
+/.settings/
+/.classpath
+/.project
+/bin/
+/out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Decompiled vanilla sources kept locally for reference
+/nfsnd/

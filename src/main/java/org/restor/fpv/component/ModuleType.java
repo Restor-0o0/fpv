@@ -10,5 +10,8 @@ public enum ModuleType {
     // Light dart gun: in companion mode the drone shoots darts at hostile mobs.
     DART_GUN,
     // Cargo box: 9-slot storage, opened by right-clicking the drone in companion mode.
-    STORAGE
+    STORAGE,
+    // Targeting pod: opens the strike bay on a spotter airframe, letting it call in
+    // the drone cards stowed there.
+    TARGETING
 }

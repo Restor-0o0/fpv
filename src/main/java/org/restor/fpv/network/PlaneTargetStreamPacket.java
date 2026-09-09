@@ -36,7 +36,15 @@ public record PlaneTargetStreamPacket(int planeId, boolean active, double x, dou
             if (!(context.player() instanceof ServerPlayer player)) return;
             Entity e = player.level().getEntity(pkt.planeId());
             if (e instanceof PlaneEntity plane && plane.hasPassenger(player)) {
-                plane.setTargetStreaming(pkt.active() ? new Vec3(pkt.x(), pkt.y(), pkt.z()) : null);
+                if (!pkt.active()) {
+                    plane.setTargetStreaming(null);
+                    return;
+                }
+                if (!Double.isFinite(pkt.x()) || !Double.isFinite(pkt.y()) || !Double.isFinite(pkt.z())) return;
+                Vec3 center = new Vec3(pkt.x(), pkt.y(), pkt.z());
+                if (center.distanceToSqr(plane.position()) <= 1024.0 * 1024.0) {
+                    plane.setTargetStreaming(center);
+                }
             }
         });
     }

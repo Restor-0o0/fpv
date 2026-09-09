@@ -24,6 +24,7 @@ import java.util.EnumSet;
 public class PatrolDroneEntity extends NpcDroneEntity {
     private static final double STANDOFF_DIST = 9.0;   // preferred firing range
     private static final int FIRE_COOLDOWN = 25;       // ticks between shots
+    private static final int BOMB_COOLDOWN = 70;
 
     public PatrolDroneEntity(EntityType<? extends PatrolDroneEntity> type, Level level) {
         super(type, level);
@@ -36,6 +37,27 @@ public class PatrolDroneEntity extends NpcDroneEntity {
             .add(Attributes.MOVEMENT_SPEED, 0.30)
             .add(Attributes.FOLLOW_RANGE, 32.0)
             .add(Attributes.ATTACK_DAMAGE, 2.0);
+    }
+
+    @Override
+    protected NpcDroneBuilds.Role buildRole() { return NpcDroneBuilds.Role.PATROL; }
+
+    private boolean bombs() {
+        return hasModule(org.restor.fpv.component.ModuleType.PAYLOAD_BAY);
+    }
+
+    private boolean shoots() {
+        return hasModule(org.restor.fpv.component.ModuleType.DART_GUN);
+    }
+
+    @Override
+    protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level,
+                                       net.minecraft.world.damagesource.DamageSource source, boolean hitByPlayer) {
+        super.dropCustomDeathLoot(level, source, hitByPlayer);
+        if (hitByPlayer && hasModule(org.restor.fpv.component.ModuleType.STORAGE)) {
+            spawnAtLocation(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, random.nextInt(3) + 1));
+            spawnAtLocation(new ItemStack(net.minecraft.world.item.Items.GUNPOWDER, random.nextInt(2) + 1));
+        }
     }
 
     @Override
@@ -70,17 +92,38 @@ public class PatrolDroneEntity extends NpcDroneEntity {
             if (t == null) return;
 
             // Slowly circle the target at standoff range, slightly above eye level.
+            getLookControl().setLookAt(t, 30f, 30f);
+
+            if (bombs()) {
+                // Bombing run: sit right above the target and kick a charge out of the bay.
+                setFlightTarget(new Vec3(t.getX(), t.getEyeY() + 7.0, t.getZ()), 1.1);
+                boolean overhead = t.distanceToSqr(getX(), t.getY(), getZ()) < 4.0;
+                if (--cooldown <= 0 && overhead && getY() - t.getY() > 3.0) {
+                    cooldown = BOMB_COOLDOWN;
+                    dropCharge();
+                }
+                return;
+            }
+
             orbitAngle += 0.02f;
             double wx = t.getX() + Math.cos(orbitAngle) * STANDOFF_DIST;
             double wy = t.getEyeY() + 2.5;
             double wz = t.getZ() + Math.sin(orbitAngle) * STANDOFF_DIST;
-            moveControl.setWantedPosition(wx, wy, wz, 1.0);
-            getLookControl().setLookAt(t, 30f, 30f);
+            setFlightTarget(new Vec3(wx, wy, wz), 1.0);
 
+            if (!shoots()) return;
             if (--cooldown <= 0 && hasLineOfSight(t) && distanceToSqr(t) < 20 * 20) {
                 cooldown = FIRE_COOLDOWN;
                 shootDart(t);
             }
+        }
+
+        private void dropCharge() {
+            DropChargeEntity charge = new DropChargeEntity(level(), getX(), getY() - 0.35, getZ());
+            charge.setOwner(PatrolDroneEntity.this);
+            charge.setDeltaMovement(getDeltaMovement().x, -0.15, getDeltaMovement().z);
+            level().addFreshEntity(charge);
+            playSound(org.restor.fpv.sound.ModSounds.WARHEAD_ARM.get(), 0.7f, 1.2f);
         }
 
         private void shootDart(LivingEntity t) {
@@ -90,7 +133,7 @@ public class PatrolDroneEntity extends NpcDroneEntity {
             Vec3 to = new Vec3(t.getX() - getX(), t.getEyeY() - 0.4 - dart.getY(), t.getZ() - getZ());
             dart.shoot(to.x, to.y, to.z, 2.2f, 4.0f);
             level().addFreshEntity(dart);
-            playSound(SoundEvents.CROSSBOW_SHOOT, 0.8f, 1.5f);
+            playSound(org.restor.fpv.sound.ModSounds.DART.get(), 0.8f, 1.5f);
         }
     }
 }

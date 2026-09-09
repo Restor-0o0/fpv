@@ -34,7 +34,8 @@ public record SetDroneCodePacket(int droneId, String code) implements CustomPack
             if (player == null || !(code.isEmpty() || code.matches("\\d{6}"))) return;
             Entity entity = player.level().getEntity(pkt.droneId());
             if (entity instanceof DroneEntity drone && drone.isRemoteControllable()
-                && drone.distanceTo(player) < 8) {
+                && drone.distanceTo(player) < 8 && drone.canPlayerAccess(player)) {
+                drone.claimOwner(player);
                 drone.setLinkCode(code);
                 player.sendSystemMessage(code.isEmpty()
                     ? Component.translatable("msg.fpv.code_cleared")

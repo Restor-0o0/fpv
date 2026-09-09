@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IHI",
+    "MPM",
+    "IBI"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "H": {
+      "item": "minecraft:hopper"
+    },
+    "M": {
+      "item": "fpv:motor_3115_900kv"
+    },
+    "P": {
+      "item": "fpv:plane_cargo"
+    },
+    "B": {
+      "item": "fpv:battery_6s_1100"
+    }
+  },
+  "result": {
+    "id": "fpv:plane_carrier"
+  }
+}

@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Quaternionf;
 import org.restor.fpv.assembly.DroneAssembly;
+import org.restor.fpv.assembly.DroneVisual;
 import org.restor.fpv.assembly.FrameSpec;
 import org.restor.fpv.assembly.ModularDroneEntity;
 import org.restor.fpv.Config;
@@ -41,17 +42,15 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
         DroneAssembly assembly = entity.getAssembly();
         FrameSpec spec = assembly.frameSpec();
 
-        // FPV self-view: draw the WHOLE model LOCKED to the camera (parked below+ahead, a "chase
-        // from the frame" look), not with its world attitude — the latter desyncs because model
-        // (modelQuat) and camera (attitudeQuat) conventions differ. Locked, it sits steady in the
-        // goggles, props spin, and tilts as the camera angle changes.
+        // FPV self-view only keeps the front motors and props visible; rendering the
+        // assembled frame here puts the camera inside its own model.
         if (fpvSelf) {
             if (Config.FPV_PROPS_IN_VIEW.get()) {
                 poseStack.pushPose();
                 DroneRenderer.applyFpvViewmodelPose(poseStack, entity, partialTick);
-                float s = Config.FPV_PROPS_SCALE.get().floatValue();
+                float s = DroneVisual.of(spec).scale() * Config.FPV_PROPS_SCALE.get().floatValue();
                 poseStack.scale(s, s, s);
-                renderAssembly(entity, assembly, spec, poseStack, buffer, packedLight, partialTick);
+                renderAssembly(entity, assembly, spec, poseStack, buffer, packedLight, partialTick, true);
                 poseStack.popPose();
             }
             return;
@@ -64,42 +63,89 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
         Quaternionf q = new Quaternionf(modelQuat(entity.yRotO, entity.xRotO, entity.getPrevRoll()))
             .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
         poseStack.mulPose(q);
-        renderAssembly(entity, assembly, spec, poseStack, buffer, packedLight, partialTick);
+        float s = DroneVisual.of(spec).scale();
+        poseStack.scale(s, s, s);
+        renderAssembly(entity, assembly, spec, poseStack, buffer, packedLight, partialTick, false);
         poseStack.popPose();
     }
 
-    /** Draws the full assembled drone (frame, battery, camera, motors + spinning props) at the
-     *  current pose origin. Shared by the world view and the FPV camera-locked view. */
+    /** Draws the assembled drone, optionally limiting FPV self-view to its front props. */
     private void renderAssembly(ModularDroneEntity entity, DroneAssembly assembly, FrameSpec spec,
-                                PoseStack poseStack, MultiBufferSource buffer, int packedLight, float partialTick) {
-        renderPart(assembly.frame, poseStack, buffer, packedLight, 0, 0, 0, 0);
+                                 PoseStack poseStack, MultiBufferSource buffer, int packedLight, float partialTick,
+                                 boolean propsOnly) {
+        DroneVisual v = DroneVisual.of(spec);
+        if (!propsOnly) renderPart(assembly.frame, poseStack, buffer, packedLight, 0, 0, 0, 0, v.frameScale());
         if (spec != null) {
-            renderPart(assembly.battery, poseStack, buffer, packedLight,
-                spec.batteryMount().x(), spec.batteryMount().y(), spec.batteryMount().z(), 0);
-            renderPart(assembly.camera, poseStack, buffer, packedLight,
-                spec.cameraMount().x(), spec.cameraMount().y(), spec.cameraMount().z(), 0);
-            renderPart(assembly.module, poseStack, buffer, packedLight,
-                spec.moduleMount().x(), spec.moduleMount().y(), spec.moduleMount().z(), 0);
+            if (!propsOnly) {
+                renderPart(assembly.battery, poseStack, buffer, packedLight,
+                    spec.batteryMount().x(), spec.batteryMount().y(), spec.batteryMount().z(), 0, v.batteryScale());
+                renderCameraPart(assembly.camera, poseStack, buffer, packedLight,
+                    spec.cameraMount().x(), spec.cameraMount().y(), spec.cameraMount().z(), v.cameraScale());
+                renderPart(assembly.module, poseStack, buffer, packedLight,
+                    spec.moduleMount().x(), spec.moduleMount().y(), spec.moduleMount().z(), 0, v.moduleScale());
+                renderPart(assembly.firmware, poseStack, buffer, packedLight,
+                    spec.moduleMount().x(), spec.moduleMount().y() + 0.06f, spec.moduleMount().z() - 0.09f, 0,
+                    v.electronicsScale());
+            }
             float spin = (entity.tickCount + partialTick) * entity.getVisualThrottle() * 40f;
+            boolean axial = spec.role() == org.restor.fpv.assembly.FrameRole.INTERCEPTOR;
             for (int i = 0; i < spec.motorCount(); i++) {
                 MountPoint m = spec.motorMounts().get(i);
-                renderPart(assembly.motors[i], poseStack, buffer, packedLight, m.x(), m.y(), m.z(), 0);
+                float x = m.x() * v.armSpread();
+                float z = m.z() * v.armSpread();
+                if (propsOnly && z > 0) continue;
+                float propSpin = i % 2 == 0 ? spin : -spin;
+                if (axial) {
+                    renderRotorPart(assembly.motors[i], poseStack, buffer, packedLight, x, m.y(), z, 0,
+                        v.motorScale());
+                    renderRotorPart(assembly.props[i], poseStack, buffer, packedLight,
+                        x, m.y(), z + v.propLift(), propSpin, v.propScale());
+                    continue;
+                }
+                renderPart(assembly.motors[i], poseStack, buffer, packedLight, x, m.y(), z, 0, v.motorScale());
                 // Props sit slightly above the motor and spin with throttle,
                 // alternating direction per slot (props-out layout).
                 renderPart(assembly.props[i], poseStack, buffer, packedLight,
-                    m.x(), m.y() + 0.06f, m.z(), i % 2 == 0 ? spin : -spin);
+                    x, m.y() + v.propLift(), z, propSpin, v.propScale());
             }
         }
     }
 
     private void renderPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
-                            int light, float x, float y, float z, float spinDeg) {
+                            int light, float x, float y, float z, float spinDeg, float scale) {
         if (stack.isEmpty()) return;
         poseStack.pushPose();
         poseStack.translate(x, y, z);
+        poseStack.scale(scale, scale, scale);
         if (spinDeg != 0) {
             poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(spinDeg));
         }
+        Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
+            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        poseStack.popPose();
+    }
+
+    /** Lays a rotor on its side so its thrust axis runs along the fuselage. */
+    private void renderRotorPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+                                 int light, float x, float y, float z, float spinDeg, float scale) {
+        if (stack.isEmpty()) return;
+        poseStack.pushPose();
+        poseStack.translate(x, y, z);
+        poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
+        poseStack.scale(scale, scale, scale);
+        if (spinDeg != 0) poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(spinDeg));
+        Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
+            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        poseStack.popPose();
+    }
+
+    private void renderCameraPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+                                  int light, float x, float y, float z, float scale) {
+        if (stack.isEmpty()) return;
+        poseStack.pushPose();
+        poseStack.translate(x, y, z);
+        poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(22.5f));
+        poseStack.scale(scale, scale, scale);
         Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
             light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
         poseStack.popPose();

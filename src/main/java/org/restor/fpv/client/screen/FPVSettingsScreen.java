@@ -128,6 +128,9 @@ public class FPVSettingsScreen extends Screen {
         y = addPair(left, y, w, colGap, twoColumns,
             axisButton(left, y, w, ROW_HEIGHT, "settings.fpv.axis_roll", Config.RC_AXIS_ROLL),
             invertButton(twoColumns ? right : left, twoColumns ? y : y + ROW_GAP, w, ROW_HEIGHT, "settings.fpv.invert_roll", Config.RC_INVERT_ROLL));
+        y = addPair(left, y, w, colGap, twoColumns,
+            axisButton(left, y, w, ROW_HEIGHT, "settings.fpv.axis_arm", Config.RC_AXIS_ARM),
+            invertButton(twoColumns ? right : left, twoColumns ? y : y + ROW_GAP, w, ROW_HEIGHT, "settings.fpv.invert_arm", Config.RC_INVERT_ARM));
         y += 6;
 
         y = addPair(left, y, w, colGap, twoColumns,
@@ -147,6 +150,10 @@ public class FPVSettingsScreen extends Screen {
             Config.MOUSE_SMOOTHING, 0.0, 0.85));
         addContentWidget(new DoubleSlider(twoColumns ? right : left, twoColumns ? y - ROW_GAP : y, w, ROW_HEIGHT, "settings.fpv.keyboard_yaw",
                 Config.KEYBOARD_YAW_SENSITIVITY, 0.05, 1.0));
+
+        y = addPair(left, y, w, colGap, twoColumns,
+            new DoubleSlider(left, y, w, ROW_HEIGHT, "settings.fpv.mouse_return",
+            Config.MOUSE_RETURN, 0.0, 1.0));
         return y;
     }
 
@@ -157,8 +164,8 @@ public class FPVSettingsScreen extends Screen {
         y = addTogglePair(left, y, w, colGap, twoColumns, "settings.fpv.hud_telemetry", Config.HUD_TELEMETRY, "settings.fpv.hud_sticks", Config.HUD_STICKS);
         y = addTogglePair(left, y, w, colGap, twoColumns, "settings.fpv.hud_roll_line", Config.HUD_ROLL_LINE, "settings.fpv.hud_pitch_ladder", Config.HUD_PITCH_LADDER);
         y = addTogglePair(left, y, w, colGap, twoColumns, "settings.fpv.hud_throttle_bar", Config.HUD_THROTTLE_BAR, "settings.fpv.hud_crosshair", Config.HUD_CROSSHAIR);
-        addContentWidget(toggleButton(left, y, w, ROW_HEIGHT, "settings.fpv.hud_heading", Config.HUD_HEADING));
-        return y + ROW_GAP;
+        y = addTogglePair(left, y, w, colGap, twoColumns, "settings.fpv.hud_heading", Config.HUD_HEADING, "settings.fpv.hud_damage", Config.HUD_DAMAGE);
+        return y;
     }
 
     private int addDev(int left, int y, int w, int colGap, boolean twoColumns) {
@@ -166,6 +173,9 @@ public class FPVSettingsScreen extends Screen {
                 b -> minecraft.setScreen(new FPVDevDroneScreen(this)))
             .bounds(left, y, twoColumns ? w * 2 + colGap : w, ROW_HEIGHT).build());
         y += ROW_GAP;
+        y = addTogglePair(left, y, w, colGap, twoColumns,
+            "settings.fpv.realistic_battery", Config.REALISTIC_BATTERY,
+            "settings.fpv.realistic_radio", Config.REALISTIC_RADIO);
         y = addDevPair(left, y, w, colGap, twoColumns,
             new DevSlider(left, y, w, ROW_HEIGHT, "settings.fpv.dev_power", Config.DEV_POWER_MULT.get(), 0.2, 5.0, "%.2fx", v -> { Config.DEV_POWER_MULT.set(v); Config.save(); }),
             new DevSlider(0, 0, w, ROW_HEIGHT, "settings.fpv.dev_drag", Config.DEV_DRAG_MULT.get(), 0.1, 6.0, "%.2fx", v -> { Config.DEV_DRAG_MULT.set(v); Config.save(); }));

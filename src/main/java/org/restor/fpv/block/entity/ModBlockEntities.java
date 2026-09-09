@@ -10,9 +10,6 @@ import org.restor.fpv.block.ModBlocks;
 public class ModBlockEntities {
     public static final DeferredRegister<BlockEntityType<?>> TYPES = DeferredRegister.create(BuiltInRegistries.BLOCK_ENTITY_TYPE, Fpv.MODID);
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<WorkbenchBlockEntity>> WORKBENCH = TYPES.register("workbench",
-        () -> BlockEntityType.Builder.of(WorkbenchBlockEntity::new, ModBlocks.WORKBENCH.get()).build(null));
-
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ControlStationBlockEntity>> CONTROL_STATION = TYPES.register("control_station",
         () -> BlockEntityType.Builder.of(ControlStationBlockEntity::new, ModBlocks.CONTROL_STATION.get()).build(null));
 
@@ -28,6 +25,18 @@ public class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<RaceGateBlockEntity>> RACE_GATE = TYPES.register("race_gate",
         () -> BlockEntityType.Builder.of(RaceGateBlockEntity::new, ModBlocks.RACE_GATE.get()).build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ChargingStationBlockEntity>> CHARGING_STATION = TYPES.register("charging_station",
+        () -> BlockEntityType.Builder.of(ChargingStationBlockEntity::new, ModBlocks.CHARGING_STATION.get()).build(null));
+
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DroneNestBlockEntity>> DRONE_NEST = TYPES.register("drone_nest",
         () -> BlockEntityType.Builder.of(DroneNestBlockEntity::new, ModBlocks.DRONE_NEST.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DroneDetectorBlockEntity>> DRONE_DETECTOR = TYPES.register("drone_detector",
+        () -> BlockEntityType.Builder.of(DroneDetectorBlockEntity::new, ModBlocks.DRONE_DETECTOR.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PartsPileBlockEntity>> PARTS_PILE = TYPES.register("parts_pile",
+        () -> BlockEntityType.Builder.of(PartsPileBlockEntity::new, ModBlocks.PARTS_PILE.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DroneJammerBlockEntity>> DRONE_JAMMER = TYPES.register("drone_jammer",
+        () -> BlockEntityType.Builder.of(DroneJammerBlockEntity::new, ModBlocks.DRONE_JAMMER.get()).build(null));
 }

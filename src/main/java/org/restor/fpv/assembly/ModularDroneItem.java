@@ -26,6 +26,8 @@ public class ModularDroneItem extends DroneItem {
             if (!a.frame.isEmpty())   tooltip.add(Component.literal("§7" + a.frame.getHoverName().getString()));
             if (!a.battery.isEmpty()) tooltip.add(Component.literal("§8+ " + a.battery.getHoverName().getString()));
             if (!a.camera.isEmpty())  tooltip.add(Component.literal("§8+ " + a.camera.getHoverName().getString()));
+            tooltip.add(Component.translatable("tooltip.fpv.assembly_condition",
+                Math.round(a.minimumCondition() / 10f)));
             if (spec != null) {
                 tooltip.add(Component.literal(String.format("§8%d motors, %.0f g, %.0f N",
                     spec.motorCount(), a.totalMassKg() * 1000, a.totalThrustN())));

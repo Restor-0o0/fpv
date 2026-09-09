@@ -38,8 +38,20 @@ public record PlaneOrbitPacket(int planeId, boolean active, double cx, double cy
             if (!(context.player() instanceof ServerPlayer player)) return;
             Entity e = player.level().getEntity(pkt.planeId());
             if (e instanceof PlaneEntity plane && plane.hasPassenger(player)) {
-                plane.setOrbit(pkt.active(), new Vec3(pkt.cx(), pkt.cy(), pkt.cz()), pkt.radius());
+                if (!pkt.active()) {
+                    plane.setOrbit(false, Vec3.ZERO, 0.0);
+                    return;
+                }
+                if (!finite(pkt.cx(), pkt.cy(), pkt.cz()) || !Double.isFinite(pkt.radius())
+                    || pkt.radius() < 0.0 || pkt.radius() > 1024.0) return;
+                Vec3 center = new Vec3(pkt.cx(), pkt.cy(), pkt.cz());
+                if (center.distanceToSqr(plane.position()) > 1024.0 * 1024.0) return;
+                plane.setOrbit(true, center, pkt.radius());
             }
         });
+    }
+
+    private static boolean finite(double x, double y, double z) {
+        return Double.isFinite(x) && Double.isFinite(y) && Double.isFinite(z);
     }
 }

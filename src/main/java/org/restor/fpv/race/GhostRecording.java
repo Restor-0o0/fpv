@@ -5,6 +5,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.network.FriendlyByteBuf;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,7 +42,7 @@ public final class GhostRecording {
 
     public static GhostRecording of(String player, UUID playerId, int timeTicks, int modelType,
                                     List<GhostFrame> frames) {
-        int n = frames.size();
+        int n = Math.min(frames.size(), MAX_FRAMES);
         double[] x = new double[n], y = new double[n], z = new double[n];
         float[] yaw = new float[n], pitch = new float[n], roll = new float[n], throttle = new float[n];
         for (int i = 0; i < n; i++) {
@@ -60,6 +61,20 @@ public final class GhostRecording {
 
     public GhostFrame frame(int i) {
         return new GhostFrame(x[i], y[i], z[i], yaw[i], pitch[i], roll[i], throttle[i]);
+    }
+
+    public boolean sameRecording(GhostRecording other) {
+        return other != null
+            && timeTicks == other.timeTicks
+            && modelType == other.modelType
+            && java.util.Objects.equals(playerId, other.playerId)
+            && Arrays.equals(x, other.x)
+            && Arrays.equals(y, other.y)
+            && Arrays.equals(z, other.z)
+            && Arrays.equals(yaw, other.yaw)
+            && Arrays.equals(pitch, other.pitch)
+            && Arrays.equals(roll, other.roll)
+            && Arrays.equals(throttle, other.throttle);
     }
 
     // -----------------------------------------------------------------
@@ -94,11 +109,11 @@ public final class GhostRecording {
     }
 
     public static GhostRecording load(CompoundTag tag) {
-        int n = tag.getInt("N");
-        double[] x = new double[n], y = new double[n], z = new double[n];
-        float[] yaw = new float[n], pitch = new float[n], roll = new float[n], throttle = new float[n];
         ListTag pos = tag.getList("Pos", net.minecraft.nbt.Tag.TAG_DOUBLE);
         ListTag rot = tag.getList("Rot", net.minecraft.nbt.Tag.TAG_FLOAT);
+        int n = boundedFrameCount(tag.getInt("N"), pos.size() / 3, rot.size() / 4);
+        double[] x = new double[n], y = new double[n], z = new double[n];
+        float[] yaw = new float[n], pitch = new float[n], roll = new float[n], throttle = new float[n];
         for (int i = 0; i < n; i++) {
             x[i] = pos.getDouble(i * 3);
             y[i] = pos.getDouble(i * 3 + 1);
@@ -133,7 +148,7 @@ public final class GhostRecording {
         String player = buf.readUtf();
         int time = buf.readInt();
         int model = buf.readInt();
-        int n = buf.readVarInt();
+        int n = requireNetworkFrameCount(buf.readVarInt());
         double[] x = new double[n], y = new double[n], z = new double[n];
         float[] yaw = new float[n], pitch = new float[n], roll = new float[n], throttle = new float[n];
         for (int i = 0; i < n; i++) {
@@ -144,4 +159,15 @@ public final class GhostRecording {
     }
 
     public static List<GhostFrame> emptyFrames() { return new ArrayList<>(); }
+
+    static int boundedFrameCount(int declared, int positionFrames, int rotationFrames) {
+        return Math.max(0, Math.min(Math.min(declared, MAX_FRAMES), Math.min(positionFrames, rotationFrames)));
+    }
+
+    static int requireNetworkFrameCount(int count) {
+        if (count < 0 || count > MAX_FRAMES) {
+            throw new IllegalArgumentException("Ghost frame count out of range: " + count);
+        }
+        return count;
+    }
 }

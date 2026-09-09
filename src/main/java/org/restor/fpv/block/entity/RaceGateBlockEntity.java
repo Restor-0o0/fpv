@@ -42,6 +42,14 @@ public class RaceGateBlockEntity extends BlockEntity {
     public BlockPos getPrevRoutePos() { return prevRoutePos; }
     public BlockPos getNextRoutePos() { return nextRoutePos; }
 
+    public void configureGenerated(int generatedSize, int generatedYaw) {
+        size = Math.max(2, Math.min(15, generatedSize));
+        yaw = Math.floorMod(generatedYaw, 360);
+        pitch = 0;
+        offset = 0;
+        sync();
+    }
+
     public void setSize(int s) { size = Math.max(2, Math.min(15, s)); sync(); }
 
     public void cycleColor() {
@@ -85,10 +93,6 @@ public class RaceGateBlockEntity extends BlockEntity {
             worldPosition.getX() + 0.5 + n.x * offset,
             worldPosition.getY() + 1.0 + size / 2.0 + n.y * offset,
             worldPosition.getZ() + 0.5 + n.z * offset);
-    }
-
-    public double passRadius() {
-        return size * 0.55;
     }
 
     public AABB renderBoundingBox() {

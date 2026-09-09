@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:drone_detector",
+    "fpv:drone_jammer"
+  ]
+}

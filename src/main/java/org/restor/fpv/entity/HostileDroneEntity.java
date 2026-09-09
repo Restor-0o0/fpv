@@ -43,6 +43,9 @@ public class HostileDroneEntity extends NpcDroneEntity {
         }
     }
 
+    @Override
+    protected NpcDroneBuilds.Role buildRole() { return NpcDroneBuilds.Role.KAMIKAZE; }
+
     private void explode() {
         if (exploded || level().isClientSide) return;
         exploded = true;
@@ -85,9 +88,9 @@ public class HostileDroneEntity extends NpcDroneEntity {
             if (!beeped) {
                 beeped = true;
                 // Aggro warning so the player gets a beat to react or shoot it down.
-                playSound(SoundEvents.BEE_LOOP_AGGRESSIVE, 1.2f, 1.6f);
+                playSound(org.restor.fpv.sound.ModSounds.DETECTOR_ALERT.get(), 1.2f, 1.6f);
             }
-            moveControl.setWantedPosition(t.getX(), t.getEyeY(), t.getZ(), 1.5);
+            setFlightTarget(new net.minecraft.world.phys.Vec3(t.getX(), t.getEyeY(), t.getZ()), 1.5);
         }
     }
 }

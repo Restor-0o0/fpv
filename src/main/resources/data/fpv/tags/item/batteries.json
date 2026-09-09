@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:battery_1s_300",
+    "fpv:battery_4s_1300",
+    "fpv:battery_6s_1100",
+    "fpv:battery_4s_650"
+  ]
+}

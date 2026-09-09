@@ -11,6 +11,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
+import org.restor.fpv.assembly.DroneAssembly;
 import org.restor.fpv.item.ModItems;
 
 // Client -> server: give the player a modular drone item carrying the assembly they built in
@@ -30,9 +31,12 @@ public record DevDroneGivePacket(CompoundTag assembly) implements CustomPacketPa
 
     public static void handle(DevDroneGivePacket pkt, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (!(context.player() instanceof ServerPlayer player) || pkt.assembly() == null) return;
+            if (!(context.player() instanceof ServerPlayer player) || pkt.assembly() == null
+                || !(player.isCreative() || player.hasPermissions(2))) return;
+            DroneAssembly assembly = DroneAssembly.load(pkt.assembly());
+            if (!assembly.validate().isComplete()) return;
             ItemStack stack = new ItemStack(ModItems.MODULAR_DRONE.get());
-            CustomData.update(DataComponents.CUSTOM_DATA, stack, t -> t.put("Assembly", pkt.assembly()));
+            CustomData.update(DataComponents.CUSTOM_DATA, stack, t -> t.put("Assembly", assembly.save()));
             if (!player.getInventory().add(stack)) {
                 player.drop(stack, false);
             }

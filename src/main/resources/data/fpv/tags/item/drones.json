@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:cinewhoop",
+    "fpv:racing_drone",
+    "fpv:tiny_whoop",
+    "fpv:remote_racing_drone",
+    "fpv:kamikaze_drone",
+    "fpv:modular_drone"
+  ]
+}

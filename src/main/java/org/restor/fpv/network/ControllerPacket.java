@@ -11,7 +11,7 @@ import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.DroneEntity;
 
 public record ControllerPacket(int droneId, float throttle, float pitch, float roll, float yaw,
-                                boolean arm, boolean modeSwitch) implements CustomPacketPayload {
+                                boolean arm, boolean modeSwitch, int seq) implements CustomPacketPayload {
     public static final Type<ControllerPacket> TYPE =
         new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "controller"));
 
@@ -24,9 +24,10 @@ public record ControllerPacket(int droneId, float throttle, float pitch, float r
             buf.writeFloat(pkt.yaw);
             buf.writeBoolean(pkt.arm);
             buf.writeBoolean(pkt.modeSwitch);
+            buf.writeInt(pkt.seq);
         },
         buf -> new ControllerPacket(buf.readInt(), buf.readFloat(), buf.readFloat(), buf.readFloat(),
-            buf.readFloat(), buf.readBoolean(), buf.readBoolean())
+            buf.readFloat(), buf.readBoolean(), buf.readBoolean(), buf.readInt())
     );
 
     @Override
@@ -38,7 +39,7 @@ public record ControllerPacket(int droneId, float throttle, float pitch, float r
                 Entity entity = player.level().getEntity(pkt.droneId());
                 if (entity instanceof DroneEntity drone
                     && (drone.hasPassenger(player) || drone.isRemotePilot(player))) {
-                    drone.setControllerInput(pkt.throttle(), pkt.pitch(), pkt.roll(), pkt.yaw(), pkt.arm(), pkt.modeSwitch());
+                    drone.setControllerInput(pkt.throttle(), pkt.pitch(), pkt.roll(), pkt.yaw(), pkt.arm(), pkt.modeSwitch(), pkt.seq());
                 }
             }
         });

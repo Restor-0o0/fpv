@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:vtx_25mw",
+    "fpv:vtx_200mw",
+    "fpv:vtx_800mw"
+  ]
+}

@@ -18,7 +18,7 @@ import org.restor.fpv.network.DevDroneGivePacket;
  */
 public class FPVDevDroneScreen extends Screen {
     private static final float G = 9.81f;
-    private static final float THROTTLE_EXP = 2.5f; // must match DroneEntity.THROTTLE_EXP
+    private static final float THROTTLE_EXP = 2.0f; // must match DroneEntity.THROTTLE_EXP
 
     private final Screen parent;
     private int rowsTop;

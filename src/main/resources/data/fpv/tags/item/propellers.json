@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:prop_5x4x3",
+    "fpv:prop_5x4x2",
+    "fpv:prop_3x2x3",
+    "fpv:prop_65mm"
+  ]
+}

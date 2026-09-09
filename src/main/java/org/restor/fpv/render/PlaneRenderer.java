@@ -1,23 +1,26 @@
 package org.restor.fpv.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.PlaneEntity;
-import org.joml.Matrix4f;
+import org.restor.fpv.item.ModItems;
 import org.joml.Quaternionf;
 
 public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "textures/entity/plane.png");
     private static final double FAR_RENDER_DISTANCE_SQR = 2048.0 * 2048.0;
+    private static final float MODEL_SCALE = 1.95f;
+
+    private final java.util.Map<net.minecraft.world.item.Item, ItemStack> models = new java.util.IdentityHashMap<>();
 
     public PlaneRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
@@ -62,15 +65,29 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
                 .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
         }
         poseStack.mulPose(q);
-        if (entity instanceof org.restor.fpv.entity.KamikazeWingEntity) {
-            poseStack.scale(3.0f, 3.0f, 3.0f);
-        }
 
-        VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
-        renderAirframe(consumer, poseStack, packedLight, entity.getVisualThrottle(),
-            entity.tickCount + partialTick);
+        float scale = MODEL_SCALE * entity.getModelScale();
+        poseStack.scale(scale, scale, scale);
+        mc.getItemRenderer().renderStatic(modelStack(entity), ItemDisplayContext.NONE,
+            packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        renderExtras(entity, partialTick, poseStack, buffer, packedLight);
 
         poseStack.popPose();
+    }
+
+    /** Called inside the oriented, model-scaled pose so subclasses can bolt parts on. */
+    protected void renderExtras(PlaneEntity entity, float partialTick, PoseStack poseStack,
+                                MultiBufferSource buffer, int packedLight) {
+    }
+
+    protected ItemStack cachedStack(net.minecraft.world.item.Item item) {
+        return models.computeIfAbsent(item, ItemStack::new);
+    }
+
+    private ItemStack modelStack(PlaneEntity entity) {
+        net.minecraft.world.item.Item item = entity.getModelItem();
+        if (item == null) item = ModItems.PLANE.get();
+        return models.computeIfAbsent(item, ItemStack::new);
     }
 
     private static Quaternionf modelQuat(float yaw, float pitch, float roll) {
@@ -78,76 +95,6 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
             .rotateY((float) Math.toRadians(yaw - 180f))
             .rotateX((float) Math.toRadians(-pitch))
             .rotateZ((float) Math.toRadians(roll));
-    }
-
-    private void renderAirframe(VertexConsumer consumer, PoseStack poseStack, int packedLight,
-                                float throttle, float tick) {
-        Matrix4f mat = poseStack.last().pose();
-
-        // Fuselage
-        renderBox(consumer, mat, packedLight, -0.12f, -0.1f, -0.6f, 0.12f, 0.1f, 0.5f, 0.75f, 0.75f, 0.78f);
-        // Nose cone
-        renderBox(consumer, mat, packedLight, -0.08f, -0.07f, -0.75f, 0.08f, 0.07f, -0.6f, 0.35f, 0.35f, 0.4f);
-        // (No canopy — these are unmanned FPV aircraft.)
-        // Main wings
-        renderBox(consumer, mat, packedLight, -0.85f, -0.03f, -0.05f, 0.85f, 0.03f, 0.2f, 0.65f, 0.65f, 0.7f);
-        // Horizontal stabilizer
-        renderBox(consumer, mat, packedLight, -0.35f, -0.02f, 0.42f, 0.35f, 0.02f, 0.55f, 0.6f, 0.6f, 0.65f);
-        // Vertical fin
-        renderBox(consumer, mat, packedLight, -0.02f, 0.02f, 0.4f, 0.02f, 0.32f, 0.55f, 0.55f, 0.55f, 0.6f);
-
-        // Propeller
-        poseStack.pushPose();
-        poseStack.translate(0, 0, -0.75f);
-        float spin = throttle * 45;
-        if (spin > 1) {
-            poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(tick * spin));
-            float pr = 0.28f, pw = 0.02f;
-            renderBox(consumer, poseStack.last().pose(), packedLight,
-                -pr, -pw, -0.01f, pr, pw, 0.01f, 0.2f, 0.2f, 0.2f);
-            renderBox(consumer, poseStack.last().pose(), packedLight,
-                -pw, -pr, -0.01f, pw, pr, 0.01f, 0.2f, 0.2f, 0.2f);
-        } else {
-            renderBox(consumer, poseStack.last().pose(), packedLight,
-                -0.03f, -0.03f, -0.02f, 0.03f, 0.03f, 0.02f, 0.15f, 0.15f, 0.15f);
-        }
-        poseStack.popPose();
-    }
-
-    private void renderBox(VertexConsumer consumer, Matrix4f mat, int packedLight,
-                           float x1, float y1, float z1, float x2, float y2, float z2,
-                           float r, float g, float b) {
-        float u1 = 0, v1 = 0, u2 = 1, v2 = 1;
-
-        consumer.addVertex(mat, x1, y2, z1).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 1, 0);
-        consumer.addVertex(mat, x2, y2, z1).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 1, 0);
-        consumer.addVertex(mat, x2, y2, z2).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 1, 0);
-        consumer.addVertex(mat, x1, y2, z2).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 1, 0);
-
-        consumer.addVertex(mat, x1, y1, z1).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, -1, 0);
-        consumer.addVertex(mat, x1, y1, z2).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, -1, 0);
-        consumer.addVertex(mat, x2, y1, z2).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, -1, 0);
-        consumer.addVertex(mat, x2, y1, z1).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, -1, 0);
-
-        consumer.addVertex(mat, x1, y1, z1).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, -1);
-        consumer.addVertex(mat, x2, y1, z1).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, -1);
-        consumer.addVertex(mat, x2, y2, z1).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, -1);
-        consumer.addVertex(mat, x1, y2, z1).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, -1);
-
-        consumer.addVertex(mat, x1, y1, z2).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, 1);
-        consumer.addVertex(mat, x1, y2, z2).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, 1);
-        consumer.addVertex(mat, x2, y2, z2).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, 1);
-        consumer.addVertex(mat, x2, y1, z2).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, 1);
-
-        consumer.addVertex(mat, x2, y1, z1).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(1, 0, 0);
-        consumer.addVertex(mat, x2, y1, z2).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(1, 0, 0);
-        consumer.addVertex(mat, x2, y2, z2).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(1, 0, 0);
-        consumer.addVertex(mat, x2, y2, z1).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(1, 0, 0);
-
-        consumer.addVertex(mat, x1, y1, z1).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(-1, 0, 0);
-        consumer.addVertex(mat, x1, y2, z1).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(-1, 0, 0);
-        consumer.addVertex(mat, x1, y2, z2).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(-1, 0, 0);
-        consumer.addVertex(mat, x1, y1, z2).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(-1, 0, 0);
     }
 
     @Override

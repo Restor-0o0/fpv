@@ -1,0 +1,37 @@
+{
+  "parent": "fpv:survival/utility",
+  "display": {
+    "icon": {
+      "id": "fpv:charging_station"
+    },
+    "title": {
+      "translate": "advancement.fpv.logistics.title"
+    },
+    "description": {
+      "translate": "advancement.fpv.logistics.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_charger": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": "fpv:charging_station"
+          }
+        ]
+      }
+    }
+  },
+  "rewards": {
+    "recipes": [
+      "fpv:drone_nest",
+      "fpv:module_storage",
+      "fpv:module_payload_bay"
+    ]
+  }
+}

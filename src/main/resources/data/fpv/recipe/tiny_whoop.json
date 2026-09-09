@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "MPM",
+    "PFP",
+    "MPM"
+  ],
+  "key": {
+    "M": {
+      "item": "fpv:motor_1103_8000kv"
+    },
+    "P": {
+      "item": "fpv:prop_65mm"
+    },
+    "F": {
+      "item": "fpv:frame_tiny_whoop"
+    }
+  },
+  "result": {
+    "id": "fpv:tiny_whoop"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:warhead_frag",
+    "fpv:warhead_he",
+    "fpv:warhead_heavy",
+    "fpv:warhead_shaped",
+    "fpv:warhead_thermo",
+    "fpv:warhead_cluster"
+  ]
+}

@@ -2,6 +2,7 @@ package org.restor.fpv.assembly;
 
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -19,6 +20,7 @@ import org.restor.fpv.data.DroneData;
  */
 public class DroneAssembly {
     public static final int MAX_MOTORS = 8;
+    public static final int BAY_SIZE = 4;
     // Thrust per motor-power unit. A 4×2207+5x4x3 4S build lands at ~TWR 5 — enough that level
     // cruise sits at ~40-45° pitch (not 65°, which TWR ~8+ forced), while low drag still gives a
     // high top speed. More cells (6S) or stronger motors push TWR up for a punchier build.
@@ -28,12 +30,19 @@ public class DroneAssembly {
     public ItemStack battery = ItemStack.EMPTY;
     public ItemStack camera = ItemStack.EMPTY;
     public ItemStack module = ItemStack.EMPTY; // optional payload/utility module (FPV_IDEAS §4-5)
+    public ItemStack firmware = ItemStack.EMPTY; // optional autonomy chip, independent of the module slot
     public final ItemStack[] motors = new ItemStack[MAX_MOTORS];
     public final ItemStack[] props = new ItemStack[MAX_MOTORS];
+    /** Drone cards stowed aboard — only frames whose role opens a bay ever hold any. */
+    public final ItemStack[] bay = new ItemStack[BAY_SIZE];
+
+    /** What the frame's extra bench slots hold, if anything. */
+    public enum BayKind { NONE, STRIKE, CARRIER }
 
     public DroneAssembly() {
         java.util.Arrays.fill(motors, ItemStack.EMPTY);
         java.util.Arrays.fill(props, ItemStack.EMPTY);
+        java.util.Arrays.fill(bay, ItemStack.EMPTY);
     }
 
     // ---------------------------------------------------------------- NBT
@@ -44,17 +53,27 @@ public class DroneAssembly {
         putStack(tag, "Battery", battery);
         putStack(tag, "Camera", camera);
         if (!module.isEmpty()) putStack(tag, "Module", module);
+        if (!firmware.isEmpty()) putStack(tag, "Firmware", firmware);
         for (int i = 0; i < MAX_MOTORS; i++) {
             if (!motors[i].isEmpty()) putStack(tag, "Motor" + i, motors[i]);
             if (!props[i].isEmpty())  putStack(tag, "Prop" + i,  props[i]);
         }
+        for (int i = 0; i < BAY_SIZE; i++) {
+            if (bay[i].isEmpty()) continue;
+            CompoundTag card = new CompoundTag();
+            card.putByte("Count", (byte) bay[i].getCount());
+            var data = bay[i].get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+            if (data != null) card.put("Data", data.copyTag());
+            tag.put("Bay" + i, card);
+        }
         return tag;
     }
 
-    // Component ItemStacks carry no per-stack state (stats live on the static ComponentStats
-    // tied to the Item), so only the registry id needs to survive the round trip.
     private static void putStack(CompoundTag tag, String key, ItemStack stack) {
-        tag.putString(key, BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
+        CompoundTag component = new CompoundTag();
+        component.putString("Id", BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
+        ComponentCondition.write(component, ComponentCondition.get(stack));
+        tag.put(key, component);
     }
 
     public static DroneAssembly load(CompoundTag tag) {
@@ -63,18 +82,34 @@ public class DroneAssembly {
         a.battery = readStack(tag, "Battery");
         a.camera = readStack(tag, "Camera");
         if (tag.contains("Module")) a.module = readStack(tag, "Module");
+        if (tag.contains("Firmware")) a.firmware = readStack(tag, "Firmware");
         for (int i = 0; i < MAX_MOTORS; i++) {
             if (tag.contains("Motor" + i)) a.motors[i] = readStack(tag, "Motor" + i);
             if (tag.contains("Prop" + i))  a.props[i]  = readStack(tag, "Prop" + i);
+        }
+        for (int i = 0; i < BAY_SIZE; i++) {
+            if (!tag.contains("Bay" + i, Tag.TAG_COMPOUND)) continue;
+            CompoundTag card = tag.getCompound("Bay" + i);
+            ItemStack stack = new ItemStack(org.restor.fpv.item.ModItems.DRONE_CARD.get(),
+                Math.max(1, card.getByte("Count")));
+            if (card.contains("Data", Tag.TAG_COMPOUND)) {
+                stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                    net.minecraft.world.item.component.CustomData.of(card.getCompound("Data")));
+            }
+            a.bay[i] = stack;
         }
         return a;
     }
 
     private static ItemStack readStack(CompoundTag tag, String key) {
         if (!tag.contains(key)) return ItemStack.EMPTY;
-        ResourceLocation id = ResourceLocation.tryParse(tag.getString(key));
+        CompoundTag component = tag.contains(key, Tag.TAG_COMPOUND) ? tag.getCompound(key) : null;
+        ResourceLocation id = ResourceLocation.tryParse(component == null ? tag.getString(key) : component.getString("Id"));
         Item item = id != null ? BuiltInRegistries.ITEM.get(id) : Items.AIR;
-        return item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
+        if (item == Items.AIR) return ItemStack.EMPTY;
+        ItemStack stack = new ItemStack(item);
+        if (component != null) ComponentCondition.set(stack, ComponentCondition.read(component));
+        return stack;
     }
 
     // ---------------------------------------------------------------- structure
@@ -85,18 +120,72 @@ public class DroneAssembly {
 
     /** Complete = frame + battery + camera + a motor AND a prop in every frame slot. */
     public boolean isComplete() {
-        FrameSpec spec = frameSpec();
-        if (spec == null || battery.isEmpty() || camera.isEmpty()) return false;
-        if (!isCompatible(frame, battery) || !isCompatible(frame, camera)) return false;
-        // Module is OPTIONAL — but when one is installed it must fit this frame (guards
-        // against inserting a module and then swapping the frame to an incompatible one).
-        if (!module.isEmpty() && !isCompatible(frame, module)) return false;
-        for (int i = 0; i < spec.motorCount(); i++) {
-            if (stats(motors[i], ComponentType.MOTOR) == null) return false;
-            if (stats(props[i], ComponentType.PROPELLER) == null) return false;
-            if (!isCompatible(frame, motors[i]) || !isCompatible(frame, props[i])) return false;
+        return validate().isComplete();
+    }
+
+    /** Nothing bolted on yet: an airframe that can be set down but never flown. */
+    public boolean isBareFrame() {
+        if (frame.isEmpty()) return false;
+        if (!battery.isEmpty() || !camera.isEmpty() || !module.isEmpty() || !firmware.isEmpty()) return false;
+        for (int i = 0; i < MAX_MOTORS; i++) {
+            if (!motors[i].isEmpty() || !props[i].isEmpty()) return false;
+        }
+        for (int i = 0; i < BAY_SIZE; i++) {
+            if (!bay[i].isEmpty()) return false;
         }
         return true;
+    }
+
+    public DroneAssemblyValidator.ValidationResult validate() {
+        FrameSpec spec = frameSpec();
+        int motorCount = spec != null ? spec.motorCount() : 0;
+        var motorSpecs = new DroneAssemblyValidator.MotorSpec[MAX_MOTORS];
+        var propSpecs = new DroneAssemblyValidator.PropSpec[MAX_MOTORS];
+        float[] thrustFactors = new float[MAX_MOTORS];
+        boolean frameCompatible = spec != null;
+
+        frameCompatible &= compatibleIfPresent(battery);
+        frameCompatible &= compatibleIfPresent(camera);
+        frameCompatible &= compatibleIfPresent(module);
+        frameCompatible &= compatibleIfPresent(firmware);
+        for (int i = 0; i < MAX_MOTORS; i++) {
+            ComponentStats motor = stats(motors[i], ComponentType.MOTOR);
+            ComponentStats prop = stats(props[i], ComponentType.PROPELLER);
+            if (motor != null) {
+                motorSpecs[i] = new DroneAssemblyValidator.MotorSpec(
+                    motor.motorKv(), motor.motorPower(), motor.motorDiameter());
+            }
+            if (prop != null) propSpecs[i] = new DroneAssemblyValidator.PropSpec(prop.propDiameter());
+            thrustFactors[i] = motorThrustFactor(i);
+            if (i < motorCount) {
+                frameCompatible &= compatibleIfPresent(motors[i]);
+                frameCompatible &= compatibleIfPresent(props[i]);
+            } else if (!motors[i].isEmpty() || !props[i].isEmpty()) {
+                frameCompatible = false;
+            }
+        }
+
+        ComponentStats batteryStats = stats(battery, ComponentType.BATTERY);
+        var batterySpec = batteryStats == null ? null
+            : new DroneAssemblyValidator.BatterySpec(batteryStats.batteryCells());
+        return DroneAssemblyValidator.validate(new DroneAssemblyValidator.Input(
+            motorCount,
+            spec != null,
+            stats(camera, ComponentType.CAMERA) != null,
+            frameCompatible,
+            motorSpecs,
+            propSpecs,
+            batterySpec,
+            totalMassKg(),
+            totalThrustN(),
+            thrustFactors,
+            ComponentCondition.ratio(camera),
+            isPlaneFrame(frame)
+        ));
+    }
+
+    private boolean compatibleIfPresent(ItemStack component) {
+        return component.isEmpty() || isCompatible(frame, component);
     }
 
     public static boolean isCompatible(ItemStack frame, ItemStack component) {
@@ -105,13 +194,21 @@ public class DroneAssembly {
         if (frameStats == null || !(component.getItem() instanceof ComponentItem ci)) return false;
         ComponentStats stats = ci.getStats();
         float frameSize = frameStats.frameSize();
+        boolean wing = isPlaneFrame(frame);
+        boolean planePart = component.getItem() instanceof org.restor.fpv.component.PlaneMotorItem
+            || component.getItem() instanceof org.restor.fpv.component.PlanePropellerItem;
+        if (planePart != wing && (stats.type() == ComponentType.MOTOR || stats.type() == ComponentType.PROPELLER)) {
+            return false;
+        }
         return switch (stats.type()) {
             case FRAME -> true;
-            case MOTOR -> compatibleMotor(frameSize, stats);
-            case PROPELLER -> compatibleProp(frameSize, stats);
-            case BATTERY -> compatibleBattery(frameSize, stats);
+            case MOTOR -> wing ? compatiblePlaneMotor(frameSize, stats) : compatibleMotor(frameSize, stats);
+            case PROPELLER -> wing ? compatiblePlaneProp(frameSize, stats) : compatibleProp(frameSize, stats);
+            case BATTERY -> compatibleBattery(frame, stats);
             case CAMERA -> compatibleCamera(frameSize, stats);
             case MODULE -> compatibleModule(frameSize, component);
+            case FIRMWARE -> component.getItem() instanceof org.restor.fpv.component.FirmwareItem fi
+                && frameSize >= fi.getFirmwareType().minFrameSize();
             default -> true;
         };
     }
@@ -130,6 +227,33 @@ public class DroneAssembly {
         if (frameSize <= 5.5f) return stats.propDiameter() >= 4.5f && stats.propDiameter() <= 5.2f;
         if (frameSize <= 6.5f) return stats.propDiameter() >= 5.0f && stats.propDiameter() <= 7.2f;
         return stats.propDiameter() >= 5.0f;
+    }
+
+    public static boolean isPlaneFrame(ItemStack frame) {
+        return frame.getItem() instanceof org.restor.fpv.component.PlaneFrameItem;
+    }
+
+    private static boolean compatiblePlaneMotor(float frameSize, ComponentStats stats) {
+        if (frameSize <= 7.0f) return stats.motorDiameter() <= 35.0f;
+        if (frameSize <= 9.0f) return stats.motorDiameter() >= 28.0f;
+        return stats.motorDiameter() >= 35.0f;
+    }
+
+    private static boolean compatiblePlaneProp(float frameSize, ComponentStats stats) {
+        if (frameSize <= 7.0f) return stats.propDiameter() <= 10.0f;
+        if (frameSize <= 9.0f) return stats.propDiameter() >= 8.0f && stats.propDiameter() <= 12.0f;
+        return stats.propDiameter() >= 10.0f;
+    }
+
+    private static boolean compatiblePlaneBattery(float frameSize, ComponentStats stats) {
+        if (stats.batteryCells() < 4) return false;
+        return frameSize <= 8.0f ? stats.batteryCapacity() >= 650 : stats.batteryCapacity() >= 1300;
+    }
+
+    private static boolean compatibleBattery(ItemStack frame, ComponentStats stats) {
+        ComponentStats fs = stats(frame, ComponentType.FRAME);
+        float size = fs != null ? fs.frameSize() : 5f;
+        return isPlaneFrame(frame) ? compatiblePlaneBattery(size, stats) : compatibleBattery(size, stats);
     }
 
     private static boolean compatibleBattery(float frameSize, ComponentStats stats) {
@@ -153,12 +277,89 @@ public class DroneAssembly {
             case WARHEAD -> frameSize >= 5.0f;      // 5" and up — it's 150g of explosives
             case DART_GUN -> frameSize >= 5.0f;     // recoil needs a 5"+ frame
             case STORAGE -> frameSize >= 3.5f;      // cargo box needs some belly room
+            case TARGETING -> frameSize >= 8.0f;    // needs a big airframe to haul the optics
         };
+    }
+
+    // ------------------------------------------------------------------ bay
+
+    public BayKind bayKind() {
+        FrameSpec spec = frameSpec();
+        if (spec == null) return BayKind.NONE;
+        if (spec.role() == FrameRole.CARRIER) return BayKind.CARRIER;
+        if (spec.role() == FrameRole.SPOTTER
+            && moduleType() == org.restor.fpv.component.ModuleType.TARGETING) return BayKind.STRIKE;
+        return BayKind.NONE;
+    }
+
+    public boolean bayAccepts(ItemStack stack) {
+        if (!DroneCardItem.isCard(stack)) return false;
+        return switch (bayKind()) {
+            // A card that itself owns a bay would nest aircraft inside aircraft.
+            case STRIKE -> !DroneCardItem.hasBay(stack);
+            case CARRIER -> !DroneCardItem.isWing(stack) && DroneCardItem.frameSize(stack) <= 7.0f;
+            case NONE -> false;
+        };
+    }
+
+    public boolean bayEmpty() {
+        for (ItemStack s : bay) if (!s.isEmpty()) return false;
+        return true;
+    }
+
+    public int bayCount() {
+        int n = 0;
+        for (ItemStack s : bay) n += s.getCount();
+        return n;
+    }
+
+    /** Per-frame flight character (agility, drag, toughness, lift capacity). */
+    public FrameTuning tuning() {
+        FrameSpec spec = frameSpec();
+        return spec != null ? spec.tuning() : FrameTuning.DEFAULT;
+    }
+
+    public FrameKind frameKind() {
+        FrameSpec spec = frameSpec();
+        return spec != null ? spec.kind() : FrameKind.MULTIROTOR;
     }
 
     /** Installed module's type, or null when the slot is empty. */
     public org.restor.fpv.component.ModuleType moduleType() {
         return module.getItem() instanceof org.restor.fpv.component.ModuleItem mi ? mi.getModuleType() : null;
+    }
+
+    /** Installed firmware's type, or null when the firmware slot is empty. */
+    public org.restor.fpv.component.FirmwareType firmwareType() {
+        return firmware.getItem() instanceof org.restor.fpv.component.FirmwareItem fi ? fi.getFirmwareType() : null;
+    }
+
+    public record RepairTarget(ComponentType type, int index, ItemStack stack, int condition) {}
+
+    public RepairTarget repairTarget() {
+        RepairTarget target = null;
+        target = damagedBefore(target, ComponentType.FRAME, -1, frame);
+        target = damagedBefore(target, ComponentType.BATTERY, -1, battery);
+        target = damagedBefore(target, ComponentType.CAMERA, -1, camera);
+        target = damagedBefore(target, ComponentType.MODULE, -1, module);
+        target = damagedBefore(target, ComponentType.FIRMWARE, -1, firmware);
+        for (int i = 0; i < MAX_MOTORS; i++) {
+            target = damagedBefore(target, ComponentType.MOTOR, i, motors[i]);
+            target = damagedBefore(target, ComponentType.PROPELLER, i, props[i]);
+        }
+        return target;
+    }
+
+    public int minimumCondition() {
+        RepairTarget target = repairTarget();
+        return target == null ? ComponentCondition.MAX : target.condition();
+    }
+
+    private static RepairTarget damagedBefore(RepairTarget current, ComponentType type, int index, ItemStack stack) {
+        if (stack.isEmpty()) return current;
+        int condition = ComponentCondition.get(stack);
+        if (condition >= ComponentCondition.MAX || current != null && condition >= current.condition()) return current;
+        return new RepairTarget(type, index, stack, condition);
     }
 
     private static ComponentStats stats(ItemStack stack, ComponentType type) {
@@ -170,13 +371,28 @@ public class DroneAssembly {
 
     // ---------------------------------------------------------------- derived stats
 
+    /** Average prop diameter in inches; falls back to the frame size when no props are fitted. */
+    public float propDiameterInches() {
+        float sum = 0f;
+        int n = 0;
+        for (int i = 0; i < MAX_MOTORS; i++) {
+            ComponentStats prop = stats(props[i], ComponentType.PROPELLER);
+            if (prop == null) continue;
+            sum += prop.propDiameter();
+            n++;
+        }
+        if (n > 0) return sum / n;
+        ComponentStats fs = stats(frame, ComponentType.FRAME);
+        return fs != null ? fs.frameSize() : 5f;
+    }
+
     public float totalMassKg() {
         ComponentStats fs = stats(frame, ComponentType.FRAME);
         float frameSize = fs != null ? fs.frameSize() : 5f;
         // Electronics (FC, ESC, RX, wiring, VTX, mounts) scale with frame size — a whoop carries
         // a few grams, a 7" a full stack. A flat baseline made small builds absurdly heavy.
         float g = 8f + frameSize * 14f;
-        g += weight(frame) + weight(battery) + weight(camera) + weight(module);
+        g += weight(frame) + weight(battery) + weight(camera) + weight(module) + weight(firmware);
         for (int i = 0; i < MAX_MOTORS; i++) g += weight(motors[i]) + weight(props[i]);
         return Math.max(0.02f, g / 1000f);
     }
@@ -190,9 +406,70 @@ public class DroneAssembly {
         ComponentStats motor = stats(motors[i], ComponentType.MOTOR);
         ComponentStats prop = stats(props[i], ComponentType.PROPELLER);
         if (motor == null || prop == null) return 0;
-        // Prop factor normalized to a 5x4 prop at efficiency 1.0.
-        float propFactor = prop.propEfficiency() * (prop.propDiameter() * prop.propPitch()) / 20f;
-        return motor.motorPower() * propFactor;
+        // Momentum theory: static thrust goes as (shaft power × disc diameter)^(2/3), so a small
+        // prop loses far less thrust than its area suggests — it just spins much faster. Scaling
+        // thrust linearly with diameter on top of the already-small motorPower double-counted the
+        // size penalty and left whoops and cinewhoops unable to lift themselves. Normalized so a
+        // 2207 on a 5x4x3 still reads 1.0.
+        float propFactor = prop.propEfficiency()
+            * (float) Math.pow(prop.propDiameter() / 5f, 2.0 / 3.0)
+            * (float) Math.pow(Math.max(0.1f, prop.propPitch()) / 4f, 0.3);
+        return (float) Math.pow(motor.motorPower(), 2.0 / 3.0) * propFactor * slotEfficiency(i)
+            * ComponentCondition.ratio(motors[i]) * ComponentCondition.ratio(props[i]);
+    }
+
+    /**
+     * How well the parts in motor slot i work together: 1.0 when everything fits, lower when
+     * the prop is wrong for the motor or either part is wrong for the frame. Nothing is
+     * forbidden — a mismatched corner simply pulls less, which computeTrim turns into drift.
+     */
+    public float slotEfficiency(int i) {
+        ComponentStats motor = stats(motors[i], ComponentType.MOTOR);
+        ComponentStats prop = stats(props[i], ComponentType.PROPELLER);
+        if (motor == null || prop == null) return 0;
+        float efficiency = 1f;
+        var motorSpec = new DroneAssemblyValidator.MotorSpec(
+            motor.motorKv(), motor.motorPower(), motor.motorDiameter());
+        if (!DroneAssemblyValidator.isMotorPropCompatible(motorSpec,
+                new DroneAssemblyValidator.PropSpec(prop.propDiameter()), isPlaneFrame(frame))) {
+            efficiency *= 0.6f;
+        }
+        ComponentStats frameStats = stats(frame, ComponentType.FRAME);
+        if (frameStats != null) {
+            boolean wing = isPlaneFrame(frame);
+            float size = frameStats.frameSize();
+            if (!(wing ? compatiblePlaneMotor(size, motor) : compatibleMotor(size, motor))) efficiency *= 0.82f;
+            if (!(wing ? compatiblePlaneProp(size, prop) : compatibleProp(size, prop))) efficiency *= 0.82f;
+        }
+        return efficiency;
+    }
+
+    /**
+     * How hard the build runs outside its spec. 1.0 = everything within limits; higher values
+     * wear motors and props out over the course of a flight (ModularDroneEntity).
+     */
+    public float stressFactor() {
+        FrameSpec spec = frameSpec();
+        int n = spec != null ? spec.motorCount() : 0;
+        ComponentStats frameStats = stats(frame, ComponentType.FRAME);
+        ComponentStats batteryStats = stats(battery, ComponentType.BATTERY);
+        float stress = 1f;
+        if (frameStats != null && batteryStats != null && !compatibleBattery(frame, batteryStats)) {
+            stress += 0.4f;
+        }
+        int mismatched = 0;
+        for (int i = 0; i < n; i++) {
+            ComponentStats motor = stats(motors[i], ComponentType.MOTOR);
+            if (motor == null) continue;
+            if (batteryStats != null && !DroneAssemblyValidator.isMotorBatteryCompatible(
+                    new DroneAssemblyValidator.MotorSpec(
+                        motor.motorKv(), motor.motorPower(), motor.motorDiameter()),
+                    new DroneAssemblyValidator.BatterySpec(batteryStats.batteryCells()))) {
+                mismatched++;
+            }
+            if (slotEfficiency(i) < 1f) mismatched++;
+        }
+        return n == 0 ? stress : stress + 0.6f * mismatched / n;
     }
 
     /** Max total thrust in Newtons. */
@@ -201,7 +478,8 @@ public class DroneAssembly {
         if (spec == null) return 1;
         float sum = 0;
         for (int i = 0; i < spec.motorCount(); i++) sum += motorThrustFactor(i);
-        return Math.max(1f, sum * THRUST_N_PER_POWER * batteryThrustFactor());
+        float frameFactor = 0.5f + 0.5f * ComponentCondition.ratio(frame);
+        return Math.max(1f, sum * THRUST_N_PER_POWER * batteryThrustFactor() * frameFactor);
     }
 
     // More battery cells = more voltage = more motor RPM = more thrust. Normalized to the frame's
@@ -214,7 +492,9 @@ public class DroneAssembly {
         ComponentStats fr = stats(frame, ComponentType.FRAME);
         float size = fr != null ? fr.frameSize() : 5f;
         float refCells = size <= 2f ? 1f : size <= 6.5f ? 4f : 6f;
-        return (float) Math.pow(b.batteryCells() / refCells, 0.7);
+        float voltageFactor = (float) Math.pow(b.batteryCells() / refCells, 0.7);
+        float fitFactor = fr != null && !compatibleBattery(frame, b) ? 0.9f : 1f;
+        return voltageFactor * fitFactor * (0.5f + 0.5f * ComponentCondition.ratio(battery));
     }
 
     /**
@@ -264,13 +544,23 @@ public class DroneAssembly {
         float frameSize = frameStats != null ? frameStats.frameSize() : 5f;
         // Drag area grows with frame size. Was 0.005·size (5" ≈ 0.025) which capped top speed
         // ~2× too low vs a real 5"; 0.0032·size (5" ≈ 0.016) gives ~170 km/h headroom.
-        float dragCdA = 0.0032f * frameSize;
+        FrameTuning tuning = spec != null ? spec.tuning() : FrameTuning.DEFAULT;
+        float dragCdA = 0.0032f * frameSize * tuning.dragFactor();
         float camTilt = cameraStats != null ? cameraStats.cameraTiltAngle() : 20f;
-        int capacity = batteryStats != null ? batteryStats.batteryCapacity() : 650;
+        int capacity = batteryStats != null
+            ? Math.max(1, Math.round(batteryStats.batteryCapacity()
+                * (0.5f + 0.5f * ComponentCondition.ratio(battery))))
+            : 650;
 
         // Bigger frames rotate slower; responsiveness drops with size too.
-        float rate = Math.max(200f, 700f - frameSize * 50f);
-        float resp = Math.max(6f, 18f - frameSize * 1.2f);
+        float rate = Math.max(200f, 700f - frameSize * 50f) * tuning.agility();
+        float resp = Math.max(6f, 18f - frameSize * 1.2f) * tuning.responsiveness();
+
+        if (spec != null && spec.isHeavyLift()) {
+            camTilt = -45f;
+            rate *= 0.55f;
+            resp *= 0.75f;
+        }
 
         return new DroneData(
             DroneData.DroneType.CUSTOM, "Custom Build", 1.0f,
