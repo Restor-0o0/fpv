@@ -561,6 +561,10 @@ public class DroneAssembly {
             rate *= 0.55f;
             resp *= 0.75f;
         }
+        // The tailsitter's camera looks straight out of the nose, i.e. along the thrust axis.
+        if (spec != null && spec.isTailsitter()) {
+            camTilt = 90f;
+        }
 
         return new DroneData(
             DroneData.DroneType.CUSTOM, "Custom Build", 1.0f,

@@ -93,6 +93,8 @@ public class ClientEventHandler {
     private static float droneGimbalYaw;
     private static float droneGimbalPitch;
     private static boolean heavyDroneActive;
+    private static boolean droneMouseLookMode = true;
+    private static float heavyMouseYaw;
 
     private static int controlSeq;
     private static boolean prevSneakKey;
@@ -215,11 +217,14 @@ public class ClientEventHandler {
                 FPVOverlay.toggleHud();
             }
 
+            boolean heavy = drone.isHeavyLift();
             if (ModKeyBindings.CAMERA_UP.consumeClick()) {
-                PacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), 5f));
+                if (heavy) nudgeGimbalPitch(drone, 5f);
+                else PacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), 5f));
             }
             if (ModKeyBindings.CAMERA_DOWN.consumeClick()) {
-                PacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), -5f));
+                if (heavy) nudgeGimbalPitch(drone, -5f);
+                else PacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), -5f));
             }
             if (ModKeyBindings.FIRE_PAYLOAD.consumeClick()) {
                 PacketDistributor.sendToServer(new org.restor.fpv.network.FirePayloadPacket(drone.getId()));
@@ -233,8 +238,11 @@ public class ClientEventHandler {
 
             // Heavy lifters are flown like a camera drone: WASD is movement, throttle sits on
             // jump/sprint, yaw on its own keys, and the mouse aims the belly gimbal instead.
-            boolean heavy = drone.isHeavyLift();
             heavyDroneActive = heavy;
+            if (ModKeyBindings.MOUSE_MODE.consumeClick()) {
+                droneMouseLookMode = !droneMouseLookMode;
+                heavyMouseYaw = 0f;
+            }
             if (heavy && !lineOfSight) updateDroneGimbal(drone);
             else clearDroneGimbal(drone);
 
@@ -300,7 +308,7 @@ public class ClientEventHandler {
             planeRcWasConnected = rcConnected;
             planeMouseLookMode = rcConnected;
         }
-        if (ModKeyBindings.PLANE_MOUSE_MODE.consumeClick()) {
+        if (ModKeyBindings.MOUSE_MODE.consumeClick()) {
             planeMouseLookMode = !planeMouseLookMode;
         }
         if (ModKeyBindings.PLANE_RESET_CAM.consumeClick()) {
@@ -447,22 +455,33 @@ public class ClientEventHandler {
             lastHeavyYaw = MC.player.getYRot();
             droneGimbalYaw = 0f;
             droneGimbalPitch = 0f;
+            heavyMouseYaw = 0f;
             heavyInitialized = true;
         }
+        float zoomSensitivity = (float) Math.pow(Math.max(1f, fpvZoom), 1.7);
+        float yawDelta = normalizeDegrees(MC.player.getYRot() - lastHeavyYaw) / zoomSensitivity;
+        float pitchDelta = MC.player.getXRot() / zoomSensitivity;
         if (ModKeyBindings.PLANE_RESET_CAM.consumeClick()) {
             droneGimbalYaw = 0f;
             droneGimbalPitch = 0f;
-        } else {
-            float zoomSensitivity = (float) Math.pow(Math.max(1f, fpvZoom), 1.7);
-            float yawDelta = normalizeDegrees(MC.player.getYRot() - lastHeavyYaw) / zoomSensitivity;
-            float pitchDelta = MC.player.getXRot() / zoomSensitivity;
-            droneGimbalYaw = clamp(droneGimbalYaw + yawDelta,
-                -DroneEntity.GIMBAL_YAW_LIMIT, DroneEntity.GIMBAL_YAW_LIMIT);
+            heavyMouseYaw = 0f;
+        } else if (droneMouseLookMode) {
+            droneGimbalYaw = normalizeDegrees(droneGimbalYaw + yawDelta);
             droneGimbalPitch = clamp(droneGimbalPitch - pitchDelta,
                 DroneEntity.GIMBAL_PITCH_MIN, DroneEntity.GIMBAL_PITCH_MAX);
+        } else {
+            float ret = Config.MOUSE_RETURN.get().floatValue();
+            heavyMouseYaw = clamp(heavyMouseYaw * (1f - ret)
+                + yawDelta * Config.MOUSE_ROLL_SENSITIVITY.get().floatValue() * MOUSE_RATE_SCALE, -1f, 1f);
         }
         lastHeavyYaw = MC.player.getYRot();
         MC.player.setXRot(0f);
+        drone.setGimbal(droneGimbalYaw, droneGimbalPitch);
+    }
+
+    private static void nudgeGimbalPitch(DroneEntity drone, float delta) {
+        droneGimbalPitch = clamp(droneGimbalPitch + delta,
+            DroneEntity.GIMBAL_PITCH_MIN, DroneEntity.GIMBAL_PITCH_MAX);
         drone.setGimbal(droneGimbalYaw, droneGimbalPitch);
     }
 
@@ -470,29 +489,29 @@ public class ClientEventHandler {
         heavyInitialized = false;
         droneGimbalYaw = 0f;
         droneGimbalPitch = 0f;
+        heavyMouseYaw = 0f;
         drone.setGimbal(0f, 0f);
     }
 
     /**
      * Heavy-lift keyboard: WASD is movement (a bank angle, which is how these rigs fly),
-     * throttle rides jump/sprint and yaw its own key pair - the mouse is busy aiming
-     * the camera.
+     * climb/descend rides jump/sprint and yaw its own key pair - the mouse is busy aiming
+     * the camera. The vertical stick is centred when neither key is held, so letting go
+     * parks the rig at its current altitude instead of dropping it.
      */
     private static void sendHeavyKeyboardInput(DroneEntity drone) {
         if (!keyboardInitialized) {
-            keyboardThrottle = 0f;
+            keyboardThrottle = HOVER_STICK;
             filteredPitch = 0f;
             filteredRoll = 0f;
             filteredYaw = 0f;
             keyboardInitialized = true;
         }
 
-        // Half the acro rate: a loaded multirotor's collective is not a switch.
-        if (MC.options.keyJump.isDown()) {
-            keyboardThrottle = Math.min(1.0f, keyboardThrottle + 0.07f);
-        } else if (MC.options.keySprint.isDown()) {
-            keyboardThrottle = Math.max(0.0f, keyboardThrottle - 0.07f);
-        }
+        float climbTarget = HOVER_STICK;
+        if (MC.options.keyJump.isDown()) climbTarget = 1f;
+        else if (MC.options.keySprint.isDown()) climbTarget = 0f;
+        keyboardThrottle += (climbTarget - keyboardThrottle) * 0.35f;
 
         float pitchTarget = 0f;
         if (MC.options.keyUp.isDown())   pitchTarget += 1f;
@@ -500,9 +519,10 @@ public class ClientEventHandler {
         float rollTarget = 0f;
         if (MC.options.keyLeft.isDown())  rollTarget -= 1f;
         if (MC.options.keyRight.isDown()) rollTarget += 1f;
-        float yawTarget = 0f;
-        if (ModKeyBindings.DRONE_YAW_LEFT.isDown())  yawTarget -= 1f;
-        if (ModKeyBindings.DRONE_YAW_RIGHT.isDown()) yawTarget += 1f;
+        float yawTarget = heavyMouseYaw;
+        if (ModKeyBindings.DRONE_YAW_LEFT.isDown())  yawTarget += 1f;
+        if (ModKeyBindings.DRONE_YAW_RIGHT.isDown()) yawTarget -= 1f;
+        yawTarget = clamp(yawTarget, -1f, 1f);
 
         filteredPitch += (pitchTarget - filteredPitch) * 0.2f;
         filteredRoll  += (rollTarget  - filteredRoll)  * 0.2f;
@@ -563,8 +583,8 @@ public class ClientEventHandler {
 
         float kbYaw = 0f;
         if (heavy) {
-            if (ModKeyBindings.DRONE_YAW_LEFT.isDown())  kbYaw -= 1f;
-            if (ModKeyBindings.DRONE_YAW_RIGHT.isDown()) kbYaw += 1f;
+            if (ModKeyBindings.DRONE_YAW_LEFT.isDown())  kbYaw += 1f;
+            if (ModKeyBindings.DRONE_YAW_RIGHT.isDown()) kbYaw -= 1f;
 
             float kbPitch = 0f;
             if (MC.options.keyUp.isDown())   kbPitch += 1f;
@@ -959,6 +979,7 @@ public class ClientEventHandler {
     }
 
     private static final float MOUSE_RATE_SCALE = 2.2f;
+    private static final float HOVER_STICK = 0.5f;
 
     private static float clamp(float value, float min, float max) {
         return Math.max(min, Math.min(max, value));

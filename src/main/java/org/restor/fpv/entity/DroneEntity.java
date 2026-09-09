@@ -94,6 +94,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // hover stick = √(1/(maxThrottle·TWR)), so the presets' TWR alone sets hover height and there
     // is strong climb headroom above it. Full stick is unaffected, so top speed doesn't suffer.
     private static final float THROTTLE_EXP = 2.0f;
+    private static final float MAX_CLIMB_RATE = 4.0f;
+    private static final float CLIMB_TAU = 0.6f;
     private static final float PROP_STRIKE_JOULES_PER_DAMAGE = 25.0f;
     private static final float PROP_STRIKE_MAX_DAMAGE = 8.0f;
     private static final int PROP_STRIKE_COOLDOWN_TICKS = 10;
@@ -346,7 +348,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             float currentPitchRate = angVelPitch;
             float currentYawRate   = angVelYaw;
 
-            flightController.throttle = throttleInput;
+            flightController.throttle = resolveThrottle(throttleInput);
             flightController.update(dt, currentRollRate, currentPitchRate, currentYawRate,
                 entityData.get(DATA_ROLL), getXRot());
 
@@ -505,7 +507,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             // Predict rotation from our own sticks — zero input latency, and immune to
             // sync-packet batching (the cause of the 20Hz freeze-jump camera stutter).
             flightController.armed = predictedArmed();
-            flightController.throttle = predThrottle;
+            flightController.throttle = resolveThrottle(predThrottle);
             flightController.targetPitch = applyDeadband(predPitch, 0.05f);
             flightController.targetRoll  = applyDeadband(predRoll,  0.05f);
             flightController.targetYaw   = applyDeadband(predYaw,   0.05f);
@@ -1011,7 +1013,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             ? droneData.dragCoefficient * descentMult        // disc-on: throttle-scaled brake/parachute
             : droneData.dragCoefficient;                     // moving along thrust: edge-on, low drag
         setDeltaMovement(dragComponent(axial, axialCdA)
-            .add(dragComponent(planar, droneData.dragCoefficient)));
+            .add(dragComponent(planar, droneData.dragCoefficient * planarDragMult())));
 
         // Horizontal-only linear momentum bleed on top of the quadratic aero drag (see LINEAR_DAMP).
         double k = LINEAR_DAMP * org.restor.fpv.Config.DEV_DRAG_MULT.get();
@@ -1727,17 +1729,48 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     public void adjustCameraAngle(float delta) {
-        entityData.set(DATA_CAMERA_ANGLE, clamp(entityData.get(DATA_CAMERA_ANGLE) + delta, -75f, 60f));
+        float max = isTailsitter() ? 120f : 60f;
+        entityData.set(DATA_CAMERA_ANGLE, clamp(entityData.get(DATA_CAMERA_ANGLE) + delta, -75f, max));
     }
 
     /** Six motors and up: flown like a camera drone — sticks move it, the mouse aims the cam. */
     public boolean isHeavyLift() { return false; }
 
+    /** Tailsitter airframes stand on their tail: thrust leaves through the nose. */
+    public boolean isTailsitter() { return false; }
+
+    /** A slender fuselage resists sideways travel far more than travel along its own axis. */
+    protected float planarDragMult() { return isTailsitter() ? 2.4f : 1f; }
+
+    /** Heavy-lift rigs: the throttle stick commands climb rate, not motor power. */
+    public boolean altitudeHold() { return false; }
+
+    protected float resolveThrottle(float stick) {
+        return altitudeHold() ? altitudeHoldThrottle(stick) : clamp(stick, 0f, 1f);
+    }
+
+    // Undoes the throttle^EXP curve applyFlightPhysics puts back on, and divides out the
+    // body-up tilt that steals vertical lift while the rig translates.
+    private float altitudeHoldThrottle(float stick) {
+        float cmd = clamp(stick, 0f, 1f) * 2f - 1f;
+        if (Math.abs(cmd) < 0.06f) cmd = 0f;
+        if (onGround() && cmd <= 0f) return 0f;
+        float vy = (float) getDeltaMovement().y * 20f;
+        float accel = clamp((cmd * MAX_CLIMB_RATE - vy) / CLIMB_TAU, -GRAVITY, GRAVITY);
+        Quaternionf rot = attitudeQuat(getYRot(), getXRot(), bodyRoll());
+        Vector3f up = new Vector3f(0, 1, 0);
+        rot.transform(up);
+        float needed = (GRAVITY + accel) / Math.max(0.25f, up.y);
+        float ceiling = droneData.maxThrottle * getBatteryPowerFactor() * effMotorPower() / mass();
+        if (ceiling <= 1.0e-4f) return 0f;
+        return (float) Math.pow(clamp(needed / ceiling, 0f, 1f), 1f / THROTTLE_EXP);
+    }
+
     // Belly-camera gimbal of the heavy rigs, in the camera's own frame: yaw pans, pitch is an
     // uptilt. Client-only — it steers the view, never the physics.
-    public static final float GIMBAL_YAW_LIMIT = 120f;
-    public static final float GIMBAL_PITCH_MIN = -110f;
-    public static final float GIMBAL_PITCH_MAX = 25f;
+    public static final float GIMBAL_YAW_LIMIT = 180f;
+    public static final float GIMBAL_PITCH_MIN = -90f;
+    public static final float GIMBAL_PITCH_MAX = 0f;
 
     private float gimbalYaw, gimbalPitch;
 
@@ -1745,7 +1778,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     public float getGimbalPitch() { return gimbalPitch; }
 
     public void setGimbal(float yaw, float pitch) {
-        gimbalYaw = clamp(yaw, -GIMBAL_YAW_LIMIT, GIMBAL_YAW_LIMIT);
+        gimbalYaw = Mth.wrapDegrees(yaw);
         gimbalPitch = clamp(pitch, GIMBAL_PITCH_MIN, GIMBAL_PITCH_MAX);
     }
 

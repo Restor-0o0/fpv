@@ -80,6 +80,10 @@ public class ModularDroneEntity extends DroneEntity {
         float s = (float) org.restor.fpv.Config.DEV_HITBOX_SCALE.get().doubleValue();
         float w = v.hitboxWidth() * s;
         float h = v.hitboxHeight() * s;
+        if (spec.isTailsitter()) {
+            w = v.hitboxWidth() * 0.72f * s;
+            h = v.hitboxWidth() * 1.45f * s;
+        }
         return net.minecraft.world.entity.EntityDimensions.scalable(w, h)
             .withEyeHeight(h * (float) org.restor.fpv.Config.FPV_CAMERA_HEIGHT.get().doubleValue());
     }
@@ -96,6 +100,17 @@ public class ModularDroneEntity extends DroneEntity {
     public boolean isHeavyLift() {
         FrameSpec spec = assembly == null ? null : assembly.frameSpec();
         return spec != null && spec.isHeavyLift();
+    }
+
+    @Override
+    public boolean altitudeHold() {
+        return isHeavyLift();
+    }
+
+    @Override
+    public boolean isTailsitter() {
+        FrameSpec spec = assembly == null ? null : assembly.frameSpec();
+        return spec != null && spec.isTailsitter();
     }
 
     private FlightController controllerFor() {

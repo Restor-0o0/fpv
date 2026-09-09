@@ -132,9 +132,9 @@ public final class GhostRenderer {
     // Same composition DroneRenderer uses for the world-space model: Ry(yaw-180)Rx(-pitch)Rz(roll).
     private static Quaternionf modelQuat(float yaw, float pitch, float roll) {
         return new Quaternionf()
-            .rotateY((float) Math.toRadians(yaw - 180f))
+            .rotateY((float) Math.toRadians(180f - yaw))
             .rotateX((float) Math.toRadians(-pitch))
-            .rotateZ((float) Math.toRadians(roll));
+            .rotateZ((float) Math.toRadians(-roll));
     }
 
     private static float scaleFor(int modelType) {

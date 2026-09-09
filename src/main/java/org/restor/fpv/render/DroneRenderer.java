@@ -76,6 +76,7 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
         Quaternionf q = new Quaternionf(modelQuat(entity.yRotO, entity.xRotO, entity.getPrevRoll()))
             .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
         poseStack.mulPose(q);
+        if (entity.isTailsitter()) poseStack.mulPose(Axis.XP.rotationDegrees(90));
 
         poseStack.scale(scale, scale, scale);
 
@@ -122,9 +123,9 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
     // Same composition the old Axis-based code produced: Ry(yaw−180)·Rx(−pitch)·Rz(roll).
     private static Quaternionf modelQuat(float yaw, float pitch, float roll) {
         return new Quaternionf()
-            .rotateY((float) Math.toRadians(yaw - 180f))
+            .rotateY((float) Math.toRadians(180f - yaw))
             .rotateX((float) Math.toRadians(-pitch))
-            .rotateZ((float) Math.toRadians(roll));
+            .rotateZ((float) Math.toRadians(-roll));
     }
 
     private float getScale(DroneEntity entity) {

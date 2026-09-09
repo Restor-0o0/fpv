@@ -63,6 +63,9 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
         Quaternionf q = new Quaternionf(modelQuat(entity.yRotO, entity.xRotO, entity.getPrevRoll()))
             .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
         poseStack.mulPose(q);
+        if (spec != null && spec.isTailsitter()) {
+            poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
+        }
         float s = DroneVisual.of(spec).scale();
         poseStack.scale(s, s, s);
         renderAssembly(entity, assembly, spec, poseStack, buffer, packedLight, partialTick, false);
@@ -154,9 +157,9 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
     // Same composition as DroneRenderer: Ry(yaw−180)·Rx(−pitch)·Rz(roll).
     private static Quaternionf modelQuat(float yaw, float pitch, float roll) {
         return new Quaternionf()
-            .rotateY((float) Math.toRadians(yaw - 180f))
+            .rotateY((float) Math.toRadians(180f - yaw))
             .rotateX((float) Math.toRadians(-pitch))
-            .rotateZ((float) Math.toRadians(roll));
+            .rotateZ((float) Math.toRadians(-roll));
     }
 
     @Override

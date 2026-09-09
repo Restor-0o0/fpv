@@ -64,7 +64,7 @@
   "key.fpv.camera_down": "Camera Angle Down",
   "key.fpv.toggle_hud": "Toggle FPV HUD",
   "key.fpv.arm_switch": "Drone Arm Switch",
-  "key.fpv.plane_mouse_mode": "Plane: Swap Mouse Fly/Look",
+  "key.fpv.mouse_mode": "Swap Mouse Fly/Look",
   "key.fpv.plane_reset_cam": "Recenter Camera Gimbal",
   "key.fpv.plane_orbit": "Plane: Orbit Point",
   "key.fpv.plane_call_strike": "Scout wing: Call Strike",

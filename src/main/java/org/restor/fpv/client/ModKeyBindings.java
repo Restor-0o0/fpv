@@ -53,10 +53,9 @@ public class ModKeyBindings {
         "key.categories.fpv"
     );
 
-    // Plane-only, no RC connected: swaps the mouse between flying (roll/pitch) and
-    // looking around the belly camera (gimbal pan/tilt).
-    public static final KeyMapping PLANE_MOUSE_MODE = new KeyMapping(
-        "key.fpv.plane_mouse_mode",
+    // Swaps the mouse between flying and aiming the belly camera, on planes and heavy drones.
+    public static final KeyMapping MOUSE_MODE = new KeyMapping(
+        "key.fpv.mouse_mode",
         InputConstants.Type.KEYSYM,
         GLFW.GLFW_KEY_C,
         "key.categories.fpv"
@@ -132,7 +131,7 @@ public class ModKeyBindings {
         event.register(CAMERA_DOWN);
         event.register(TOGGLE_HUD);
         event.register(ARM_SWITCH);
-        event.register(PLANE_MOUSE_MODE);
+        event.register(MOUSE_MODE);
         event.register(PLANE_RESET_CAM);
         event.register(PLANE_ORBIT);
         event.register(PLANE_CALL_STRIKE);

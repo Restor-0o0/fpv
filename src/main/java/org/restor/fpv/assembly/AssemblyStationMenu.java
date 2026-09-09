@@ -419,6 +419,9 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         int n = spec != null ? spec.motorCount() : DroneAssembly.MAX_MOTORS;
         refreshing = true;
         try {
+            // The container listener rebuilds a result the moment the taken one leaves the
+            // slot; clearing it here stops that copy being disassembled back into the bench.
+            resultContainer.setItem(0, ItemStack.EMPTY);
             shrinkSlot(SLOT_FRAME);
             shrinkSlot(SLOT_BATTERY);
             shrinkSlot(SLOT_CAMERA);

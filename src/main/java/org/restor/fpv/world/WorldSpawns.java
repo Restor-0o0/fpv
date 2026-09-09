@@ -1,6 +1,7 @@
 package org.restor.fpv.world;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.StructureTags;
 import net.minecraft.util.RandomSource;
@@ -11,10 +12,16 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.block.ModBlocks;
 import org.restor.fpv.entity.ModEntities;
 import org.restor.fpv.entity.VillageDroneEntity;
+
+import java.util.ArrayDeque;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Worldgen-time drone presence: villages get air defence of their own, and the wilderness
@@ -24,16 +31,44 @@ import org.restor.fpv.entity.VillageDroneEntity;
 public final class WorldSpawns {
     private static final int NEST_CHANCE = 700;
     private static final int VILLAGE_GUARD_CHANCE = 4;
+    private static final int POPULATE_PER_TICK = 8;
+    private static final int MAX_QUEUED = 4096;
+
+    private static final Map<ResourceKey<Level>, ArrayDeque<ChunkPos>> PENDING = new ConcurrentHashMap<>();
 
     private WorldSpawns() {}
 
+    // ChunkEvent.Load fires inside the chunk's own load, on the server thread, so
+    // server.execute would run inline and deadlock on the chunk future. Queue instead.
     @SubscribeEvent
     public static void onChunkLoad(ChunkEvent.Load event) {
         if (!event.isNewChunk() || !(event.getLevel() instanceof ServerLevel level)) return;
         if (level.dimension() != Level.OVERWORLD) return;
         ChunkPos pos = event.getChunk().getPos();
-        // The chunk is still being built here, so entities and blocks wait for the next tick.
-        level.getServer().execute(() -> populate(level, pos));
+        ArrayDeque<ChunkPos> queue = PENDING.computeIfAbsent(level.dimension(), key -> new ArrayDeque<>());
+        synchronized (queue) {
+            while (queue.size() >= MAX_QUEUED) queue.removeFirst();
+            queue.addLast(pos);
+        }
+    }
+
+    @SubscribeEvent
+    public static void onServerTick(ServerTickEvent.Post event) {
+        for (ServerLevel level : event.getServer().getAllLevels()) {
+            ArrayDeque<ChunkPos> queue = PENDING.get(level.dimension());
+            if (queue == null) continue;
+            for (int i = 0; i < POPULATE_PER_TICK; i++) {
+                ChunkPos pos;
+                synchronized (queue) { pos = queue.pollFirst(); }
+                if (pos == null) break;
+                populate(level, pos);
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public static void onLevelUnload(LevelEvent.Unload event) {
+        if (event.getLevel() instanceof ServerLevel level) PENDING.remove(level.dimension());
     }
 
     private static void populate(ServerLevel level, ChunkPos chunkPos) {

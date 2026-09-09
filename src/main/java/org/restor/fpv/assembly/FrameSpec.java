@@ -41,4 +41,12 @@ public record FrameSpec(
     public boolean isHeavyLift() {
         return kind == FrameKind.MULTIROTOR && motorCount >= 6;
     }
+
+    /**
+     * Tailsitter: the rotors sit on the fuselage axis, so the airframe rests and hovers
+     * standing on its tail and accelerates by tipping the whole tube over, rocket style.
+     */
+    public boolean isTailsitter() {
+        return role == FrameRole.INTERCEPTOR;
+    }
 }

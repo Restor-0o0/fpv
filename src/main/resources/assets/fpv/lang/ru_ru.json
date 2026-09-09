@@ -64,7 +64,7 @@
   "key.fpv.camera_down": "Угол камеры вниз",
   "key.fpv.toggle_hud": "Показать/скрыть HUD",
   "key.fpv.arm_switch": "Переключатель ARM дрона",
-  "key.fpv.plane_mouse_mode": "Самолёт: мышь полёт/камера",
+  "key.fpv.mouse_mode": "Мышь: полёт/камера",
   "key.fpv.plane_reset_cam": "Сброс подвеса камеры в центр",
   "key.fpv.plane_orbit": "Самолёт: облёт точки (орбита)",
   "key.fpv.plane_call_strike": "Развед-крыло: вызвать удар",

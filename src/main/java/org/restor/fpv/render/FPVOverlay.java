@@ -110,16 +110,21 @@ public class FPVOverlay {
             // yaw/roll by 180° — per-axis lerps jerk violently there even though the
             // actual rotation is continuous; slerp follows the true arc.
             float pt = (float) event.getPartialTick();
+            // Heavy rigs carry the camera on a stabilised belly gimbal: it follows the
+            // airframe's heading only, so the horizon stays level and straight down is a
+            // hard stop instead of a pole the view spins around.
+            if (drone.isHeavyLift()) {
+                float heading = Mth.rotLerp(pt, drone.yRotO, drone.getYRot());
+                event.setYaw(heading + drone.getGimbalYaw());
+                event.setPitch(-drone.getGimbalPitch());
+                event.setRoll(0f);
+                return;
+            }
             org.joml.Quaternionf q = new org.joml.Quaternionf(
                     DroneEntity.attitudeQuat(drone.yRotO, drone.xRotO, drone.getPrevRoll()))
-                .slerp(DroneEntity.attitudeQuat(drone.getYRot(), drone.getXRot(), drone.getRoll()), pt)
-                // Camera uptilt applied in the CAMERA's local frame (correct at any attitude).
-                .rotateX((float) Math.toRadians(-drone.getCameraAngle()));
-            // Heavy rigs carry the camera on a belly gimbal the mouse aims, pan then tilt.
-            if (drone.isHeavyLift()) {
-                q.rotateY((float) Math.toRadians(-drone.getGimbalYaw()))
-                 .rotateX((float) Math.toRadians(-drone.getGimbalPitch()));
-            }
+                .slerp(DroneEntity.attitudeQuat(drone.getYRot(), drone.getXRot(), drone.getRoll()), pt);
+            // Camera uptilt applied in the CAMERA's local frame (correct at any attitude).
+            q.rotateX((float) Math.toRadians(-drone.getCameraAngle()));
             float[] a = DroneEntity.decomposeAttitude(q);
 
             event.setYaw(a[0]);
@@ -230,17 +235,24 @@ public class FPVOverlay {
         int margin = 10;
 
         int y = margin;
+        boolean heavy = drone.isHeavyLift();
 
         if (org.restor.fpv.Config.HUD_HINTS.get()) {
-            y = renderKeyHints(graphics, margin, y, new net.minecraft.client.KeyMapping[]{
+            java.util.List<net.minecraft.client.KeyMapping> hints = new java.util.ArrayList<>(java.util.List.of(
                 org.restor.fpv.client.ModKeyBindings.CYCLE_MODE,
                 org.restor.fpv.client.ModKeyBindings.ARM_SWITCH,
                 org.restor.fpv.client.ModKeyBindings.CAMERA_UP,
                 org.restor.fpv.client.ModKeyBindings.CAMERA_DOWN,
                 org.restor.fpv.client.ModKeyBindings.FIRE_PAYLOAD,
                 org.restor.fpv.client.ModKeyBindings.OPEN_SETTINGS,
-                org.restor.fpv.client.ModKeyBindings.TOGGLE_HUD,
-            }, bindHint(MC.options.keyShift, "hud.fpv.hint_exit"));
+                org.restor.fpv.client.ModKeyBindings.TOGGLE_HUD));
+            if (heavy) {
+                hints.add(org.restor.fpv.client.ModKeyBindings.MOUSE_MODE);
+                hints.add(org.restor.fpv.client.ModKeyBindings.PLANE_RESET_CAM);
+            }
+            y = renderKeyHints(graphics, margin, y,
+                hints.toArray(new net.minecraft.client.KeyMapping[0]),
+                bindHint(MC.options.keyShift, "hud.fpv.hint_exit"));
         }
 
         if (org.restor.fpv.Config.HUD_TELEMETRY.get()) {
@@ -248,6 +260,13 @@ public class FPVOverlay {
             String mode = "MODE: " + drone.getFlightMode().name();
             graphics.drawString(font, mode, margin, y, color);
             y += lineHeight;
+
+            if (heavy) {
+                String cam = String.format("CAM: PAN %+.0f  TILT %+.0f",
+                    drone.getGimbalYaw(), drone.getGimbalPitch());
+                graphics.drawString(font, cam, margin, y, color);
+                y += lineHeight;
+            }
 
             // Armed status
             org.restor.fpv.flight.RadioFailsafe.State radioState = drone.getRadioState();
@@ -322,8 +341,10 @@ public class FPVOverlay {
         float pitch = att[1];
         float roll  = att[2];
 
-        if (org.restor.fpv.Config.HUD_ROLL_LINE.get())    renderRollLine(graphics, width, height, roll);
-        if (org.restor.fpv.Config.HUD_PITCH_LADDER.get()) renderPitchLadder(graphics, width, height, pitch);
+        if (!heavy) {
+            if (org.restor.fpv.Config.HUD_ROLL_LINE.get())    renderRollLine(graphics, width, height, roll);
+            if (org.restor.fpv.Config.HUD_PITCH_LADDER.get()) renderPitchLadder(graphics, width, height, pitch);
+        }
 
         // Heading (0 = north)
         if (org.restor.fpv.Config.HUD_HEADING.get()) {
@@ -342,17 +363,30 @@ public class FPVOverlay {
             int barY = height / 2 - barHeight / 2;
 
             fillRect(graphics, barX, barY, barWidth, barHeight, 0x88000000);
-            int fillH = (int) (throttle * barHeight);
-            int fillColor = throttle > 0.9f ? 0xFFFF0000 : 0xFF00FF00;
-            fillRect(graphics, barX, barY + barHeight - fillH, barWidth, fillH, fillColor);
+            if (heavy) {
+                int mid = barY + barHeight / 2;
+                float cmd = throttle * 2f - 1f;
+                int h = Math.round(Math.abs(cmd) * (barHeight / 2f));
+                fillRect(graphics, barX, cmd >= 0 ? mid - h : mid, barWidth, Math.max(1, h), 0xFF00FF00);
+                fillRect(graphics, barX - 2, mid, barWidth + 4, 1, color);
 
-            graphics.drawString(font, "THR", barX - 2, barY - lineHeight, color);
-            String thrPct = String.format("%.0f%%", throttle * 100);
-            graphics.drawString(font, thrPct, barX + barWidth - font.width(thrPct), barY + barHeight + 3, color);
+                graphics.drawString(font, "V/S", barX - 2, barY - lineHeight, color);
+                float vs = (float) drone.getDeltaMovement().y * 20f;
+                String vsStr = String.format("%+.1f", vs);
+                graphics.drawString(font, vsStr, barX + barWidth - font.width(vsStr), barY + barHeight + 3, color);
+            } else {
+                int fillH = (int) (throttle * barHeight);
+                int fillColor = throttle > 0.9f ? 0xFFFF0000 : 0xFF00FF00;
+                fillRect(graphics, barX, barY + barHeight - fillH, barWidth, fillH, fillColor);
+
+                graphics.drawString(font, "THR", barX - 2, barY - lineHeight, color);
+                String thrPct = String.format("%.0f%%", throttle * 100);
+                graphics.drawString(font, thrPct, barX + barWidth - font.width(thrPct), barY + barHeight + 3, color);
+            }
         }
 
         if (org.restor.fpv.Config.HUD_CROSSHAIR.get()) renderCrosshair(graphics, width, height);
-        if (org.restor.fpv.Config.HUD_STICKS.get())
+        if (org.restor.fpv.Config.HUD_STICKS.get() && !heavy)
             renderStickBoxes(graphics, width, height, drone.getPredYaw(),
                 drone.getPredThrottle(), drone.getPredRoll(), drone.getPredPitch());
         if (org.restor.fpv.Config.HUD_DAMAGE.get()) renderDamageBadges(graphics, width, height, drone);
@@ -499,7 +533,7 @@ public class FPVOverlay {
         int topY = margin;
         if (org.restor.fpv.Config.HUD_HINTS.get()) {
             topY = renderKeyHints(graphics, margin, topY, new net.minecraft.client.KeyMapping[]{
-                org.restor.fpv.client.ModKeyBindings.PLANE_MOUSE_MODE,
+                org.restor.fpv.client.ModKeyBindings.MOUSE_MODE,
                 org.restor.fpv.client.ModKeyBindings.PLANE_RESET_CAM,
                 org.restor.fpv.client.ModKeyBindings.PLANE_ORBIT,
                 org.restor.fpv.client.ModKeyBindings.PLANE_CALL_STRIKE,
