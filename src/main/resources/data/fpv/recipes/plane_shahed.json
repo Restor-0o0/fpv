@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " H ",
+    "MPM",
+    " B "
+  ],
+  "key": {
+    "H": {
+      "item": "fpv:warhead_heavy"
+    },
+    "M": {
+      "item": "fpv:motor_2806_1300kv"
+    },
+    "P": {
+      "item": "fpv:plane_kamikaze"
+    },
+    "B": {
+      "item": "fpv:battery_6s_1100"
+    }
+  },
+  "result": {
+    "item": "fpv:plane_shahed"
+  }
+}

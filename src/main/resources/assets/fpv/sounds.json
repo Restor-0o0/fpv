@@ -1,0 +1,160 @@
+{
+  "drone.motor_loop": {
+    "subtitle": "subtitles.fpv.motor_loop",
+    "sounds": [
+      {
+        "name": "fpv:motor_loop",
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "drone.motor_loop_small": {
+    "subtitle": "subtitles.fpv.motor_loop",
+    "sounds": [
+      {
+        "name": "fpv:motor_loop_small",
+        "attenuation_distance": 16
+      }
+    ]
+  },
+  "drone.motor_loop_large": {
+    "subtitle": "subtitles.fpv.motor_loop",
+    "sounds": [
+      {
+        "name": "fpv:motor_loop_large",
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "drone.arm": {
+    "subtitle": "subtitles.fpv.arm",
+    "sounds": [
+      {
+        "name": "fpv:arm"
+      }
+    ]
+  },
+  "drone.disarm": {
+    "subtitle": "subtitles.fpv.disarm",
+    "sounds": [
+      {
+        "name": "fpv:disarm"
+      }
+    ]
+  },
+  "drone.crash": {
+    "subtitle": "subtitles.fpv.crash",
+    "sounds": [
+      {
+        "name": "fpv:crash"
+      }
+    ]
+  },
+  "drone.launch": {
+    "subtitle": "subtitles.fpv.launch",
+    "sounds": [
+      {
+        "name": "fpv:launch"
+      }
+    ]
+  },
+  "drone.dart": {
+    "subtitle": "subtitles.fpv.dart",
+    "sounds": [
+      {
+        "name": "fpv:dart"
+      }
+    ]
+  },
+  "drone.payload_release": {
+    "subtitle": "subtitles.fpv.payload_release",
+    "sounds": [
+      {
+        "name": "fpv:payload_release"
+      }
+    ]
+  },
+  "tx.bind": {
+    "subtitle": "subtitles.fpv.tx_bind",
+    "sounds": [
+      {
+        "name": "fpv:tx_bind"
+      }
+    ]
+  },
+  "tx.unbind": {
+    "subtitle": "subtitles.fpv.tx_unbind",
+    "sounds": [
+      {
+        "name": "fpv:tx_unbind"
+      }
+    ]
+  },
+  "tx.link": {
+    "subtitle": "subtitles.fpv.tx_link",
+    "sounds": [
+      {
+        "name": "fpv:tx_link"
+      }
+    ]
+  },
+  "station.charge": {
+    "subtitle": "subtitles.fpv.station_charge",
+    "sounds": [
+      {
+        "name": "fpv:station_charge"
+      }
+    ]
+  },
+  "station.nest_deploy": {
+    "subtitle": "subtitles.fpv.nest_deploy",
+    "sounds": [
+      {
+        "name": "fpv:nest_deploy"
+      }
+    ]
+  },
+  "warhead.arm": {
+    "subtitle": "subtitles.fpv.warhead_arm",
+    "sounds": [
+      {
+        "name": "fpv:warhead_arm"
+      }
+    ]
+  },
+  "warhead.detonate": {
+    "subtitle": "subtitles.fpv.warhead_detonate",
+    "sounds": [
+      {
+        "name": "fpv:warhead_detonate",
+        "attenuation_distance": 32
+      }
+    ]
+  },
+  "warhead.incendiary": {
+    "subtitle": "subtitles.fpv.warhead_incendiary",
+    "sounds": [
+      {
+        "name": "fpv:warhead_incendiary"
+      }
+    ]
+  },
+  "antidrone.detector_alert": {
+    "subtitle": "subtitles.fpv.detector_alert",
+    "sounds": [
+      {
+        "name": "fpv:detector_alert",
+        "attenuation_distance": 24
+      }
+    ]
+  },
+  "antidrone.jammer_loop": {
+    "subtitle": "subtitles.fpv.jammer_loop",
+    "sounds": [
+      {
+        "name": "fpv:jammer_loop",
+        "attenuation_distance": 16
+      }
+    ]
+  }
+}

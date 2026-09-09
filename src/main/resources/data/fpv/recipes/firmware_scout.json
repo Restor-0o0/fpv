@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "RGR",
+    "SFS",
+    "RGR"
+  ],
+  "key": {
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "G": {
+      "item": "minecraft:gold_nugget"
+    },
+    "S": {
+      "item": "minecraft:spyglass"
+    },
+    "F": {
+      "item": "fpv:firmware_companion"
+    }
+  },
+  "result": {
+    "item": "fpv:firmware_scout"
+  }
+}

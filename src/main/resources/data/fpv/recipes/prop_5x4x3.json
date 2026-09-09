@@ -1,0 +1,6 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [" S ", "SIS", " S "],
+  "key": { "S": { "item": "minecraft:honeycomb" }, "I": { "item": "minecraft:iron_ingot" } },
+  "result": { "item": "fpv:prop_5x4x3", "count": 4 }
+}

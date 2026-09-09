@@ -12,7 +12,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ViewportEvent;
-import net.minecraftforge.common.Tags;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.controller.RCController;
@@ -111,11 +110,21 @@ public class FPVOverlay {
             // yaw/roll by 180° — per-axis lerps jerk violently there even though the
             // actual rotation is continuous; slerp follows the true arc.
             float pt = (float) event.getPartialTick();
+            // Heavy rigs carry the camera on a stabilised belly gimbal: it follows the
+            // airframe's heading only, so the horizon stays level and straight down is a
+            // hard stop instead of a pole the view spins around.
+            if (drone.isHeavyLift()) {
+                float heading = Mth.rotLerp(pt, drone.yRotO, drone.getYRot());
+                event.setYaw(heading + drone.getGimbalYaw());
+                event.setPitch(-drone.getGimbalPitch());
+                event.setRoll(0f);
+                return;
+            }
             org.joml.Quaternionf q = new org.joml.Quaternionf(
                     DroneEntity.attitudeQuat(drone.yRotO, drone.xRotO, drone.getPrevRoll()))
-                .slerp(DroneEntity.attitudeQuat(drone.getYRot(), drone.getXRot(), drone.getRoll()), pt)
-                // Camera uptilt applied in the CAMERA's local frame (correct at any attitude).
-                .rotateX((float) Math.toRadians(-drone.getCameraAngle()));
+                .slerp(DroneEntity.attitudeQuat(drone.getYRot(), drone.getXRot(), drone.getRoll()), pt);
+            // Camera uptilt applied in the CAMERA's local frame (correct at any attitude).
+            q.rotateX((float) Math.toRadians(-drone.getCameraAngle()));
             float[] a = DroneEntity.decomposeAttitude(q);
 
             event.setYaw(a[0]);
@@ -169,7 +178,13 @@ public class FPVOverlay {
     }
 
     public static void renderOverlay(GuiGraphics graphics, float partialTick) {
-        if (!isFPVActive() || !hudVisible) return;
+        if (!hudVisible) return;
+        DroneEntity los = org.restor.fpv.client.LineOfSightSession.drone();
+        if (los != null) {
+            renderOSD(graphics, graphics.guiWidth(), graphics.guiHeight(), los, partialTick);
+            return;
+        }
+        if (!isFPVActive()) return;
         DroneEntity drone = currentDrone();
         if (drone != null) {
             renderOSD(graphics, graphics.guiWidth(), graphics.guiHeight(), drone, partialTick);
@@ -189,7 +204,7 @@ public class FPVOverlay {
     // localize and reflect any rebind the player made. Returns the Y just below the block
     // so telemetry can stack underneath it.
     private static int renderKeyHints(GuiGraphics graphics, int margin, int startY,
-                                      net.minecraft.client.KeyMapping[] keys) {
+                                      net.minecraft.client.KeyMapping[] keys, String... extra) {
         Font font = MC.font;
         int lineHeight = font.lineHeight + 2;
         int color = 0xC0FFFF55; // dim yellow, distinct from the green telemetry
@@ -200,7 +215,16 @@ public class FPVOverlay {
             graphics.drawString(font, "[" + key + "] " + name, margin, y, color);
             y += lineHeight;
         }
+        for (String line : extra) {
+            graphics.drawString(font, line, margin, y, color);
+            y += lineHeight;
+        }
         return y + 4; // small gap before telemetry
+    }
+
+    private static String bindHint(net.minecraft.client.KeyMapping key, String labelKey) {
+        return "[" + key.getTranslatedKeyMessage().getString() + "] "
+            + net.minecraft.network.chat.Component.translatable(labelKey).getString();
     }
 
     private static void renderOSD(GuiGraphics graphics, int width, int height, DroneEntity drone, float partialTick) {
@@ -211,15 +235,24 @@ public class FPVOverlay {
         int margin = 10;
 
         int y = margin;
+        boolean heavy = drone.isHeavyLift();
 
         if (org.restor.fpv.Config.HUD_HINTS.get()) {
-            y = renderKeyHints(graphics, margin, y, new net.minecraft.client.KeyMapping[]{
+            java.util.List<net.minecraft.client.KeyMapping> hints = new java.util.ArrayList<>(java.util.List.of(
                 org.restor.fpv.client.ModKeyBindings.CYCLE_MODE,
+                org.restor.fpv.client.ModKeyBindings.ARM_SWITCH,
                 org.restor.fpv.client.ModKeyBindings.CAMERA_UP,
                 org.restor.fpv.client.ModKeyBindings.CAMERA_DOWN,
+                org.restor.fpv.client.ModKeyBindings.FIRE_PAYLOAD,
                 org.restor.fpv.client.ModKeyBindings.OPEN_SETTINGS,
-                org.restor.fpv.client.ModKeyBindings.TOGGLE_HUD,
-            });
+                org.restor.fpv.client.ModKeyBindings.TOGGLE_HUD));
+            if (heavy) {
+                hints.add(org.restor.fpv.client.ModKeyBindings.MOUSE_MODE);
+                hints.add(org.restor.fpv.client.ModKeyBindings.PLANE_RESET_CAM);
+            }
+            y = renderKeyHints(graphics, margin, y,
+                hints.toArray(new net.minecraft.client.KeyMapping[0]),
+                bindHint(MC.options.keyShift, "hud.fpv.hint_exit"));
         }
 
         if (org.restor.fpv.Config.HUD_TELEMETRY.get()) {
@@ -228,9 +261,19 @@ public class FPVOverlay {
             graphics.drawString(font, mode, margin, y, color);
             y += lineHeight;
 
+            if (heavy) {
+                String cam = String.format("CAM: PAN %+.0f  TILT %+.0f",
+                    drone.getGimbalYaw(), drone.getGimbalPitch());
+                graphics.drawString(font, cam, margin, y, color);
+                y += lineHeight;
+            }
+
             // Armed status
-            String armed = "ARM: " + (drone.getVisualThrottle() > 0.01f ? "ARMED" : "DISARMED");
-            graphics.drawString(font, armed, margin, y, isArmed(drone) ? 0xFF00FF00 : 0xFFFF0000);
+            org.restor.fpv.flight.RadioFailsafe.State radioState = drone.getRadioState();
+            String armed = "RADIO: " + radioState.name();
+            int armedColor = radioState == org.restor.fpv.flight.RadioFailsafe.State.ARMED
+                ? 0xFF00FF00 : radioState.isFailsafe() ? 0xFFFFA000 : 0xFFFF0000;
+            graphics.drawString(font, armed, margin, y, armedColor);
             y += lineHeight;
 
             // Battery
@@ -244,6 +287,16 @@ public class FPVOverlay {
             String rssiStr = String.format("RSSI: %.0f%%", rssi * 100);
             graphics.drawString(font, rssiStr, margin, y, rssi > 0.3f ? color : 0xFFFF0000);
             y += lineHeight;
+
+            if (org.restor.fpv.Config.HUD_NETSTATS.get()) {
+                int lagTicks = Math.max(0,
+                    org.restor.fpv.client.ClientEventHandler.getControlSeq() - drone.getAckSeq());
+                float mspt = drone.getServerMspt();
+                String net = String.format("LINK: %dms  SRV: %.0fms", lagTicks * 50, mspt);
+                graphics.drawString(font, net, margin, y,
+                    lagTicks > 4 || mspt > 50f ? 0xFFFF3030 : color);
+                y += lineHeight;
+            }
 
             // Payload charges (only shown when carrying)
             int payload = drone.getPayloadAmmo();
@@ -274,6 +327,10 @@ public class FPVOverlay {
             graphics.drawString(font, speedStr, margin, height - margin - lineHeight, color);
         }
 
+        if (!drone.getRadioState().motorsArmed()) {
+            renderArmWarning(graphics, width, height);
+        }
+
         // Attitude via quaternion slerp (same path as the camera) — per-axis Euler
         // lerps jerk near pitch ±90 where yaw/roll flip by 180°.
         org.joml.Quaternionf q = new org.joml.Quaternionf(
@@ -284,8 +341,10 @@ public class FPVOverlay {
         float pitch = att[1];
         float roll  = att[2];
 
-        if (org.restor.fpv.Config.HUD_ROLL_LINE.get())    renderRollLine(graphics, width, height, roll);
-        if (org.restor.fpv.Config.HUD_PITCH_LADDER.get()) renderPitchLadder(graphics, width, height, pitch);
+        if (!heavy) {
+            if (org.restor.fpv.Config.HUD_ROLL_LINE.get())    renderRollLine(graphics, width, height, roll);
+            if (org.restor.fpv.Config.HUD_PITCH_LADDER.get()) renderPitchLadder(graphics, width, height, pitch);
+        }
 
         // Heading (0 = north)
         if (org.restor.fpv.Config.HUD_HEADING.get()) {
@@ -304,21 +363,165 @@ public class FPVOverlay {
             int barY = height / 2 - barHeight / 2;
 
             fillRect(graphics, barX, barY, barWidth, barHeight, 0x88000000);
-            int fillH = (int) (throttle * barHeight);
-            int fillColor = throttle > 0.9f ? 0xFFFF0000 : 0xFF00FF00;
-            fillRect(graphics, barX, barY + barHeight - fillH, barWidth, fillH, fillColor);
+            if (heavy) {
+                int mid = barY + barHeight / 2;
+                float cmd = throttle * 2f - 1f;
+                int h = Math.round(Math.abs(cmd) * (barHeight / 2f));
+                fillRect(graphics, barX, cmd >= 0 ? mid - h : mid, barWidth, Math.max(1, h), 0xFF00FF00);
+                fillRect(graphics, barX - 2, mid, barWidth + 4, 1, color);
 
-            graphics.drawString(font, "THR", barX - 2, barY - lineHeight, color);
-            String thrPct = String.format("%.0f%%", throttle * 100);
-            graphics.drawString(font, thrPct, barX + barWidth - font.width(thrPct), barY + barHeight + 3, color);
+                graphics.drawString(font, "V/S", barX - 2, barY - lineHeight, color);
+                float vs = (float) drone.getDeltaMovement().y * 20f;
+                String vsStr = String.format("%+.1f", vs);
+                graphics.drawString(font, vsStr, barX + barWidth - font.width(vsStr), barY + barHeight + 3, color);
+            } else {
+                int fillH = (int) (throttle * barHeight);
+                int fillColor = throttle > 0.9f ? 0xFFFF0000 : 0xFF00FF00;
+                fillRect(graphics, barX, barY + barHeight - fillH, barWidth, fillH, fillColor);
+
+                graphics.drawString(font, "THR", barX - 2, barY - lineHeight, color);
+                String thrPct = String.format("%.0f%%", throttle * 100);
+                graphics.drawString(font, thrPct, barX + barWidth - font.width(thrPct), barY + barHeight + 3, color);
+            }
         }
 
         if (org.restor.fpv.Config.HUD_CROSSHAIR.get()) renderCrosshair(graphics, width, height);
-        if (org.restor.fpv.Config.HUD_STICKS.get())
+        if (org.restor.fpv.Config.HUD_STICKS.get() && !heavy)
             renderStickBoxes(graphics, width, height, drone.getPredYaw(),
                 drone.getPredThrottle(), drone.getPredRoll(), drone.getPredPitch());
+        if (org.restor.fpv.Config.HUD_DAMAGE.get()) renderDamageBadges(graphics, width, height, drone);
 
         renderRaceHud(graphics, width, height);
+    }
+
+    // ------------------------------------------------------------------
+    //  Component damage badges (bottom right)
+    // ------------------------------------------------------------------
+
+    private static final int DAMAGE_OK = 0xFFB0B060;
+    private static final int DAMAGE_WARN = 0xFFFFAA20;
+    private static final int DAMAGE_CRIT = 0xFFFF3030;
+
+    private static final int ICON_PROP = 0;
+    private static final int ICON_MOTOR = 1;
+    private static final int ICON_FRAME = 2;
+    private static final int ICON_CAMERA = 3;
+    private static final int ICON_BATTERY = 4;
+
+    // Worn parts show up as icon + remaining condition, stacked upward from the bottom
+    // right so they never collide with the telemetry column or the throttle bar.
+    private static void renderDamageBadges(GuiGraphics graphics, int width, int height, DroneEntity drone) {
+        if (!(drone instanceof org.restor.fpv.assembly.ModularDroneEntity modular)) return;
+        org.restor.fpv.assembly.DroneAssembly assembly = modular.getAssembly();
+        if (assembly == null) return;
+        org.restor.fpv.assembly.FrameSpec spec = assembly.frameSpec();
+        int motorCount = spec != null ? spec.motorCount() : 0;
+
+        float propWorst = 1f, motorWorst = 1f;
+        int propCount = 0, motorCount2 = 0;
+        for (int i = 0; i < motorCount; i++) {
+            if (!assembly.props[i].isEmpty()) {
+                float r = org.restor.fpv.assembly.ComponentCondition.ratio(assembly.props[i]);
+                propWorst = Math.min(propWorst, r);
+                if (r < 0.95f) propCount++;
+            }
+            if (!assembly.motors[i].isEmpty()) {
+                float r = org.restor.fpv.assembly.ComponentCondition.ratio(assembly.motors[i]);
+                motorWorst = Math.min(motorWorst, r);
+                if (r < 0.95f) motorCount2++;
+            }
+        }
+
+        int margin = 10;
+        int icon = 12;
+        int gap = 4;
+        int x = width - margin - icon;
+        int y = height - margin - icon;
+        boolean blink = MC.level == null || (MC.level.getGameTime() % 12) < 7;
+
+        y = damageBadge(graphics, x, y, icon, gap, blink, ICON_BATTERY, "BATT",
+            ratioOf(assembly.battery), 0);
+        y = damageBadge(graphics, x, y, icon, gap, blink, ICON_CAMERA, "CAM",
+            ratioOf(assembly.camera), 0);
+        y = damageBadge(graphics, x, y, icon, gap, blink, ICON_FRAME, "FRAME",
+            ratioOf(assembly.frame), 0);
+        y = damageBadge(graphics, x, y, icon, gap, blink, ICON_MOTOR, "MOTOR",
+            motorWorst, motorCount2);
+        damageBadge(graphics, x, y, icon, gap, blink, ICON_PROP, "PROP",
+            propWorst, propCount);
+    }
+
+    private static float ratioOf(net.minecraft.world.item.ItemStack stack) {
+        return stack.isEmpty() ? 1f : org.restor.fpv.assembly.ComponentCondition.ratio(stack);
+    }
+
+    // Returns the Y for the next badge above this one (unchanged when nothing is drawn).
+    private static int damageBadge(GuiGraphics graphics, int x, int y, int size, int gap,
+                                   boolean blink, int iconId, String label, float ratio, int count) {
+        if (ratio >= 0.95f) return y;
+        int color = ratio < 0.30f ? DAMAGE_CRIT : ratio < 0.60f ? DAMAGE_WARN : DAMAGE_OK;
+        if (ratio < 0.30f && !blink) color = 0x60FF3030;
+
+        drawDamageIcon(graphics, x, y, iconId, color);
+
+        Font font = MC.font;
+        String text = count > 1
+            ? String.format("%s x%d %d%%", label, count, Math.round(ratio * 100f))
+            : String.format("%s %d%%", label, Math.round(ratio * 100f));
+        graphics.drawString(font, text, x - 4 - font.width(text),
+            y + (size - font.lineHeight) / 2, color);
+        return y - size - gap;
+    }
+
+    private static void drawDamageIcon(GuiGraphics graphics, int x, int y, int iconId, int color) {
+        switch (iconId) {
+            case ICON_PROP -> {
+                fillRect(graphics, x, y + 5, 12, 2, color);
+                fillRect(graphics, x + 1, y + 4, 3, 1, color);
+                fillRect(graphics, x + 8, y + 7, 3, 1, color);
+                fillRect(graphics, x + 5, y + 4, 2, 4, color);
+            }
+            case ICON_MOTOR -> {
+                fillRect(graphics, x + 5, y, 2, 3, color);
+                fillRect(graphics, x + 3, y + 3, 6, 8, color);
+                fillRect(graphics, x + 1, y + 9, 10, 2, color);
+            }
+            case ICON_FRAME -> {
+                fillRect(graphics, x + 3, y + 3, 6, 6, color);
+                fillRect(graphics, x, y, 3, 2, color);
+                fillRect(graphics, x + 9, y, 3, 2, color);
+                fillRect(graphics, x, y + 10, 3, 2, color);
+                fillRect(graphics, x + 9, y + 10, 3, 2, color);
+            }
+            case ICON_CAMERA -> {
+                fillRect(graphics, x, y + 3, 9, 7, color);
+                fillRect(graphics, x + 9, y + 5, 3, 3, color);
+                fillRect(graphics, x + 2, y + 1, 4, 2, color);
+            }
+            case ICON_BATTERY -> {
+                fillRect(graphics, x, y + 3, 10, 2, color);
+                fillRect(graphics, x, y + 9, 10, 2, color);
+                fillRect(graphics, x, y + 3, 2, 8, color);
+                fillRect(graphics, x + 8, y + 3, 2, 8, color);
+                fillRect(graphics, x + 10, y + 5, 2, 4, color);
+            }
+            default -> fillRect(graphics, x, y, 12, 12, color);
+        }
+    }
+
+    private static void renderArmWarning(GuiGraphics graphics, int width, int height) {
+        String key = org.restor.fpv.client.ModKeyBindings.ARM_SWITCH
+            .getTranslatedKeyMessage().getString();
+        String message = net.minecraft.network.chat.Component
+            .translatable("hud.fpv.arm_warning", key).getString();
+        boolean bright = MC.level == null || (MC.level.getGameTime() / 8L & 1L) == 0L;
+        int color = bright ? 0xFFFF3030 : 0x88FF3030;
+        int textWidth = MC.font.width(message);
+        int x = width / 2;
+        int y = height / 2 - 34;
+        graphics.fill(x - textWidth / 2 - 6, y - 4, x + textWidth / 2 + 6,
+            y + MC.font.lineHeight + 4, bright ? 0xB0000000 : 0x60000000);
+        graphics.drawCenteredString(MC.font, message, x, y, color);
     }
 
     private static void renderPlaneOSD(GuiGraphics graphics, int width, int height, PlaneEntity plane, float partialTick) {
@@ -330,12 +533,14 @@ public class FPVOverlay {
         int topY = margin;
         if (org.restor.fpv.Config.HUD_HINTS.get()) {
             topY = renderKeyHints(graphics, margin, topY, new net.minecraft.client.KeyMapping[]{
-                org.restor.fpv.client.ModKeyBindings.PLANE_MOUSE_MODE,
+                org.restor.fpv.client.ModKeyBindings.MOUSE_MODE,
                 org.restor.fpv.client.ModKeyBindings.PLANE_RESET_CAM,
+                org.restor.fpv.client.ModKeyBindings.PLANE_ORBIT,
                 org.restor.fpv.client.ModKeyBindings.PLANE_CALL_STRIKE,
                 org.restor.fpv.client.ModKeyBindings.OPEN_SETTINGS,
                 org.restor.fpv.client.ModKeyBindings.TOGGLE_HUD,
-            });
+            }, bindHint(MC.options.keyAttack, "hud.fpv.hint_lock"),
+               bindHint(MC.options.keyShift, "hud.fpv.hint_exit"));
         }
 
         if (org.restor.fpv.Config.HUD_TELEMETRY.get()) {
@@ -349,6 +554,11 @@ public class FPVOverlay {
 
             String camStr = String.format("CAM: %.0f°", plane.getGimbalPitch());
             graphics.drawString(font, camStr, margin, topY + lineHeight * 2, color);
+
+            boolean locked = org.restor.fpv.client.ClientEventHandler.hasPlaneLock();
+            String trkStr = plane.isOrbiting() ? "TRK: ORBIT" : locked ? "TRK: LOCK" : "TRK: FREE";
+            graphics.drawString(font, trkStr, margin, topY + lineHeight * 3,
+                plane.isOrbiting() ? 0xFF55FFFF : locked ? 0xFFFFFF55 : color);
 
             String ctrlStr = RCController.isConnected()
                 ? "TX: " + RCController.getControllerName()
@@ -471,10 +681,6 @@ public class FPVOverlay {
         // Fixed reference arrow at screen center height
         graphics.hLine(x - 7, x - 3, cy, 0xFF00FF00);
         graphics.fill(x - 3, cy - 1, x - 1, cy + 2, 0xFF00FF00);
-    }
-
-    private static boolean isArmed(DroneEntity drone) {
-        return drone.getVisualThrottle() > 0.01f;
     }
 
     private static void renderCrosshair(GuiGraphics graphics, int width, int height) {

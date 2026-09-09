@@ -24,6 +24,9 @@ public class GhostSavedData extends SavedData {
 
     private final Map<String, Course> courses = new HashMap<>();
 
+
+
+
     public static GhostSavedData get(ServerLevel level) {
         return level.getDataStorage().computeIfAbsent(GhostSavedData::load, GhostSavedData::new, NAME);
     }

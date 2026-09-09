@@ -1,42 +1,31 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import org.restor.fpv.compat.StreamCodec;
+import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import org.restor.fpv.compat.IPayloadContext;
+import org.restor.fpv.Fpv;
 
-import java.util.function.Supplier;
+public record ExplosionParticlesPacket(double x, double y, double z, float spread) implements CustomPacketPayload {
+    public static final Type<ExplosionParticlesPacket> TYPE =
+        new Type<>(new ResourceLocation(Fpv.MODID, "explosion_particles"));
 
-public class ExplosionParticlesPacket {
-    private final double x;
-    private final double y;
-    private final double z;
-    private final float spread;
+    public static final StreamCodec<FriendlyByteBuf, ExplosionParticlesPacket> STREAM_CODEC = StreamCodec.of(
+        (buf, pkt) -> {
+            buf.writeDouble(pkt.x);
+            buf.writeDouble(pkt.y);
+            buf.writeDouble(pkt.z);
+            buf.writeFloat(pkt.spread);
+        },
+        buf -> new ExplosionParticlesPacket(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readFloat())
+    );
 
-    public ExplosionParticlesPacket(double x, double y, double z, float spread) {
-        this.x = x;
-        this.y = y;
-        this.z = z;
-        this.spread = spread;
-    }
+    @Override
+    public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    public ExplosionParticlesPacket(FriendlyByteBuf buf) {
-        this.x = buf.readDouble();
-        this.y = buf.readDouble();
-        this.z = buf.readDouble();
-        this.spread = buf.readFloat();
-    }
-
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeDouble(x);
-        buf.writeDouble(y);
-        buf.writeDouble(z);
-        buf.writeFloat(spread);
-    }
-
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-            () -> () -> org.restor.fpv.client.ClientExplosionParticles.spawn(x, y, z, spread)));
-        ctx.get().setPacketHandled(true);
+    public static void handle(ExplosionParticlesPacket pkt, IPayloadContext context) {
+        context.enqueueWork(() -> org.restor.fpv.client.ClientExplosionParticles.spawn(
+            pkt.x(), pkt.y(), pkt.z(), pkt.spread()));
     }
 }

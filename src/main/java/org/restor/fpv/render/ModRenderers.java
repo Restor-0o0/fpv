@@ -10,24 +10,45 @@ import org.restor.fpv.entity.ModEntities;
 @Mod.EventBusSubscriber(modid = Fpv.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ModRenderers {
     @SubscribeEvent
+    public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
+        for (String skin : event.getSkins()) {
+            if (event.getSkin(skin) instanceof net.minecraft.client.renderer.entity.player.PlayerRenderer renderer) {
+                renderer.addLayer(new GogglesLayer(renderer, event.getContext().getItemRenderer()));
+            }
+        }
+    }
+
+    @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.CINEWHOOP.get(), DroneRenderer::new);
         event.registerEntityRenderer(ModEntities.RACING.get(), DroneRenderer::new);
         event.registerEntityRenderer(ModEntities.TINY_WHOOP.get(), DroneRenderer::new);
-        event.registerEntityRenderer(ModEntities.COMPONENT.get(), DroneRenderer::new);
         event.registerEntityRenderer(ModEntities.REMOTE_RACING.get(), DroneRenderer::new);
         event.registerEntityRenderer(ModEntities.KAMIKAZE.get(), DroneRenderer::new);
         event.registerEntityRenderer(ModEntities.OPERATOR_DUMMY.get(), OperatorDummyRenderer::new);
         event.registerEntityRenderer(ModEntities.MODULAR.get(), ModularDroneRenderer::new);
         event.registerEntityRenderer(ModEntities.PLANE.get(), PlaneRenderer::new);
+        event.registerEntityRenderer(ModEntities.MODULAR_PLANE.get(), ModularPlaneRenderer::new);
         event.registerEntityRenderer(ModEntities.PLANE_SCOUT.get(), PlaneRenderer::new);
         event.registerEntityRenderer(ModEntities.PLANE_KAMIKAZE.get(), PlaneRenderer::new);
-        event.registerEntityRenderer(ModEntities.HOSTILE_DRONE.get(), HostileDroneRenderer::new);
-        event.registerEntityRenderer(ModEntities.PATROL_DRONE.get(), HostileDroneRenderer::new);
-        event.registerEntityRenderer(ModEntities.INTERCEPTOR_DRONE.get(), HostileDroneRenderer::new);
+        event.registerEntityRenderer(ModEntities.PLANE_DELTA.get(), PlaneRenderer::new);
+        event.registerEntityRenderer(ModEntities.PLANE_GLIDER.get(), PlaneRenderer::new);
+        event.registerEntityRenderer(ModEntities.PLANE_CARGO.get(), PlaneRenderer::new);
+        event.registerEntityRenderer(ModEntities.PLANE_CARRIER.get(), PlaneRenderer::new);
+        event.registerEntityRenderer(ModEntities.PLANE_SHAHED.get(), PlaneRenderer::new);
+        event.registerEntityRenderer(ModEntities.PLANE_LONGRANGE.get(), PlaneRenderer::new);
+        event.registerEntityRenderer(ModEntities.PLANE_INTERCEPTOR.get(), PlaneRenderer::new);
+        event.registerEntityRenderer(ModEntities.DROP_CHARGE.get(),
+            ctx -> new net.minecraft.client.renderer.entity.ThrownItemRenderer<>(ctx, 0.9f, false));
+        event.registerEntityRenderer(ModEntities.HOSTILE_DRONE.get(), NpcDroneRenderer::new);
+        event.registerEntityRenderer(ModEntities.PATROL_DRONE.get(), NpcDroneRenderer::new);
+        event.registerEntityRenderer(ModEntities.INTERCEPTOR_DRONE.get(), NpcDroneRenderer::new);
+        event.registerEntityRenderer(ModEntities.VILLAGE_DRONE.get(), NpcDroneRenderer::new);
         event.registerBlockEntityRenderer(org.restor.fpv.block.entity.ModBlockEntities.RACE_GATE.get(),
             RaceGateRenderer::new);
         event.registerBlockEntityRenderer(org.restor.fpv.block.entity.ModBlockEntities.RACE_START.get(),
             RaceStartRenderer::new);
+        event.registerBlockEntityRenderer(org.restor.fpv.block.entity.ModBlockEntities.PARTS_PILE.get(),
+            PartsPileRenderer::new);
     }
 }

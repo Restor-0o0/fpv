@@ -20,6 +20,14 @@ public class OperatorDummyEntity extends Entity {
         net.minecraft.network.syncher.SynchedEntityData.defineId(OperatorDummyEntity.class,
             net.minecraft.network.syncher.EntityDataSerializers.STRING);
 
+    private static final net.minecraft.network.syncher.EntityDataAccessor<net.minecraft.world.item.ItemStack> DATA_RADIO =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(OperatorDummyEntity.class,
+            net.minecraft.network.syncher.EntityDataSerializers.ITEM_STACK);
+
+    private static final net.minecraft.network.syncher.EntityDataAccessor<net.minecraft.world.item.ItemStack> DATA_HEAD =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(OperatorDummyEntity.class,
+            net.minecraft.network.syncher.EntityDataSerializers.ITEM_STACK);
+
     private UUID vehicleUuid;
     private int checkTimer;
 
@@ -32,6 +40,18 @@ public class OperatorDummyEntity extends Entity {
         this.vehicleUuid = vehicle.getUUID();
         entityData.set(DATA_PILOT, pilot.toString());
     }
+
+    public void setRadio(net.minecraft.world.item.ItemStack stack) {
+        entityData.set(DATA_RADIO, stack.copyWithCount(1));
+    }
+
+    public net.minecraft.world.item.ItemStack getRadio() { return entityData.get(DATA_RADIO); }
+
+    public void setHeadGear(net.minecraft.world.item.ItemStack stack) {
+        entityData.set(DATA_HEAD, stack.copyWithCount(1));
+    }
+
+    public net.minecraft.world.item.ItemStack getHeadGear() { return entityData.get(DATA_HEAD); }
 
     /** Pilot UUID for skin lookup on the client; null until synced. */
     @org.jetbrains.annotations.Nullable
@@ -51,7 +71,8 @@ public class OperatorDummyEntity extends Entity {
         if (!level().isClientSide && ++checkTimer >= 20) {
             checkTimer = 0;
             if (!(level() instanceof ServerLevel sl) || vehicleUuid == null
-                || !(sl.getEntity(vehicleUuid) instanceof Pilotable p) || !p.hasAnyPilot()) {
+                || !(sl.getEntity(vehicleUuid) instanceof Pilotable p) || !p.hasAnyPilot()
+                || !p.isActiveDummy(getUUID())) {
                 discard();
             }
         }
@@ -59,7 +80,9 @@ public class OperatorDummyEntity extends Entity {
 
     @Override
     protected void defineSynchedData() {
-        entityData.define(DATA_PILOT, "");
+        this.entityData.define(DATA_PILOT, "");
+        this.entityData.define(DATA_RADIO, net.minecraft.world.item.ItemStack.EMPTY);
+        this.entityData.define(DATA_HEAD, net.minecraft.world.item.ItemStack.EMPTY);
     }
 
     @Override

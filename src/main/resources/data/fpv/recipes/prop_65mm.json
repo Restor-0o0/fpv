@@ -1,0 +1,6 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [" I ", "ISI", " I "],
+  "key": { "I": { "item": "minecraft:iron_nugget" }, "S": { "item": "minecraft:slime_ball" } },
+  "result": { "item": "fpv:prop_65mm", "count": 4 }
+}

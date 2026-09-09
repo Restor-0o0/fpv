@@ -88,15 +88,15 @@ public class FPVDevSettingsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollY) {
         int old = scrollOffset;
-        scrollOffset = (int) Math.max(0, Math.min(maxScroll, scrollOffset - delta * 18));
+        scrollOffset = (int) Math.max(0, Math.min(maxScroll, scrollOffset - scrollY * 18));
         if (scrollOffset != old) {
             clearWidgets();
             init();
             return true;
         }
-        return super.mouseScrolled(mouseX, mouseY, delta);
+        return super.mouseScrolled(mouseX, mouseY, scrollY);
     }
 
     @Override

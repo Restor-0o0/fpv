@@ -6,7 +6,9 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import org.restor.fpv.compat.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.restor.fpv.component.ComponentItem;
@@ -28,11 +30,21 @@ public class ModularDroneEntity extends DroneEntity {
 
     private DroneAssembly assembly = new DroneAssembly();
     private float trimRoll, trimPitch, trimYaw; // °/s at full throttle
+    private boolean clientAssemblyInitialized;
+    // Scraping a wall damages parts several ticks in a row; re-serialising and
+    // re-syncing the whole assembly NBT on each of those was pure overhead.
+    private int assemblyResyncDelay = -1;
+    private int stressWearTimer;
     // Warhead module state (mirrors KamikazeDroneEntity's impact logic).
-    private int airborneTicks;
+    private final org.restor.fpv.warhead.ContactFuze fuze = new org.restor.fpv.warhead.ContactFuze();
+    private final org.restor.fpv.warhead.ProximityFuze proximityFuze = new org.restor.fpv.warhead.ProximityFuze();
+    private org.restor.fpv.warhead.WarheadType warhead = org.restor.fpv.warhead.WarheadType.FRAG;
     private boolean exploded;
     // Dart gun (companion mode) fire cooldown.
     private int dartCooldown;
+    // Trader firmware: rolled lazily, saved with the drone.
+    private final DroneTrader trader = new DroneTrader(this);
+    private static final float DART_SHOT_POWER_FACTOR = 8.0f;
     // Cargo box contents (storage module). Kept even when the module is swapped out —
     // the items drop when the drone breaks.
     private final net.minecraft.world.SimpleContainer cargo = new net.minecraft.world.SimpleContainer(9);
@@ -44,7 +56,7 @@ public class ModularDroneEntity extends DroneEntity {
     @Override
     protected void defineSynchedData() {
         super.defineSynchedData();
-        entityData.define(DATA_ASSEMBLY, new CompoundTag());
+        this.entityData.define(DATA_ASSEMBLY, new CompoundTag());
     }
 
     public DroneAssembly getAssembly() {
@@ -55,14 +67,67 @@ public class ModularDroneEntity extends DroneEntity {
         this.assembly = a;
         entityData.set(DATA_ASSEMBLY, a.save());
         applyAssembly();
+        refreshDimensions();
+    }
+
+    // The hitbox follows the frame, so a whoop build isn't boxed like a 5".
+    @Override
+    public net.minecraft.world.entity.EntityDimensions getDimensions(net.minecraft.world.entity.Pose pose) {
+        FrameSpec spec = assembly == null ? null : assembly.frameSpec();
+        if (spec == null) return super.getDimensions(pose);
+        DroneVisual v = DroneVisual.of(spec);
+        float s = (float) org.restor.fpv.Config.DEV_HITBOX_SCALE.get().doubleValue();
+        float w = v.hitboxWidth() * s;
+        float h = v.hitboxHeight() * s;
+        if (spec.isTailsitter()) {
+            w = v.hitboxWidth() * 0.72f * s;
+            h = v.hitboxWidth() * 1.45f * s;
+        }
+        return net.minecraft.world.entity.EntityDimensions.scalable(w, h);
+    }
+
+    @Override
+    protected float getEyeHeight(net.minecraft.world.entity.Pose pose,
+                                 net.minecraft.world.entity.EntityDimensions dimensions) {
+        return dimensions.height * (float) org.restor.fpv.Config.FPV_CAMERA_HEIGHT.get().doubleValue();
     }
 
     // Derive flight characteristics from the installed components.
     private void applyAssembly() {
-        this.droneData = assembly.buildDroneData();
-        this.flightController = new FlightController(droneData);
+        updateWearEffects();
+        this.flightController = controllerFor();
         this.battery = new Battery(droneData.batteryCapacity, 4.2f);
         adjustCameraAngle(droneData.cameraAngle - getCameraAngle());
+    }
+
+    @Override
+    public boolean isHeavyLift() {
+        FrameSpec spec = assembly == null ? null : assembly.frameSpec();
+        return spec != null && spec.isHeavyLift();
+    }
+
+    @Override
+    public boolean altitudeHold() {
+        return isHeavyLift();
+    }
+
+    @Override
+    public boolean isTailsitter() {
+        FrameSpec spec = assembly == null ? null : assembly.frameSpec();
+        return spec != null && spec.isTailsitter();
+    }
+
+    private FlightController controllerFor() {
+        FlightController fc = new FlightController(droneData);
+        FrameSpec spec = assembly.frameSpec();
+        fc.setMode(spec != null && spec.isHeavyLift()
+            ? org.restor.fpv.flight.FlightMode.ANGLE
+            : org.restor.fpv.flight.FlightMode.ACRO);
+        return fc;
+    }
+
+    private void updateWearEffects() {
+        this.droneData = assembly.buildDroneData();
         float[] trim = assembly.computeTrim();
         trimRoll = trim[0];
         trimPitch = trim[1];
@@ -75,7 +140,13 @@ public class ModularDroneEntity extends DroneEntity {
         // Client receives the assembly → rebuild derived stats + renderer data.
         if (DATA_ASSEMBLY.equals(key) && level().isClientSide) {
             assembly = DroneAssembly.load(entityData.get(DATA_ASSEMBLY));
-            applyAssembly();
+            updateWearEffects();
+            refreshDimensions();
+            if (!clientAssemblyInitialized) {
+                flightController = controllerFor();
+                battery = new Battery(droneData.batteryCapacity, 4.2f);
+                clientAssemblyInitialized = true;
+            }
         }
     }
 
@@ -83,6 +154,71 @@ public class ModularDroneEntity extends DroneEntity {
     @Override protected float trimRollRate()  { return trimRoll * throttleInput; }
     @Override protected float trimPitchRate() { return trimPitch * throttleInput; }
     @Override protected float trimYawRate()   { return trimYaw * throttleInput; }
+
+    public float getCameraGlitchSeverity() {
+        return 1f - ComponentCondition.ratio(assembly.camera);
+    }
+
+    @Override
+    protected void onMovementImpact(Vec3 velocityDelta) {
+        if (level().isClientSide) return;
+        fuze.reportImpact(velocityDelta.length());
+        FrameSpec spec = assembly.frameSpec();
+        if (spec == null || spec.motorCount() == 0) return;
+
+        double dx = velocityDelta.x * 20.0;
+        double dy = velocityDelta.y * 20.0;
+        double dz = velocityDelta.z * 20.0;
+        double yaw = Math.toRadians(getYRot());
+        double localX = dx * Math.cos(yaw) - dz * Math.sin(yaw);
+        double localZ = dx * Math.sin(yaw) + dz * Math.cos(yaw);
+        float[] mountX = new float[spec.motorCount()];
+        float[] mountZ = new float[spec.motorCount()];
+        for (int i = 0; i < spec.motorCount(); i++) {
+            mountX[i] = spec.motorMounts().get(i).x();
+            mountZ[i] = spec.motorMounts().get(i).z();
+        }
+
+        DroneImpactDamage.Allocation damage = DroneImpactDamage.allocate(
+            assembly.totalMassKg(), localX, dy, localZ, mountX, mountZ);
+        if (!damage.hasDamage()) return;
+        int i = damage.motorIndex();
+        float wear = 1f / Math.max(0.2f, assembly.tuning().toughness());
+        ComponentCondition.damage(assembly.props[i], scaled(damage.propDamage(), wear));
+        ComponentCondition.damage(assembly.motors[i], scaled(damage.motorDamage(), wear));
+        ComponentCondition.damage(assembly.frame, scaled(damage.frameDamage(), wear));
+        updateWearEffects();
+        assemblyResyncDelay = 10;
+    }
+
+    private static int scaled(int amount, float factor) {
+        return amount <= 0 ? amount : Math.max(1, Math.round(amount * factor));
+    }
+
+    /** Thrust-limited like every drone, but never above what the airframe is rated to carry. */
+    @Override
+    public float warheadCapacityKg() {
+        return Math.min(super.warheadCapacityKg(), assembly.tuning().liftCapacityKg());
+    }
+
+    // Parts running outside their spec (wrong prop for the motor, over-volted pack) survive,
+    // but burn themselves out over a flight instead of being rejected at the bench.
+    private void tickStressWear() {
+        float stress = assembly.stressFactor();
+        if (stress <= 1.01f || !flightController.isArmed() || throttleInput <= 0.05f) return;
+        if (++stressWearTimer < 40) return;
+        stressWearTimer = 0;
+        int amount = Math.max(1, Math.round((stress - 1f) * 8f * throttleInput));
+        FrameSpec spec = assembly.frameSpec();
+        int n = spec != null ? spec.motorCount() : 0;
+        for (int i = 0; i < n; i++) {
+            if (assembly.slotEfficiency(i) >= 1f && stress < 1.3f) continue;
+            ComponentCondition.damage(assembly.motors[i], amount);
+            ComponentCondition.damage(assembly.props[i], amount);
+        }
+        updateWearEffects();
+        assemblyResyncDelay = 20;
+    }
 
     // ------------------------------------------------------------------
     //  Module effects (FPV_IDEAS §4)
@@ -92,10 +228,57 @@ public class ModularDroneEntity extends DroneEntity {
         return assembly.moduleType() == org.restor.fpv.component.ModuleType.WARHEAD;
     }
 
+    public org.restor.fpv.warhead.WarheadType getWarhead() { return warhead; }
+
+    public void setWarhead(org.restor.fpv.warhead.WarheadType type) {
+        if (type != null) warhead = type;
+    }
+
+    // The warhead module is the mount; which head sits in it is chosen here, limited by
+    // whatever lift the build has left over.
+    @Override
+    public net.minecraft.world.InteractionResult interact(Player player,
+                                                          net.minecraft.world.InteractionHand hand) {
+        ItemStack held = player.getItemInHand(hand);
+        if (player.isSecondaryUseActive() && org.restor.fpv.warhead.WarheadLoading.isWarhead(held)) {
+            if (!canPlayerAccess(player)) return net.minecraft.world.InteractionResult.FAIL;
+            if (!level().isClientSide) {
+                if (!hasWarhead()) {
+                    player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+                        "msg.fpv.warhead_no_module"), true);
+                } else {
+                    org.restor.fpv.warhead.WarheadLoading.swap(player, held, warhead,
+                        warheadCapacityKg(), this::setWarhead);
+                }
+            }
+            return net.minecraft.world.InteractionResult.sidedSuccess(level().isClientSide);
+        }
+        return super.interact(player, hand);
+    }
+
     // Drop charges only fit when a Payload Bay module is installed.
     @Override
     protected int payloadCapacity() {
-        return assembly.moduleType() == org.restor.fpv.component.ModuleType.PAYLOAD_BAY ? MAX_PAYLOAD : 0;
+        return hasPayloadBay() ? liftLimitedPayload() : 0;
+    }
+
+    @Override
+    protected boolean hasPayloadBay() {
+        return assembly.moduleType() == org.restor.fpv.component.ModuleType.PAYLOAD_BAY;
+    }
+
+    @Override
+    public org.restor.fpv.component.FirmwareType firmware() {
+        return assembly.firmwareType();
+    }
+
+    @Override
+    protected boolean autonomousInteract(net.minecraft.world.entity.player.Player player) {
+        org.restor.fpv.component.FirmwareType fw = firmware();
+        if (fw == null || !fw.trades() || trader.getTradingPlayer() != null) return false;
+        trader.setTradingPlayer(player);
+        trader.openTradingScreen(player, getDisplayName(), 1);
+        return true;
     }
 
     // Companion combat: a dart gun module engages hostile mobs near the owner. Arrows are
@@ -105,16 +288,20 @@ public class ModularDroneEntity extends DroneEntity {
         if (assembly.moduleType() != org.restor.fpv.component.ModuleType.DART_GUN) return;
         if (dartCooldown > 0) { dartCooldown--; return; }
 
-        net.minecraft.world.entity.monster.Monster target = null;
-        double best = Double.MAX_VALUE;
-        for (net.minecraft.world.entity.monster.Monster m : level().getEntitiesOfClass(
-                net.minecraft.world.entity.monster.Monster.class,
-                getBoundingBox().inflate(12.0),
-                m -> m.isAlive() && hasLineOfSightTo(m))) {
-            double d = distanceToSqr(m);
-            if (d < best) { best = d; target = m; }
+        net.minecraft.world.entity.LivingEntity target = autoTarget();
+        if (target != null && !hasLineOfSightTo(target)) target = null;
+        if (target == null) {
+            double best = Double.MAX_VALUE;
+            for (net.minecraft.world.entity.monster.Monster m : level().getEntitiesOfClass(
+                    net.minecraft.world.entity.monster.Monster.class,
+                    getBoundingBox().inflate(12.0),
+                    m -> m.isAlive() && !isCompanionAlly(owner, m) && hasLineOfSightTo(m))) {
+                double d = distanceToSqr(m);
+                if (d < best) { best = d; target = m; }
+            }
         }
         if (target == null) return;
+        if (!consumeCompanionWeaponEnergy(DART_SHOT_POWER_FACTOR)) return;
 
         dartCooldown = 18;
         net.minecraft.world.entity.projectile.Arrow dart = new net.minecraft.world.entity.projectile.Arrow(
@@ -125,7 +312,7 @@ public class ModularDroneEntity extends DroneEntity {
         Vec3 to = target.getEyePosition().subtract(dart.position());
         dart.shoot(to.x, to.y, to.z, 2.4f, 2.0f);
         level().addFreshEntity(dart);
-        playSound(net.minecraft.sounds.SoundEvents.CROSSBOW_SHOOT, 0.7f, 1.7f);
+        playSound(org.restor.fpv.sound.ModSounds.DART.get(), 0.7f, 1.7f);
         // Face the threat while engaging.
         setYRot((float) Math.toDegrees(Math.atan2(-to.x, to.z)));
     }
@@ -144,7 +331,7 @@ public class ModularDroneEntity extends DroneEntity {
     protected boolean openStorage(net.minecraft.world.entity.player.Player player) {
         if (assembly.moduleType() != org.restor.fpv.component.ModuleType.STORAGE) return false;
         if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
-            sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
+net.minecraftforge.network.NetworkHooks.openScreen(sp, new net.minecraft.world.SimpleMenuProvider(
                 (id, inv, p) -> new net.minecraft.world.inventory.ChestMenu(
                     net.minecraft.world.inventory.MenuType.GENERIC_9x1, id, inv, cargo, 1),
                 getName()));
@@ -164,22 +351,39 @@ public class ModularDroneEntity extends DroneEntity {
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide || !hasWarhead()) return;
+        if (level().isClientSide) return;
 
-        if (flightController.isArmed() && !onGround()) {
-            airborneTicks++;
-        } else if (!flightController.isArmed()) {
-            airborneTicks = 0;
+        if (assemblyResyncDelay >= 0 && assemblyResyncDelay-- == 0) {
+            entityData.set(DATA_ASSEMBLY, assembly.save());
         }
-        // Grace period so arming/takeoff from the ground doesn't detonate instantly.
-        if (airborneTicks > 10 && (horizontalCollision || verticalCollision || onGround())) {
+        tickStressWear();
+        if (!hasWarhead()) return;
+
+        boolean powered = flightController.isArmed();
+        if (warhead.proximity()
+            && proximityFuze.tick(this, powered, org.restor.fpv.warhead.ProximityFuze.TRIGGER_RADIUS,
+                this::isProximityTarget)) {
             explodeWarhead();
+            return;
         }
+        if (fuze.tick(this, powered)) explodeWarhead();
+    }
+
+    // What an airburst head is allowed to go off next to: hostiles and other aircraft, never
+    // the pilot, its own passengers or anything friendly to the owner.
+    private boolean isProximityTarget(net.minecraft.world.entity.Entity e) {
+        if (e == this || hasPassenger(e) || e.isSpectator()) return false;
+        if (e instanceof net.minecraft.world.entity.player.Player p
+            && (p.isCreative() || p == getRacePilot())) return false;
+        if (!canHitCompanionTarget(e)) return false;
+        return e instanceof net.minecraft.world.entity.LivingEntity
+            || e instanceof org.restor.fpv.entity.DroneEntity
+            || e instanceof org.restor.fpv.entity.PlaneEntity;
     }
 
     @Override
     protected void onEntityCollision() {
-        if (hasWarhead() && flightController.isArmed() && airborneTicks > 10) {
+        if (hasWarhead() && flightController.isArmed() && fuze.isArmed()) {
             explodeWarhead();
         }
     }
@@ -187,6 +391,7 @@ public class ModularDroneEntity extends DroneEntity {
     @Override
     public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
         if (isInvulnerableTo(source)) return false;
+        if (!isAuthorizedPlayerDamage(source)) return false;
         // A warhead build is a flying bomb: explosions and fire set it off.
         if (hasWarhead() && !level().isClientSide
             && (source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)
@@ -204,16 +409,7 @@ public class ModularDroneEntity extends DroneEntity {
         // so they watch the hit from where they launched instead of dying in the blast.
         if (!getPassengers().isEmpty()) ejectPassengers();
         endRemoteControl();
-        float power = (float) org.restor.fpv.Config.DEV_EXPLOSION_POWER.get().doubleValue();
-        double x = getX(), y = getY(), z = getZ();
-        org.restor.fpv.entity.KamikazeExplosionEffects.flingBlocks(level(), x, y, z, power);
-        java.util.Map<net.minecraft.core.BlockPos, net.minecraft.world.level.block.state.BlockState> before =
-            org.restor.fpv.entity.KamikazeExplosionEffects.captureBreakableBlocks(level(), x, y, z, power);
-        level().explode(this, x, y, z, power, Level.ExplosionInteraction.TNT);
-        org.restor.fpv.entity.KamikazeExplosionEffects.restoreUnbrokenBlocks(level(), before, x, y, z);
-        org.restor.fpv.entity.KamikazeExplosionEffects.removeFloatingBlocks(level(), x, y, z, power);
-        org.restor.fpv.entity.KamikazeExplosionEffects.damageMobs(level(), this, x, y, z, power);
-        org.restor.fpv.entity.KamikazeExplosionEffects.spawn(level(), x, y, z, power);
+        org.restor.fpv.entity.WarheadDetonation.detonate(level(), this, position(), warhead);
         discard();
     }
 
@@ -242,24 +438,30 @@ public class ModularDroneEntity extends DroneEntity {
         if (tag.contains("Assembly")) {
             setAssembly(DroneAssembly.load(tag.getCompound("Assembly")));
         }
+        if (tag.contains("Warhead")) warhead = org.restor.fpv.warhead.WarheadType.byId(tag.getString("Warhead"));
+        super.readFromItemTag(tag);
     }
 
     @Override
     protected void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
         if (tag.contains("Assembly")) {
             setAssembly(DroneAssembly.load(tag.getCompound("Assembly")));
         }
+        if (tag.contains("Warhead")) warhead = org.restor.fpv.warhead.WarheadType.byId(tag.getString("Warhead"));
+        super.readAdditionalSaveData(tag);
         if (tag.contains("Cargo")) {
             cargo.fromTag(tag.getList("Cargo", net.minecraft.nbt.Tag.TAG_COMPOUND));
         }
+        trader.load(tag);
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
         tag.put("Assembly", assembly.save());
+        tag.putString("Warhead", warhead.id());
         tag.put("Cargo", cargo.createTag());
+        trader.save(tag);
     }
 
     @Override
@@ -269,8 +471,11 @@ public class ModularDroneEntity extends DroneEntity {
 
     @Override
     protected ItemStack getDropStack() {
-        ItemStack stack = new ItemStack(ModItems.MODULAR_DRONE.get());
-        stack.getOrCreateTag().put("Assembly", assembly.save());
+        ItemStack stack = super.getDropStack();
+        CustomData.update(stack, t -> {
+            t.put("Assembly", assembly.save());
+            if (hasWarhead()) t.putString("Warhead", warhead.id());
+        });
         return stack;
     }
 }

@@ -14,5 +14,6 @@ public class ModEntityAttributes {
         event.put(ModEntities.HOSTILE_DRONE.get(), NpcDroneEntity.createAttributes().build());
         event.put(ModEntities.PATROL_DRONE.get(), PatrolDroneEntity.createAttributes().build());
         event.put(ModEntities.INTERCEPTOR_DRONE.get(), InterceptorDroneEntity.createAttributes().build());
+        event.put(ModEntities.VILLAGE_DRONE.get(), VillageDroneEntity.createAttributes().build());
     }
 }

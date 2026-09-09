@@ -2,46 +2,41 @@ package org.restor.fpv.network;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
+import org.restor.fpv.compat.StreamCodec;
+import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.network.NetworkEvent;
+import org.restor.fpv.compat.IPayloadContext;
+import org.restor.fpv.Fpv;
 import org.restor.fpv.block.entity.ControlStationBlockEntity;
 
-import java.util.function.Supplier;
-
 // Adds or removes a saved link code on a control station block.
-public class StationCodesPacket {
-    private final BlockPos pos;
-    private final String code;
-    private final boolean add;
+public record StationCodesPacket(BlockPos pos, String code, boolean add) implements CustomPacketPayload {
+    public static final Type<StationCodesPacket> TYPE =
+        new Type<>(new ResourceLocation(Fpv.MODID, "station_codes"));
 
-    public StationCodesPacket(BlockPos pos, String code, boolean add) {
-        this.pos = pos;
-        this.code = code;
-        this.add = add;
-    }
+    public static final StreamCodec<FriendlyByteBuf, StationCodesPacket> STREAM_CODEC = StreamCodec.of(
+        (buf, pkt) -> {
+            buf.writeBlockPos(pkt.pos);
+            buf.writeUtf(pkt.code, 6);
+            buf.writeBoolean(pkt.add);
+        },
+        buf -> new StationCodesPacket(buf.readBlockPos(), buf.readUtf(6), buf.readBoolean())
+    );
 
-    public StationCodesPacket(FriendlyByteBuf buf) {
-        this.pos = buf.readBlockPos();
-        this.code = buf.readUtf(6);
-        this.add = buf.readBoolean();
-    }
+    @Override
+    public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeBlockPos(pos);
-        buf.writeUtf(code, 6);
-        buf.writeBoolean(add);
-    }
-
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
-            if (player == null || !code.matches("\\d{6}")) return;
+    public static void handle(StationCodesPacket pkt, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)) return;
+            if (!pkt.code().matches("\\d{6}")) return;
+            BlockPos pos = pkt.pos();
             if (player.distanceToSqr(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5) > 64) return;
             if (player.level().getBlockEntity(pos) instanceof ControlStationBlockEntity be) {
-                if (add) be.addCode(code);
-                else be.removeCode(code);
+                if (pkt.add()) be.addCode(pkt.code());
+                else be.removeCode(pkt.code());
             }
         });
-        ctx.get().setPacketHandled(true);
     }
 }

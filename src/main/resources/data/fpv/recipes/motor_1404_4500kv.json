@@ -1,0 +1,6 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [" C ", "CIC", " C "],
+  "key": { "C": { "item": "minecraft:copper_ingot" }, "I": { "item": "minecraft:iron_ingot" } },
+  "result": { "item": "fpv:motor_1404_4500kv", "count": 2 }
+}

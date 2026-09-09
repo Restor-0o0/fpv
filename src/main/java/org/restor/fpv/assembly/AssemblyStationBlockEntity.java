@@ -1,6 +1,7 @@
 package org.restor.fpv.assembly;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.MenuProvider;
@@ -14,9 +15,8 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 import org.restor.fpv.block.entity.ModBlockEntities;
 
-// Persistent inventory of the assembly station (components survive closing the UI).
 public class AssemblyStationBlockEntity extends BlockEntity implements MenuProvider {
-    private final SimpleContainer items = new SimpleContainer(AssemblyStationMenu.SLOT_COUNT);
+    private final SimpleContainer items = new SimpleContainer(AssemblyStationMenu.INPUT_SLOT_COUNT);
 
     public AssemblyStationBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ASSEMBLY_STATION.get(), pos, state);
@@ -35,7 +35,7 @@ public class AssemblyStationBlockEntity extends BlockEntity implements MenuProvi
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int id, Inventory inv, Player player) {
-        return new AssemblyStationMenu(id, inv, items);
+        return new AssemblyStationMenu(id, inv, items, worldPosition);
     }
 
     @Override
@@ -52,7 +52,7 @@ public class AssemblyStationBlockEntity extends BlockEntity implements MenuProvi
         super.saveAdditional(tag);
         var list = new net.minecraft.nbt.ListTag();
         for (int i = 0; i < items.getContainerSize(); i++) {
-            list.add(items.getItem(i).save(new CompoundTag()));
+            list.add(items.getItem(i).save(new net.minecraft.nbt.CompoundTag()));
         }
         tag.put("Items", list);
     }

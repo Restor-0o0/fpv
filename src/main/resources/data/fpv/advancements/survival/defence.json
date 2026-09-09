@@ -1,0 +1,35 @@
+{
+  "parent": "fpv:survival/utility",
+  "display": {
+    "icon": {
+      "item": "fpv:drone_detector"
+    },
+    "title": {
+      "translate": "advancement.fpv.defence.title"
+    },
+    "description": {
+      "translate": "advancement.fpv.defence.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_detector": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["fpv:drone_detector"]
+          }
+        ]
+      }
+    }
+  },
+  "rewards": {
+    "recipes": [
+      "fpv:drone_jammer"
+    ]
+  }
+}

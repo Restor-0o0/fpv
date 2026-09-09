@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["IBI", "R R", "IBI"],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "B": { "item": "minecraft:light_blue_dye" },
+    "R": { "item": "minecraft:redstone" }
+  },
+  "result": { "item": "fpv:race_gate", "count": 2 }
+}

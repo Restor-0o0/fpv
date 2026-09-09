@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "fpv:block/parts_pile"
+    },
+    "facing=east": {
+      "model": "fpv:block/parts_pile"
+    },
+    "facing=south": {
+      "model": "fpv:block/parts_pile"
+    },
+    "facing=west": {
+      "model": "fpv:block/parts_pile"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["LGL", "RCR", "III"],
+  "key": {
+    "L": { "item": "minecraft:redstone_lamp" },
+    "G": { "item": "minecraft:green_dye" },
+    "R": { "item": "minecraft:redstone" },
+    "C": { "item": "minecraft:comparator" },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "result": { "item": "fpv:race_start" }
+}

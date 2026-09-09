@@ -6,10 +6,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderGuiOverlayEvent;
 import net.minecraftforge.client.event.ViewportEvent;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.restor.fpv.compat.PacketDistributor;
 import org.restor.fpv.Config;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.client.screen.FPVSettingsScreen;
@@ -19,7 +19,6 @@ import org.restor.fpv.entity.PlaneEntity;
 import org.restor.fpv.network.CameraAnglePacket;
 import org.restor.fpv.network.ControllerPacket;
 import org.restor.fpv.network.CycleModePacket;
-import org.restor.fpv.network.ModNetworking;
 import org.restor.fpv.network.PlaneControllerPacket;
 import org.restor.fpv.render.FPVOverlay;
 import org.slf4j.Logger;
@@ -31,9 +30,10 @@ public class ClientEventHandler {
 
     private static int scanCooldown;
     private static boolean prevCycleKey;
-    private static int keyboardControlTicks;
     private static boolean keyboardInitialized;
+    private static boolean keyboardArmSwitch;
     private static float keyboardThrottle;
+    private static float keyboardThrottleBias;
     private static float lastPlayerYaw;
     private static float lastPlayerPitch;
     private static float filteredPitch;
@@ -66,6 +66,9 @@ public class ClientEventHandler {
     private static float filteredPlaneCtrlRoll;
     private static float filteredPlaneCtrlYaw;
     private static boolean planeMouseLookMode;
+    private static boolean planeRcWasConnected;
+    private static float planeThrottleBias;
+    private static int planeRcIdleTicks;
     private static float planeGimbalYaw;
     private static float planeGimbalPitch;
     private static int planeRcLogTick;
@@ -82,6 +85,32 @@ public class ClientEventHandler {
     private static boolean planeTargetStreamActive;
     // FPV camera zoom (mouse wheel), applied as an FOV divisor.
     private static float fpvZoom = 1f;
+
+    // Heavy-lift drone state: WASD flies the airframe and the mouse aims the belly camera,
+    // so the gimbal angles and the mouse baseline live outside the acro path.
+    private static boolean heavyInitialized;
+    private static float lastHeavyYaw;
+    private static float droneGimbalYaw;
+    private static float droneGimbalPitch;
+    private static boolean heavyDroneActive;
+    // Mouse owns the belly camera by default; the swap key hands it back to the airframe.
+    private static boolean droneMouseLookMode = true;
+    private static float heavyMouseYaw;
+
+    private static int controlSeq;
+    private static boolean prevSneakKey;
+
+    public static int getControlSeq() { return controlSeq; }
+
+    // handleKeybinds() runs later in the same tick, so the yaw keys have to be drained here
+    // or Q drops the held item and E opens the inventory every time the drone yaws.
+    @SubscribeEvent
+    public static void onClientTickPre(TickEvent.ClientTickEvent event) {
+        if (event.phase != TickEvent.Phase.START) return;
+        if (!heavyDroneActive || MC.player == null || MC.screen != null) return;
+        while (MC.options.keyDrop.consumeClick()) { }
+        while (MC.options.keyInventory.consumeClick()) { }
+    }
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -150,8 +179,10 @@ public class ClientEventHandler {
         // Riding a drone, or flying one remotely from a control station (the server
         // set our camera entity to the drone) — same input pipeline for both.
         DroneEntity drone = null;
+        boolean lineOfSight = false;
         if (MC.player.getVehicle() instanceof DroneEntity d) drone = d;
         else if (MC.getCameraEntity() instanceof DroneEntity d) drone = d;
+        else if (LineOfSightSession.drone() != null) { drone = LineOfSightSession.drone(); lineOfSight = true; }
 
         if (drone != null) {
             // Remote piloting (camera-only, not riding): LocalPlayer.tick() never sends
@@ -160,13 +191,25 @@ public class ClientEventHandler {
             // area off minecraft.player's position (not the camera entity's) — without
             // this the view area stays frozen at the station and new terrain never appears
             // as the drone flies away, even though chunk data is loaded server-side.
-            if (MC.player.getVehicle() == null) {
-                MC.player.setPos(drone.getX(), drone.getY(), drone.getZ());
+            if (!lineOfSight) {
+                if (MC.player.getVehicle() == null) {
+                    MC.player.setPos(drone.getX(), drone.getY(), drone.getZ());
+                }
+
+                if (MC.options.getCameraType() != CameraType.FIRST_PERSON) {
+                    MC.options.setCameraType(CameraType.FIRST_PERSON);
+                }
             }
 
-            if (MC.options.getCameraType() != CameraType.FIRST_PERSON) {
-                MC.options.setCameraType(CameraType.FIRST_PERSON);
+            boolean sneakDown = MC.options.keyShift.isDown();
+            if (sneakDown && !prevSneakKey && (lineOfSight || MC.player.getVehicle() == drone)) {
+                prevSneakKey = true;
+                PacketDistributor.sendToServer(new org.restor.fpv.network.DroneDismountPacket(drone.getId()));
+                if (lineOfSight) LineOfSightSession.clear();
+                else MC.player.stopRiding();
+                return;
             }
+            prevSneakKey = sneakDown;
 
             if (ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
                 MC.setScreen(new FPVSettingsScreen(null));
@@ -177,40 +220,69 @@ public class ClientEventHandler {
                 FPVOverlay.toggleHud();
             }
 
+            boolean heavy = drone.isHeavyLift();
             if (ModKeyBindings.CAMERA_UP.consumeClick()) {
-                ModNetworking.CHANNEL.sendToServer(new CameraAnglePacket(drone.getId(), 5f));
+                if (heavy) nudgeGimbalPitch(drone, 5f);
+                else PacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), 5f));
             }
             if (ModKeyBindings.CAMERA_DOWN.consumeClick()) {
-                ModNetworking.CHANNEL.sendToServer(new CameraAnglePacket(drone.getId(), -5f));
+                if (heavy) nudgeGimbalPitch(drone, -5f);
+                else PacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), -5f));
             }
             if (ModKeyBindings.FIRE_PAYLOAD.consumeClick()) {
-                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.FirePayloadPacket(drone.getId()));
+                PacketDistributor.sendToServer(new org.restor.fpv.network.FirePayloadPacket(drone.getId()));
             }
 
+            // The keyboard arm switch must remain available when an RC transmitter is
+            // connected; otherwise only controller button 0 can ever arm the drone.
+            if (ModKeyBindings.ARM_SWITCH.consumeClick()) {
+                keyboardArmSwitch = !keyboardArmSwitch;
+            }
+
+            // Heavy lifters are flown like a camera drone: WASD is movement, throttle sits on
+            // jump/sprint, yaw on its own keys, and the mouse aims the belly gimbal instead.
+            heavyDroneActive = heavy;
+            if (ModKeyBindings.MOUSE_MODE.consumeClick()) {
+                droneMouseLookMode = !droneMouseLookMode;
+                heavyMouseYaw = 0f;
+            }
+            if (heavy && !lineOfSight) updateDroneGimbal(drone);
+            else clearDroneGimbal(drone);
+
             if (hasKeyboardKeyInput()) {
-                keyboardControlTicks = 20;
                 ticksSinceKeyboard = 0;
             } else if (ticksSinceKeyboard < 1000) {
                 ticksSinceKeyboard++;
             }
 
-            if (keyboardControlTicks > 0) {
-                sendKeyboardMouseInput(drone);
-                keyboardControlTicks--;
-            } else if (!sendControllerInput(drone)) {
-                sendKeyboardMouseInput(drone);
-            } else {
+            // The controller path merges the keys it needs per axis, so a keypress never
+            // takes the whole frame away from the radio (which used to drop throttle to 0).
+            if (sendControllerInput(drone, heavy)) {
                 keyboardInitialized = false;
+                if (lineOfSight) faceDrone(drone);
+            } else {
+                keyboardThrottleBias = 0f;
+                if (heavy) {
+                    if (lineOfSight) faceDrone(drone);
+                    sendHeavyKeyboardInput(drone);
+                } else {
+                    sendKeyboardMouseInput(drone, lineOfSight);
+                }
             }
 
             boolean cycleDown = ModKeyBindings.CYCLE_MODE.isDown();
             if (cycleDown && !prevCycleKey) {
-                ModNetworking.CHANNEL.sendToServer(new CycleModePacket(drone.getId()));
+                PacketDistributor.sendToServer(new CycleModePacket(drone.getId()));
             }
             prevCycleKey = cycleDown;
             return;
         }
         keyboardInitialized = false;
+        keyboardArmSwitch = false;
+        prevSneakKey = false;
+        keyboardThrottleBias = 0f;
+        heavyDroneActive = false;
+        heavyInitialized = false;
 
         // Planes are riding-only (no remote control station).
         PlaneEntity plane = MC.player.getVehicle() instanceof PlaneEntity p ? p : null;
@@ -235,7 +307,11 @@ public class ClientEventHandler {
         }
 
         boolean rcConnected = RCController.isConnected();
-        if (!rcConnected && ModKeyBindings.PLANE_MOUSE_MODE.consumeClick()) {
+        if (rcConnected != planeRcWasConnected) {
+            planeRcWasConnected = rcConnected;
+            planeMouseLookMode = rcConnected;
+        }
+        if (ModKeyBindings.MOUSE_MODE.consumeClick()) {
             planeMouseLookMode = !planeMouseLookMode;
         }
         if (ModKeyBindings.PLANE_RESET_CAM.consumeClick()) {
@@ -247,10 +323,12 @@ public class ClientEventHandler {
         if (atk && !prevAttackKey) {
             if (planeLockTarget != null) {
                 clearPlaneTracking(plane, false);
+                actionBar("msg.fpv.lock_off");
             } else {
                 planeLockTarget = raycastFromCrosshair(plane, planeGimbalYaw, planeGimbalPitch);
                 planeRawLockTarget = planeLockTarget;
                 plane.setStabilizedGimbalView(planeLockTarget != null);
+                actionBar(planeLockTarget != null ? "msg.fpv.lock_on" : "msg.fpv.lock_no_target");
             }
         }
         prevAttackKey = atk;
@@ -263,22 +341,24 @@ public class ClientEventHandler {
         }
 
         if (ModKeyBindings.PLANE_CALL_STRIKE.consumeClick()
-            && plane instanceof org.restor.fpv.entity.ScoutPlaneEntity) {
+            && (plane instanceof org.restor.fpv.entity.ScoutPlaneEntity
+                || plane instanceof org.restor.fpv.entity.CarrierPlaneEntity
+                || plane instanceof org.restor.fpv.assembly.ModularPlaneEntity mp && mp.hasStrikeBay())) {
             net.minecraft.world.phys.Vec3 target = planeLockTarget != null ? planeLockTarget
                 : raycastFromCrosshair(plane, planeGimbalYaw, planeGimbalPitch);
             if (target != null) {
                 planeLockTarget = target;
                 planeRawLockTarget = target;
-                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneStrikePacket(
+                PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneStrikePacket(
                     plane.getId(), target.x, target.y, target.z));
             } else {
                 MC.player.displayClientMessage(
                     net.minecraft.network.chat.Component.translatable("msg.fpv.strike_no_target"), true);
             }
         }
-        // RC connected: mouse always drives the gimbal. RC disconnected: mouse flies
-        // by default, and "C" swaps it over to the gimbal (flight moves to keyboard).
-        boolean gimbalMode = rcConnected || planeMouseLookMode;
+        // Default: mouse drives the gimbal with a radio connected, flies the wing without
+        // one. "C" swaps it either way — it is no longer swallowed while a radio is plugged in.
+        boolean gimbalMode = planeMouseLookMode;
 
         if (!planeInitialized) {
             lastPlaneYaw = MC.player.getYRot();
@@ -341,12 +421,19 @@ public class ClientEventHandler {
         if (ModKeyBindings.PLANE_ORBIT.consumeClick()) {
             net.minecraft.world.phys.Vec3 orbitCandidate = planeRawLockTarget != null ? planeRawLockTarget : planeLockTarget;
             if (orbitCandidate == null) {
-                stopPlaneOrbit(plane, true);
+                if (planeOrbitActive) {
+                    stopPlaneOrbit(plane, true);
+                    actionBar("msg.fpv.orbit_off");
+                } else {
+                    actionBar("msg.fpv.orbit_no_target");
+                }
             } else if (planeOrbitActive && samePoint(orbitCandidate, planeOrbitTarget)) {
                 stopPlaneOrbit(plane, true);
+                actionBar("msg.fpv.orbit_off");
             } else {
                 planeLockTarget = orbitCandidate;
                 startPlaneOrbit(plane, orbitCandidate);
+                actionBar("msg.fpv.orbit_on");
             }
         }
 
@@ -356,14 +443,106 @@ public class ClientEventHandler {
             // Autopilot flies the plane server-side; don't send stick inputs (the client
             // just follows the synced attitude/position while the camera stays locked).
             planeKeyboardInitialized = false;
-        } else if (!rcConnected || !sendPlaneControllerInput(plane)) {
+        } else if (!rcConnected || !sendPlaneControllerInput(plane, gimbalMode, yawDeltaP, pitchDeltaP)) {
+            planeThrottleBias = 0f;
             sendPlaneKeyboardInput(plane, gimbalMode, yawDeltaP, pitchDeltaP);
         } else {
             planeKeyboardInitialized = false;
         }
     }
 
-    private static boolean sendControllerInput(DroneEntity drone) {
+    // The mouse owns the belly camera on a heavy rig: it pans and tilts the gimbal inside
+    // its mechanical limits and never reaches the airframe's attitude.
+    private static void updateDroneGimbal(DroneEntity drone) {
+        if (!heavyInitialized) {
+            lastHeavyYaw = MC.player.getYRot();
+            droneGimbalYaw = 0f;
+            droneGimbalPitch = 0f;
+            heavyMouseYaw = 0f;
+            heavyInitialized = true;
+        }
+        float zoomSensitivity = (float) Math.pow(Math.max(1f, fpvZoom), 1.7);
+        float yawDelta = normalizeDegrees(MC.player.getYRot() - lastHeavyYaw) / zoomSensitivity;
+        float pitchDelta = MC.player.getXRot() / zoomSensitivity;
+        if (ModKeyBindings.PLANE_RESET_CAM.consumeClick()) {
+            droneGimbalYaw = 0f;
+            droneGimbalPitch = 0f;
+            heavyMouseYaw = 0f;
+        } else if (droneMouseLookMode) {
+            // Full circle pan (yaw wraps) and free look-down: the whole lower hemisphere.
+            droneGimbalYaw = normalizeDegrees(droneGimbalYaw + yawDelta);
+            droneGimbalPitch = clamp(droneGimbalPitch - pitchDelta,
+                DroneEntity.GIMBAL_PITCH_MIN, DroneEntity.GIMBAL_PITCH_MAX);
+        } else {
+            // Mouse flies the airframe: X steers the heading, the gimbal holds where it was.
+            float ret = Config.MOUSE_RETURN.get().floatValue();
+            heavyMouseYaw = clamp(heavyMouseYaw * (1f - ret)
+                + yawDelta * Config.MOUSE_ROLL_SENSITIVITY.get().floatValue() * MOUSE_RATE_SCALE, -1f, 1f);
+        }
+        lastHeavyYaw = MC.player.getYRot();
+        MC.player.setXRot(0f);
+        drone.setGimbal(droneGimbalYaw, droneGimbalPitch);
+    }
+
+    private static void nudgeGimbalPitch(DroneEntity drone, float delta) {
+        droneGimbalPitch = clamp(droneGimbalPitch + delta,
+            DroneEntity.GIMBAL_PITCH_MIN, DroneEntity.GIMBAL_PITCH_MAX);
+        drone.setGimbal(droneGimbalYaw, droneGimbalPitch);
+    }
+
+    private static void clearDroneGimbal(DroneEntity drone) {
+        heavyInitialized = false;
+        droneGimbalYaw = 0f;
+        droneGimbalPitch = 0f;
+        heavyMouseYaw = 0f;
+        drone.setGimbal(0f, 0f);
+    }
+
+    /**
+     * Heavy-lift keyboard: WASD is movement (a bank angle, which is how these rigs fly),
+     * climb/descend rides jump/sprint and yaw its own key pair - the mouse is busy aiming
+     * the camera. The vertical stick is centred when neither key is held, so letting go
+     * parks the rig at its current altitude instead of dropping it.
+     */
+    private static void sendHeavyKeyboardInput(DroneEntity drone) {
+        if (!keyboardInitialized) {
+            keyboardThrottle = HOVER_STICK;
+            filteredPitch = 0f;
+            filteredRoll = 0f;
+            filteredYaw = 0f;
+            keyboardInitialized = true;
+        }
+
+        float climbTarget = HOVER_STICK;
+        if (MC.options.keyJump.isDown()) climbTarget = 1f;
+        else if (MC.options.keySprint.isDown()) climbTarget = 0f;
+        keyboardThrottle += (climbTarget - keyboardThrottle) * 0.35f;
+
+        float pitchTarget = 0f;
+        if (MC.options.keyUp.isDown())   pitchTarget += 1f;
+        if (MC.options.keyDown.isDown()) pitchTarget -= 1f;
+        float rollTarget = 0f;
+        if (MC.options.keyLeft.isDown())  rollTarget -= 1f;
+        if (MC.options.keyRight.isDown()) rollTarget += 1f;
+        float yawTarget = heavyMouseYaw;
+        if (ModKeyBindings.DRONE_YAW_LEFT.isDown())  yawTarget += 1f;
+        if (ModKeyBindings.DRONE_YAW_RIGHT.isDown()) yawTarget -= 1f;
+        yawTarget = clamp(yawTarget, -1f, 1f);
+
+        filteredPitch += (pitchTarget - filteredPitch) * 0.2f;
+        filteredRoll  += (rollTarget  - filteredRoll)  * 0.2f;
+        filteredYaw   += (yawTarget   - filteredYaw)   * 0.25f;
+
+        float yaw = clamp(filteredYaw * Config.KEYBOARD_YAW_SENSITIVITY.get().floatValue(), -1f, 1f);
+        boolean arm = keyboardArmSwitch;
+
+        drone.setClientPredictedInputs(keyboardThrottle, filteredPitch, filteredRoll, yaw, arm);
+        PacketDistributor.sendToServer(new ControllerPacket(
+            drone.getId(), keyboardThrottle, filteredPitch, filteredRoll, yaw, arm, false, ++controlSeq
+        ));
+    }
+
+    private static boolean sendControllerInput(DroneEntity drone, boolean heavy) {
         if (!RCController.isConnected()) return false;
 
         float[] axes = RCController.readAxes();
@@ -391,26 +570,60 @@ public class ClientEventHandler {
         rcIdleTicks = sticksIdle ? rcIdleTicks + 1 : 0;
         if (rcIdleTicks > 40 && ticksSinceKeyboard < 200) return false;
 
-        boolean arm = false;
+        // Keyboard stays live while a transmitter is plugged in: W/S trims throttle
+        // around the stick and A/D adds yaw. Only the axes actually pressed are touched.
+        // On a heavy rig W/S/A/D are movement, so the trim moves to jump/sprint.
+        boolean trimUp = heavy ? MC.options.keyJump.isDown() : MC.options.keyUp.isDown();
+        boolean trimDown = heavy ? MC.options.keySprint.isDown() : MC.options.keyDown.isDown();
+        if (trimUp) {
+            keyboardThrottleBias = Math.min(1f, keyboardThrottleBias + 0.05f);
+        } else if (trimDown) {
+            keyboardThrottleBias = Math.max(-1f, keyboardThrottleBias - 0.05f);
+        } else if (throttle > 0.02f) {
+            // The stick is flying: bleed the keyboard trim away so it can't leave a
+            // permanent offset. With the stick at rest the trim is the throttle, so it stays.
+            keyboardThrottleBias -= Math.signum(keyboardThrottleBias) * Math.min(0.01f, Math.abs(keyboardThrottleBias));
+        }
+        throttle = clamp(throttle + keyboardThrottleBias, 0f, 1f);
+
+        float kbYaw = 0f;
+        if (heavy) {
+            if (ModKeyBindings.DRONE_YAW_LEFT.isDown())  kbYaw += 1f;
+            if (ModKeyBindings.DRONE_YAW_RIGHT.isDown()) kbYaw -= 1f;
+
+            float kbPitch = 0f;
+            if (MC.options.keyUp.isDown())   kbPitch += 1f;
+            if (MC.options.keyDown.isDown()) kbPitch -= 1f;
+            float kbRoll = 0f;
+            if (MC.options.keyLeft.isDown())  kbRoll -= 1f;
+            if (MC.options.keyRight.isDown()) kbRoll += 1f;
+            filteredPitch += (kbPitch - filteredPitch) * 0.2f;
+            filteredRoll  += (kbRoll  - filteredRoll)  * 0.2f;
+            pitch = clamp(pitch + filteredPitch, -1f, 1f);
+            roll  = clamp(roll  + filteredRoll,  -1f, 1f);
+        } else {
+            if (MC.options.keyLeft.isDown()) kbYaw -= 1f;
+            if (MC.options.keyRight.isDown()) kbYaw += 1f;
+        }
+        if (kbYaw != 0f) {
+            yaw = clamp(yaw + kbYaw * Config.KEYBOARD_YAW_SENSITIVITY.get().floatValue(), -1f, 1f);
+        }
+
+        boolean arm = keyboardArmSwitch;
         boolean mode = false;
         if (buttons != null) {
-            arm = buttons[0] || throttle > 0.10f;
+            arm |= buttons.length > 0 && buttons[0];
             // buttons[1] is ignored for mode-switching: on many RCs it is a latching switch
             // that stays pressed, which would immediately switch ACRO→ANGLE on mount.
             // Use the keyboard cycle key (default: M) to change flight mode instead.
-        } else {
-            arm = throttle > 0.10f;
         }
+        // RC transmitters carry the arm switch on an AUX axis, not a joystick button.
+        arm |= RCController.isArmSwitchOn();
 
-        // Periodic log: once per second — always shows raw axes and mapped values.
-        // Also logs on significant change so fast movements are captured.
-        boolean logChanged = Math.abs(throttle - lastLogThrottle) > 0.05f
-            || Math.abs(pitch - lastLogPitch) > 0.05f
-            || Math.abs(roll - lastLogRoll) > 0.05f
-            || Math.abs(yaw - lastLogYaw) > 0.05f
-            || arm != lastLogArm;
+        // Once per second, and only when the dev trace is on: formatting + appending a
+        // line per tick was a measurable cost of its own while flying.
         rcLogTick++;
-        if (logChanged || rcLogTick >= 20) {
+        if (Config.DEV_VERBOSE_LOG.get() && rcLogTick >= 20) {
             rcLogTick = 0;
             float[] rawAxes = RCController.readRawAxes();
             String rawStr = rawAxes != null ? java.util.Arrays.toString(rawAxes) : "null";
@@ -432,14 +645,28 @@ public class ClientEventHandler {
 
         // Always send controller input to maintain controller mode
         // (prevents fallback to keyboard input which causes yaw feedback loops)
-        drone.setClientPredictedInputs(throttle, pitch, roll, yaw);
-        ModNetworking.CHANNEL.sendToServer(new ControllerPacket(
-            drone.getId(), throttle, pitch, roll, yaw, arm, mode
+        drone.setClientPredictedInputs(throttle, pitch, roll, yaw, arm);
+        PacketDistributor.sendToServer(new ControllerPacket(
+            drone.getId(), throttle, pitch, roll, yaw, arm, mode, ++controlSeq
         ));
         return true;
     }
 
-    private static void sendKeyboardMouseInput(DroneEntity drone) {
+    // Line of sight: the pilot's head tracks the drone so it stays on screen, and the
+    // stick deltas are re-based on the snapped angles so only mouse movement reaches them.
+    private static void faceDrone(DroneEntity drone) {
+        net.minecraft.world.phys.Vec3 to = drone.getEyePosition().subtract(MC.player.getEyePosition());
+        double flat = Math.sqrt(to.x * to.x + to.z * to.z);
+        if (flat > 0.05 || Math.abs(to.y) > 0.05) {
+            MC.player.setYRot((float) (Math.toDegrees(Math.atan2(-to.x, to.z))));
+            MC.player.setXRot((float) (-Math.toDegrees(Math.atan2(to.y, flat))));
+            MC.player.setYHeadRot(MC.player.getYRot());
+        }
+        lastPlayerYaw = MC.player.getYRot();
+        lastPlayerPitch = MC.player.getXRot();
+    }
+
+    private static void sendKeyboardMouseInput(DroneEntity drone, boolean lineOfSight) {
         if (!keyboardInitialized) {
             keyboardThrottle = 0f;
             lastPlayerYaw = MC.player.getYRot();
@@ -454,21 +681,30 @@ public class ClientEventHandler {
 
         float yawDelta = normalizeDegrees(MC.player.getYRot() - lastPlayerYaw);
         float pitchDelta = MC.player.getXRot() - lastPlayerPitch;
-        lastPlayerYaw = MC.player.getYRot();
-        lastPlayerPitch = MC.player.getXRot();
-        MC.player.setXRot(0f);
-        lastPlayerPitch = 0f;
+        if (lineOfSight) {
+            faceDrone(drone);
+        } else {
+            lastPlayerYaw = MC.player.getYRot();
+            lastPlayerPitch = MC.player.getXRot();
+            MC.player.setXRot(0f);
+            lastPlayerPitch = 0f;
+        }
 
         // 0.15/tick = 3.0/sec → full throttle range in ~7 ticks (0.35s), real FPV feel.
         // Passive decay is near-zero so releasing W holds the throttle position.
-        if (MC.options.keyUp.isDown()) {
+        if (MC.options.keyUp.isDown() || MC.options.keyJump.isDown()) {
             keyboardThrottle = Math.min(1.0f, keyboardThrottle + 0.15f);
-        } else if (MC.options.keyDown.isDown()) {
+        } else if (MC.options.keyDown.isDown() || MC.options.keySprint.isDown()) {
             keyboardThrottle = Math.max(0.0f, keyboardThrottle - 0.15f);
         }
 
-        mouseDroneRoll = clamp(mouseDroneRoll + yawDelta * Config.MOUSE_ROLL_SENSITIVITY.get().floatValue(), -1f, 1f);
-        mouseDronePitch = clamp(mouseDronePitch - pitchDelta * Config.MOUSE_PITCH_SENSITIVITY.get().floatValue(), -1f, 1f);
+        // The sticks follow mouse *movement* and spring back to center when it stops, so the
+        // attitude no longer stays wherever the pointer was left.
+        float ret = Config.MOUSE_RETURN.get().floatValue();
+        mouseDroneRoll = clamp(mouseDroneRoll * (1f - ret)
+            + yawDelta * Config.MOUSE_ROLL_SENSITIVITY.get().floatValue() * MOUSE_RATE_SCALE, -1f, 1f);
+        mouseDronePitch = clamp(mouseDronePitch * (1f - ret)
+            - pitchDelta * Config.MOUSE_PITCH_SENSITIVITY.get().floatValue() * MOUSE_RATE_SCALE, -1f, 1f);
         float smoothing = Config.MOUSE_SMOOTHING.get().floatValue();
         filteredRoll = filteredRoll * smoothing + mouseDroneRoll * (1f - smoothing);
         filteredPitch = filteredPitch * smoothing + mouseDronePitch * (1f - smoothing);
@@ -481,15 +717,16 @@ public class ClientEventHandler {
         float pitch = applyDeadband(filteredPitch, deadband);
         float roll = applyDeadband(filteredRoll, deadband);
         float yaw = applyDeadband(filteredYaw, deadband);
-        boolean arm = keyboardThrottle > 0.05f;
+        boolean arm = keyboardArmSwitch;
 
-        drone.setClientPredictedInputs(keyboardThrottle, pitch, roll, yaw);
-        ModNetworking.CHANNEL.sendToServer(new ControllerPacket(
-            drone.getId(), keyboardThrottle, pitch, roll, yaw, arm, false
+        drone.setClientPredictedInputs(keyboardThrottle, pitch, roll, yaw, arm);
+        PacketDistributor.sendToServer(new ControllerPacket(
+            drone.getId(), keyboardThrottle, pitch, roll, yaw, arm, false, ++controlSeq
         ));
     }
 
-    private static boolean sendPlaneControllerInput(PlaneEntity plane) {
+    private static boolean sendPlaneControllerInput(PlaneEntity plane, boolean gimbalMode,
+                                                    float yawDeltaP, float pitchDeltaP) {
         float[] axes = RCController.readAxes();
         boolean[] buttons = RCController.readButtons();
         if (axes == null) return false;
@@ -506,10 +743,51 @@ public class ClientEventHandler {
         roll  = applyDeadband(filteredPlaneCtrlRoll,  0.03f);
         yaw   = applyDeadband(filteredPlaneCtrlYaw,   0.06f);
 
-        boolean arm = buttons != null ? (buttons[0] || throttle > 0.10f) : throttle > 0.10f;
+        // A connected but untouched radio must not own the wing: hand everything back to
+        // the keyboard/mouse path once the sticks have sat idle and a key was pressed recently.
+        boolean sticksIdle = throttle < 0.02f && Math.abs(pitch) < 0.02f
+            && Math.abs(roll) < 0.02f && Math.abs(yaw) < 0.02f;
+        planeRcIdleTicks = sticksIdle ? planeRcIdleTicks + 1 : 0;
+        if (planeRcIdleTicks > 40 && ticksSinceKeyboard < 200) return false;
+
+        // Keyboard/mouse merge on top of the sticks, per axis. Throttle trim sits on
+        // jump/sprint because W/S are the pitch keys while the mouse holds the gimbal.
+        if (MC.options.keyJump.isDown()) {
+            planeThrottleBias = Math.min(1f, planeThrottleBias + 0.05f);
+        } else if (MC.options.keySprint.isDown()) {
+            planeThrottleBias = Math.max(-1f, planeThrottleBias - 0.05f);
+        } else if (throttle > 0.02f) {
+            planeThrottleBias -= Math.signum(planeThrottleBias) * Math.min(0.01f, Math.abs(planeThrottleBias));
+        }
+        throttle = clamp(throttle + planeThrottleBias, 0f, 1f);
+
+        float kbRollTarget = 0f;
+        if (MC.options.keyLeft.isDown())  kbRollTarget -= 1f;
+        if (MC.options.keyRight.isDown()) kbRollTarget += 1f;
+        float kbPitchTarget = 0f;
+        if (MC.options.keyUp.isDown())   kbPitchTarget -= 1f;
+        if (MC.options.keyDown.isDown()) kbPitchTarget += 1f;
+
+        if (gimbalMode) {
+            filteredPlaneRoll  += (kbRollTarget  - filteredPlaneRoll)  * 0.35f;
+            filteredPlanePitch += (kbPitchTarget - filteredPlanePitch) * 0.35f;
+        } else {
+            float mouseRateScale = 3.5f;
+            mousePlaneRoll = clamp(yawDeltaP * Config.MOUSE_ROLL_SENSITIVITY.get().floatValue() * mouseRateScale, -1f, 1f);
+            mousePlanePitch = clamp(-pitchDeltaP * Config.MOUSE_PITCH_SENSITIVITY.get().floatValue() * mouseRateScale, -1f, 1f);
+            float smoothing = Config.MOUSE_SMOOTHING.get().floatValue();
+            filteredPlaneRoll = filteredPlaneRoll * smoothing + mousePlaneRoll * (1f - smoothing);
+            filteredPlanePitch = filteredPlanePitch * smoothing + mousePlanePitch * (1f - smoothing);
+            yaw = clamp(yaw - kbRollTarget * 0.6f, -1f, 1f);
+        }
+        float mergeDeadband = Config.MOUSE_DEADBAND.get().floatValue();
+        roll  = clamp(roll  + applyDeadband(filteredPlaneRoll,  mergeDeadband), -1f, 1f);
+        pitch = clamp(pitch + applyDeadband(filteredPlanePitch, mergeDeadband), -1f, 1f);
+
+        boolean arm = (buttons != null && buttons.length > 0 && buttons[0]) || throttle > 0.10f;
 
         planeRcLogTick++;
-        if (planeRcLogTick >= 20) {
+        if (Config.DEV_VERBOSE_LOG.get() && planeRcLogTick >= 20) {
             planeRcLogTick = 0;
             LOGGER.info("[PLANE-RC] id={} thr={} pitch={} roll={} yaw={} arm={} buttons={}",
                 plane.getId(),
@@ -522,7 +800,7 @@ public class ClientEventHandler {
         }
 
         plane.setClientPredictedInputs(throttle, pitch, roll, yaw);
-        ModNetworking.CHANNEL.sendToServer(new PlaneControllerPacket(
+        PacketDistributor.sendToServer(new PlaneControllerPacket(
             plane.getId(), throttle, pitch, roll, yaw, arm
         ));
         return true;
@@ -548,6 +826,16 @@ public class ClientEventHandler {
         }
     }
 
+    public static boolean hasPlaneLock() {
+        return planeLockTarget != null || planeRawLockTarget != null;
+    }
+
+    private static void actionBar(String key) {
+        if (MC.player != null) {
+            MC.player.displayClientMessage(net.minecraft.network.chat.Component.translatable(key), true);
+        }
+    }
+
     private static void startPlaneOrbit(PlaneEntity plane, net.minecraft.world.phys.Vec3 center) {
         double dx = plane.getX() - center.x, dz = plane.getZ() - center.z;
         double radius = Math.max(12.0, Math.sqrt(dx * dx + dz * dz));
@@ -555,7 +843,7 @@ public class ClientEventHandler {
         planeOrbitTarget = center;
         planeOrbitSyncGrace = 10;
         plane.setOrbit(true, center, radius);
-        ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
+        PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
             plane.getId(), true, center.x, center.y, center.z, radius));
     }
 
@@ -566,7 +854,7 @@ public class ClientEventHandler {
         if (plane != null) {
             plane.setOrbit(false, net.minecraft.world.phys.Vec3.ZERO, 0);
             if (notifyServer) {
-                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
+                PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
                     plane.getId(), false, 0, 0, 0, 0));
             }
         }
@@ -592,7 +880,7 @@ public class ClientEventHandler {
             : planeOrbitTarget;
         if (target == null) {
             if (planeTargetStreamActive) {
-                ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
+                PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
                     plane.getId(), false, 0, 0, 0));
                 planeTargetStreamActive = false;
             }
@@ -600,7 +888,7 @@ public class ClientEventHandler {
             return;
         }
         if (!planeTargetStreamActive || planeTargetStreamTicks-- <= 0) {
-            ModNetworking.CHANNEL.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
+            PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
                 plane.getId(), true, target.x, target.y, target.z));
             planeTargetStreamActive = true;
             planeTargetStreamTicks = 10;
@@ -637,12 +925,14 @@ public class ClientEventHandler {
             planeKeyboardInitialized = true;
         }
 
-        if (!gimbalMode) {
-            if (MC.options.keyUp.isDown()) {
-                planeThrottle = Math.min(1.0f, planeThrottle + 0.15f);
-            } else if (MC.options.keyDown.isDown()) {
-                planeThrottle = Math.max(0.0f, planeThrottle - 0.15f);
-            }
+        // W/S become the pitch keys in gimbal mode, so throttle also lives on jump/sprint —
+        // otherwise it would be frozen wherever it happened to be when the mode flipped.
+        boolean throttleUp = MC.options.keyJump.isDown() || (!gimbalMode && MC.options.keyUp.isDown());
+        boolean throttleDown = MC.options.keySprint.isDown() || (!gimbalMode && MC.options.keyDown.isDown());
+        if (throttleUp) {
+            planeThrottle = Math.min(1.0f, planeThrottle + 0.15f);
+        } else if (throttleDown) {
+            planeThrottle = Math.max(0.0f, planeThrottle - 0.15f);
         }
 
         float roll, pitch, yaw;
@@ -681,15 +971,20 @@ public class ClientEventHandler {
 
         boolean arm = planeThrottle > 0.05f;
         plane.setClientPredictedInputs(planeThrottle, pitch, roll, yaw);
-        ModNetworking.CHANNEL.sendToServer(new PlaneControllerPacket(
+        PacketDistributor.sendToServer(new PlaneControllerPacket(
             plane.getId(), planeThrottle, pitch, roll, yaw, arm
         ));
     }
 
     private static boolean hasKeyboardKeyInput() {
         return MC.options.keyUp.isDown() || MC.options.keyDown.isDown()
-            || MC.options.keyLeft.isDown() || MC.options.keyRight.isDown();
+            || MC.options.keyLeft.isDown() || MC.options.keyRight.isDown()
+            || MC.options.keyJump.isDown() || MC.options.keySprint.isDown()
+            || ModKeyBindings.DRONE_YAW_LEFT.isDown() || ModKeyBindings.DRONE_YAW_RIGHT.isDown();
     }
+
+    private static final float MOUSE_RATE_SCALE = 2.2f;
+    private static final float HOVER_STICK = 0.5f;
 
     private static float clamp(float value, float min, float max) {
         return Math.max(min, Math.min(max, value));
@@ -787,11 +1082,10 @@ public class ClientEventHandler {
     public static void onRenderPlayer(net.minecraftforge.client.event.RenderPlayerEvent.Pre event) {
         // Pilots ride inside the FPV entity/camera-follow body; don't render their player
         // model clipped into the drone/plane for any client in multiplayer.
-        if (event.getEntity().getVehicle() instanceof DroneEntity
-            || event.getEntity().getVehicle() instanceof PlaneEntity
+        if (event.getEntity().getVehicle() instanceof org.restor.fpv.entity.Pilotable
             || (MC.player != null && event.getEntity() == MC.player
-                && !(MC.player.getVehicle() instanceof DroneEntity)
-                && MC.getCameraEntity() instanceof DroneEntity)) {
+                && MC.getCameraEntity() != MC.player
+                && MC.getCameraEntity() instanceof org.restor.fpv.entity.Pilotable)) {
             event.setCanceled(true);
         }
     }

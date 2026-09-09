@@ -1,55 +1,57 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
+import org.restor.fpv.compat.StreamCodec;
+import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.network.NetworkEvent;
+import org.restor.fpv.compat.IPayloadContext;
+import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.PlaneEntity;
 
-import java.util.function.Supplier;
-
 // Client -> server: engage/disengage the plane's orbit autopilot around a world point.
-public class PlaneOrbitPacket {
-    private final int planeId;
-    private final boolean active;
-    private final double cx, cy, cz;
-    private final double radius;
+public record PlaneOrbitPacket(int planeId, boolean active, double cx, double cy, double cz,
+                                double radius) implements CustomPacketPayload {
+    public static final Type<PlaneOrbitPacket> TYPE =
+        new Type<>(new ResourceLocation(Fpv.MODID, "plane_orbit"));
 
-    public PlaneOrbitPacket(int planeId, boolean active, double cx, double cy, double cz, double radius) {
-        this.planeId = planeId;
-        this.active = active;
-        this.cx = cx; this.cy = cy; this.cz = cz;
-        this.radius = radius;
-    }
+    public static final StreamCodec<FriendlyByteBuf, PlaneOrbitPacket> STREAM_CODEC = StreamCodec.of(
+        (buf, pkt) -> {
+            buf.writeInt(pkt.planeId);
+            buf.writeBoolean(pkt.active);
+            buf.writeDouble(pkt.cx);
+            buf.writeDouble(pkt.cy);
+            buf.writeDouble(pkt.cz);
+            buf.writeDouble(pkt.radius);
+        },
+        buf -> new PlaneOrbitPacket(buf.readInt(), buf.readBoolean(), buf.readDouble(), buf.readDouble(),
+            buf.readDouble(), buf.readDouble())
+    );
 
-    public PlaneOrbitPacket(FriendlyByteBuf buf) {
-        this.planeId = buf.readInt();
-        this.active = buf.readBoolean();
-        this.cx = buf.readDouble();
-        this.cy = buf.readDouble();
-        this.cz = buf.readDouble();
-        this.radius = buf.readDouble();
-    }
+    @Override
+    public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeInt(planeId);
-        buf.writeBoolean(active);
-        buf.writeDouble(cx);
-        buf.writeDouble(cy);
-        buf.writeDouble(cz);
-        buf.writeDouble(radius);
-    }
-
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> {
-            ServerPlayer player = ctx.get().getSender();
-            if (player == null) return;
-            Entity e = player.level().getEntity(planeId);
+    public static void handle(PlaneOrbitPacket pkt, IPayloadContext context) {
+        context.enqueueWork(() -> {
+            if (!(context.player() instanceof ServerPlayer player)) return;
+            Entity e = player.level().getEntity(pkt.planeId());
             if (e instanceof PlaneEntity plane && plane.hasPassenger(player)) {
-                plane.setOrbit(active, new Vec3(cx, cy, cz), radius);
+                if (!pkt.active()) {
+                    plane.setOrbit(false, Vec3.ZERO, 0.0);
+                    return;
+                }
+                if (!finite(pkt.cx(), pkt.cy(), pkt.cz()) || !Double.isFinite(pkt.radius())
+                    || pkt.radius() < 0.0 || pkt.radius() > 1024.0) return;
+                Vec3 center = new Vec3(pkt.cx(), pkt.cy(), pkt.cz());
+                if (center.distanceToSqr(plane.position()) > 1024.0 * 1024.0) return;
+                plane.setOrbit(true, center, pkt.radius());
             }
         });
-        ctx.get().setPacketHandled(true);
+    }
+
+    private static boolean finite(double x, double y, double z) {
+        return Double.isFinite(x) && Double.isFinite(y) && Double.isFinite(z);
     }
 }

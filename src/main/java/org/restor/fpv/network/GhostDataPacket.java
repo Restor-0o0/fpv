@@ -1,50 +1,42 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import org.restor.fpv.compat.StreamCodec;
+import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import org.restor.fpv.compat.IPayloadContext;
+import org.restor.fpv.Fpv;
 import org.restor.fpv.race.GhostRecording;
-
-import java.util.function.Supplier;
 
 // Server -> client: the ghost recordings to play back for the run that is starting. Sent once
 // at run start alongside the RaceTimerPacket so both share the same startTime clock. An empty
 // packet (no personal, no overall) clears any previously loaded ghosts.
-public class GhostDataPacket {
-    private final long startTime;
-    private final boolean personalIsOverall; // player holds the track record → one ghost, "both" colour
-    private final GhostRecording personal;   // nullable
-    private final GhostRecording overall;    // nullable
+public record GhostDataPacket(long startTime, boolean personalIsOverall, GhostRecording personal,
+                               GhostRecording overall) implements CustomPacketPayload {
+    public static final Type<GhostDataPacket> TYPE =
+        new Type<>(new ResourceLocation(Fpv.MODID, "ghost_data"));
 
-    public GhostDataPacket(long startTime, boolean personalIsOverall,
-                           GhostRecording personal, GhostRecording overall) {
-        this.startTime = startTime;
-        this.personalIsOverall = personalIsOverall;
-        this.personal = personal;
-        this.overall = overall;
-    }
+    public static final StreamCodec<FriendlyByteBuf, GhostDataPacket> STREAM_CODEC = StreamCodec.of(
+        (buf, pkt) -> {
+            buf.writeLong(pkt.startTime);
+            buf.writeBoolean(pkt.personalIsOverall);
+            buf.writeBoolean(pkt.personal != null);
+            if (pkt.personal != null) pkt.personal.write(buf);
+            buf.writeBoolean(pkt.overall != null);
+            if (pkt.overall != null) pkt.overall.write(buf);
+        },
+        buf -> new GhostDataPacket(
+            buf.readLong(),
+            buf.readBoolean(),
+            buf.readBoolean() ? GhostRecording.read(buf) : null,
+            buf.readBoolean() ? GhostRecording.read(buf) : null)
+    );
 
-    public GhostDataPacket(FriendlyByteBuf buf) {
-        this.startTime = buf.readLong();
-        this.personalIsOverall = buf.readBoolean();
-        this.personal = buf.readBoolean() ? GhostRecording.read(buf) : null;
-        this.overall  = buf.readBoolean() ? GhostRecording.read(buf) : null;
-    }
+    @Override
+    public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
-    public void encode(FriendlyByteBuf buf) {
-        buf.writeLong(startTime);
-        buf.writeBoolean(personalIsOverall);
-        buf.writeBoolean(personal != null);
-        if (personal != null) personal.write(buf);
-        buf.writeBoolean(overall != null);
-        if (overall != null) overall.write(buf);
-    }
-
-    public void handle(Supplier<NetworkEvent.Context> ctx) {
-        ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-            () -> () -> org.restor.fpv.client.GhostRenderer.setGhosts(
-                startTime, personalIsOverall, personal, overall)));
-        ctx.get().setPacketHandled(true);
+    public static void handle(GhostDataPacket pkt, IPayloadContext context) {
+        context.enqueueWork(() -> org.restor.fpv.client.GhostRenderer.setGhosts(
+            pkt.startTime(), pkt.personalIsOverall(), pkt.personal(), pkt.overall()));
     }
 }

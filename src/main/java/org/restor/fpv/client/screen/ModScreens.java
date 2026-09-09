@@ -11,10 +11,12 @@ import org.restor.fpv.menu.ModMenus;
 @Mod.EventBusSubscriber(modid = Fpv.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ModScreens {
     @SubscribeEvent
-    public static void onClientSetup(FMLClientSetupEvent event) {
+    public static void onRegisterScreens(FMLClientSetupEvent event) {
         event.enqueueWork(() -> {
-            MenuScreens.register(ModMenus.WORKBENCH.get(), WorkbenchScreen::new);
             MenuScreens.register(ModMenus.ASSEMBLY_STATION.get(), AssemblyStationScreen::new);
+            MenuScreens.register(ModMenus.CHARGING_STATION.get(), ChargingStationScreen::new);
+            MenuScreens.register(ModMenus.CARRIER.get(), CarrierScreen::new);
+            MenuScreens.register(ModMenus.CARGO_BAY.get(), CargoBayScreen::new);
         });
     }
 }

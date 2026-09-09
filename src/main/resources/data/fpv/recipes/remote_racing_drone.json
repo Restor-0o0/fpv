@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " V ",
+    "CDC",
+    " H "
+  ],
+  "key": {
+    "V": {
+      "item": "fpv:vtx_800mw"
+    },
+    "C": {
+      "item": "fpv:camera_wide"
+    },
+    "D": {
+      "item": "fpv:racing_drone"
+    },
+    "H": {
+      "item": "fpv:fc_h7"
+    }
+  },
+  "result": {
+    "item": "fpv:remote_racing_drone"
+  }
+}

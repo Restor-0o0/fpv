@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " T ",
+    "MPM",
+    "GBG"
+  ],
+  "key": {
+    "T": {
+      "item": "fpv:warhead_thermo"
+    },
+    "M": {
+      "item": "fpv:motor_3115_900kv"
+    },
+    "P": {
+      "item": "fpv:plane_shahed"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "B": {
+      "item": "fpv:battery_6s_1100"
+    }
+  },
+  "result": {
+    "item": "fpv:plane_longrange"
+  }
+}

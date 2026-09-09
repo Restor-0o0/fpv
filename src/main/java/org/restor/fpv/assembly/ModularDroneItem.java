@@ -1,10 +1,10 @@
 package org.restor.fpv.assembly;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.level.Level;
-import org.jetbrains.annotations.Nullable;
+import org.restor.fpv.compat.CustomData;
 import org.restor.fpv.entity.ModEntities;
 import org.restor.fpv.item.DroneItem;
 
@@ -17,13 +17,16 @@ public class ModularDroneItem extends DroneItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltip, TooltipFlag flag) {
-        if (stack.hasTag() && stack.getTag().contains("Assembly")) {
-            DroneAssembly a = DroneAssembly.load(stack.getTag().getCompound("Assembly"));
+    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level context, List<Component> tooltip, TooltipFlag flag) {
+        CustomData data = CustomData.get(stack);
+        if (data != null && data.contains("Assembly")) {
+            DroneAssembly a = DroneAssembly.load(data.copyTag().getCompound("Assembly"));
             FrameSpec spec = a.frameSpec();
             if (!a.frame.isEmpty())   tooltip.add(Component.literal("§7" + a.frame.getHoverName().getString()));
             if (!a.battery.isEmpty()) tooltip.add(Component.literal("§8+ " + a.battery.getHoverName().getString()));
             if (!a.camera.isEmpty())  tooltip.add(Component.literal("§8+ " + a.camera.getHoverName().getString()));
+            tooltip.add(Component.translatable("tooltip.fpv.assembly_condition",
+                Math.round(a.minimumCondition() / 10f)));
             if (spec != null) {
                 tooltip.add(Component.literal(String.format("§8%d motors, %.0f g, %.0f N",
                     spec.motorCount(), a.totalMassKg() * 1000, a.totalThrustN())));

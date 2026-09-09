@@ -286,6 +286,36 @@ public class RCController {
         return state;
     }
 
+    // RC transmitters expose their arm switch as an AUX axis (rest ~-1, flipped ~+1),
+    // not a GLFW button — so the button-based arm path never fires for them. Read the
+    // configured arm axis; when unset (-1), auto-detect the first non-gimbal axis the
+    // user flips high and persist it so future reads use it directly.
+    public static boolean isArmSwitchOn() {
+        if (!connected) return false;
+        float[] raw = lastRawAxes;
+        if (raw == null) return false;
+        boolean invert = Config.RC_INVERT_ARM.get();
+        int cfg = Config.RC_AXIS_ARM.get();
+        if (cfg >= 0 && cfg < raw.length) {
+            float v = invert ? -raw[cfg] : raw[cfg];
+            return v > 0f;
+        }
+        if (cfg < 0) {
+            for (int i = 0; i < raw.length; i++) {
+                if (i == axisMap[AXIS_THROTTLE] || i == axisMap[AXIS_ROLL]
+                    || i == axisMap[AXIS_PITCH] || i == axisMap[AXIS_YAW]) continue;
+                float v = invert ? -raw[i] : raw[i];
+                if (v > 0.5f) {
+                    Config.RC_AXIS_ARM.set(i);
+                    Config.save();
+                    LOGGER.info("[RC-ARM] auto-detected arm switch on AUX axis {}", i);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static String getControllerName() {
         return controllerName;
     }

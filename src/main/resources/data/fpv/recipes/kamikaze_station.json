@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["NWN", "THT", "OCO"],
+  "key": {
+    "N": { "item": "minecraft:netherite_scrap" },
+    "W": { "item": "fpv:module_warhead" },
+    "T": { "item": "minecraft:tnt" },
+    "H": { "item": "fpv:fc_h7" },
+    "O": { "item": "minecraft:obsidian" },
+    "C": { "item": "fpv:control_station" }
+  },
+  "result": { "item": "fpv:kamikaze_station" }
+}

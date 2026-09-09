@@ -24,14 +24,13 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.phys.BlockHitResult;
 import org.joml.Vector3f;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 import org.jetbrains.annotations.Nullable;
 import org.restor.fpv.block.entity.RaceGateBlockEntity;
 
 // Checkpoint gate: a coloured frame the racer flies through. FACING (6-way) is the face it
 // was placed on and seeds the frame orientation; fine yaw/pitch angle is set in the screen.
 public class RaceGateBlock extends BaseEntityBlock {
+    public static final float FRAME_RADIUS = 0.32f;
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
 
     public RaceGateBlock(Properties props) {
@@ -39,12 +38,12 @@ public class RaceGateBlock extends BaseEntityBlock {
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.UP));
     }
 
+
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
                                  InteractionHand hand, BlockHitResult hit) {
         if (level.isClientSide) {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> org.restor.fpv.client.RaceMarkingClient.onGateClicked(pos));
+            org.restor.fpv.client.RaceMarkingClient.onGateClicked(pos);
         }
         return InteractionResult.SUCCESS;
     }
@@ -117,7 +116,7 @@ public class RaceGateBlock extends BaseEntityBlock {
     private static VoxelShape edgeShape(Vector3f a, Vector3f b) {
         VoxelShape shape = Shapes.empty();
         int steps = Math.max(3, (int) Math.ceil(a.distance(b) * 2.0));
-        double radius = 0.32;
+        double radius = FRAME_RADIUS;
         for (int i = 0; i <= steps; i++) {
             double t = i / (double) steps;
             double x = a.x + (b.x - a.x) * t;
@@ -130,5 +129,10 @@ public class RaceGateBlock extends BaseEntityBlock {
 
     private static VoxelShape frameBox(double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {
         return Block.box(minX * 16.0, minY * 16.0, minZ * 16.0, maxX * 16.0, maxY * 16.0, maxZ * 16.0);
+    }
+
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+        return StationShapes.PEDESTAL;
     }
 }

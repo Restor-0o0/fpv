@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "MPM",
+    "PFP",
+    "MPM"
+  ],
+  "key": {
+    "M": {
+      "item": "fpv:motor_2207_2450kv"
+    },
+    "P": {
+      "item": "fpv:prop_5x4x3"
+    },
+    "F": {
+      "item": "fpv:frame_5inch"
+    }
+  },
+  "result": {
+    "item": "fpv:racing_drone"
+  }
+}

@@ -6,22 +6,31 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import org.restor.fpv.compat.PacketDistributor;
+import org.restor.fpv.block.entity.RaceGateBlockEntity;
 import org.restor.fpv.block.entity.RaceStartBlockEntity;
-import org.restor.fpv.network.ModNetworking;
 import org.restor.fpv.network.RaceStartConfigPacket;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
-// Race course config: lap count + leaderboard of completed runs.
+// Race course config: settings column on the left, leaderboard column on the right.
 public class RaceStartScreen extends Screen {
+    private static final int COL_W = 164;
+    private static final int PANEL_W = COL_W * 2 + 36;
+    private static final int PANEL_H = 252;
+
     private final BlockPos pos;
+    private final List<StepperRow> rows = new ArrayList<>();
     private int laps = 3;
     private int color = RaceStartBlockEntity.DEFAULT_START_COLOR;
     private int size = 6;
     private int yaw = 0;
     private int pitch = 0;
     private int offset = 0;
-    private Button lapsButton;
+    private int left;
+    private int top;
 
     public RaceStartScreen(BlockPos pos) {
         super(Component.translatable("screen.fpv.race_start"));
@@ -46,100 +55,100 @@ public class RaceStartScreen extends Screen {
             offset = be.getOffset();
         }
 
-        int cx = width / 2;
-        int y = 44;
+        rows.clear();
+        left = (width - PANEL_W) / 2;
+        top = Math.max(4, (height - PANEL_H) / 2);
 
-        addRenderableWidget(Button.builder(Component.literal("-"), b -> changeLaps(-1))
-            .bounds(cx - 90, y, 24, 20).build());
-        lapsButton = addRenderableWidget(Button.builder(lapsLabel(), b -> {})
-            .bounds(cx - 62, y, 124, 20).build());
-        lapsButton.active = false;
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> changeLaps(1))
-            .bounds(cx + 66, y, 24, 20).build());
+        int lx = left + 12;
+        int rx = left + 24 + COL_W;
+        int y = top + 46;
 
+        addRow(lx, y, "screen.fpv.race_laps", () -> String.valueOf(laps),
+            () -> changeLaps(-1), () -> changeLaps(1), "-", "+");
+        y += 24;
+        addRow(lx, y, "screen.fpv.race_size", () -> String.valueOf(size),
+            () -> changeSize(size - 1), () -> changeSize(size + 1), "-", "+");
+        y += 24;
+        addRow(lx, y, "screen.fpv.race_yaw", () -> yaw + "\u00B0",
+            () -> changeYaw(-15), () -> changeYaw(15), "<", ">");
+        y += 24;
+        addRow(lx, y, "screen.fpv.race_pitch", () -> pitch + "\u00B0",
+            () -> changePitch(-15), () -> changePitch(15), "-", "+");
+        y += 24;
+        addRow(lx, y, "screen.fpv.race_offset", () -> String.valueOf(offset),
+            () -> changeOffset(offset - 1), () -> changeOffset(offset + 1), "-", "+");
+        y += 28;
+
+        addRenderableWidget(Button.builder(Component.translatable("screen.fpv.race_start_color"),
+            b -> changeColor()).bounds(lx, y, COL_W, 20).build());
+        y += 24;
+        addRenderableWidget(Button.builder(Component.translatable("screen.fpv.race_flip"),
+            b -> flipNormal()).bounds(lx, y, COL_W, 20).build());
+        y += 24;
         addRenderableWidget(Button.builder(Component.translatable("screen.fpv.race_mark"), b -> {
             org.restor.fpv.client.RaceMarkingClient.startMarking(pos);
             onClose();
-        }).bounds(cx - 90, y + 24, 180, 20).build());
+        }).bounds(lx, y, COL_W, 20).build());
 
-        addRenderableWidget(Button.builder(Component.translatable("screen.fpv.race_start_color"), b -> changeColor())
-            .bounds(cx - 90, y + 48, 180, 20).build());
-
-        addRenderableWidget(Button.builder(Component.literal("-"), b -> changeSize(size - 1))
-            .bounds(cx - 90, y + 72, 24, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> changeSize(size + 1))
-            .bounds(cx + 66, y + 72, 24, 20).build());
-
-        addRenderableWidget(Button.builder(Component.literal("<"), b -> changeYaw(-15))
-            .bounds(cx - 90, y + 96, 24, 20).build());
-        addRenderableWidget(Button.builder(Component.literal(">"), b -> changeYaw(15))
-            .bounds(cx + 66, y + 96, 24, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("-"), b -> changePitch(-15))
-            .bounds(cx - 90, y + 120, 24, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> changePitch(15))
-            .bounds(cx + 66, y + 120, 24, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("-"), b -> changeOffset(offset - 1))
-            .bounds(cx - 90, y + 144, 24, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("+"), b -> changeOffset(offset + 1))
-            .bounds(cx + 66, y + 144, 24, 20).build());
-        addRenderableWidget(Button.builder(Component.translatable("screen.fpv.race_flip"), b -> flipNormal())
-            .bounds(cx - 90, y + 168, 180, 20).build());
-
-        addRenderableWidget(Button.builder(Component.translatable("screen.fpv.race_clear"), b -> {
-            ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, laps, true));
-        }).bounds(cx - 90, height - 52, 180, 20).build());
-
+        addRenderableWidget(Button.builder(Component.translatable("screen.fpv.race_clear"),
+            b -> PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, true)))
+            .bounds(rx, top + PANEL_H - 30, COL_W, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
-            .bounds(cx - 90, height - 28, 180, 20).build());
+            .bounds(lx, top + PANEL_H - 30, COL_W, 20).build());
     }
 
-    private Component lapsLabel() {
-        return Component.translatable("screen.fpv.race_laps").append(": " + laps);
+    private void addRow(int x, int y, String key, Supplier<String> value,
+                        Runnable minus, Runnable plus, String minusLabel, String plusLabel) {
+        StepperRow row = new StepperRow(x, y, COL_W, Component.translatable(key), value);
+        rows.add(row);
+        addRenderableWidget(Button.builder(Component.literal(minusLabel), b -> minus.run())
+            .bounds(row.minusX(), y, StepperRow.BUTTON, StepperRow.BUTTON).build());
+        addRenderableWidget(Button.builder(Component.literal(plusLabel), b -> plus.run())
+            .bounds(row.plusX(), y, StepperRow.BUTTON, StepperRow.BUTTON).build());
     }
 
     private void changeLaps(int d) {
         laps = Math.max(1, Math.min(50, laps + d));
-        lapsButton.setMessage(lapsLabel());
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, laps, false));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, false));
     }
 
     private void changeColor() {
         RaceStartBlockEntity be = be();
         if (be != null) be.cycleColor();
         int idx = 0;
-        for (int i = 0; i < org.restor.fpv.block.entity.RaceGateBlockEntity.PALETTE.length; i++) {
-            if (org.restor.fpv.block.entity.RaceGateBlockEntity.PALETTE[i] == color) { idx = i; break; }
+        for (int i = 0; i < RaceGateBlockEntity.PALETTE.length; i++) {
+            if (RaceGateBlockEntity.PALETTE[i] == color) { idx = i; break; }
         }
-        color = org.restor.fpv.block.entity.RaceGateBlockEntity.PALETTE[(idx + 1) % org.restor.fpv.block.entity.RaceGateBlockEntity.PALETTE.length];
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, laps, false, true));
+        color = RaceGateBlockEntity.PALETTE[(idx + 1) % RaceGateBlockEntity.PALETTE.length];
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, false, true));
     }
 
     private void changeSize(int value) {
         size = Math.max(2, Math.min(15, value));
         RaceStartBlockEntity be = be();
         if (be != null) be.setSize(size);
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_SIZE, size));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_SIZE, size));
     }
 
     private void changeYaw(int delta) {
         yaw = Math.floorMod(yaw + delta, 360);
         RaceStartBlockEntity be = be();
         if (be != null) be.adjustYaw(delta);
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_YAW, delta));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_YAW, delta));
     }
 
     private void changePitch(int delta) {
         pitch = Math.max(-90, Math.min(90, pitch + delta));
         RaceStartBlockEntity be = be();
         if (be != null) be.adjustPitch(delta);
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_PITCH, delta));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_PITCH, delta));
     }
 
     private void changeOffset(int value) {
         offset = Math.max(0, Math.min(12, value));
         RaceStartBlockEntity be = be();
         if (be != null) be.setOffset(offset);
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_OFFSET, offset));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_OFFSET, offset));
     }
 
     private void flipNormal() {
@@ -147,48 +156,50 @@ public class RaceStartScreen extends Screen {
         pitch = -pitch;
         RaceStartBlockEntity be = be();
         if (be != null) be.flipNormal();
-        ModNetworking.CHANNEL.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.FLIP_NORMAL, 0));
+        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.FLIP_NORMAL, 0));
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
-        graphics.drawCenteredString(font, title, width / 2, 16, 0xFFFFFF);
-        graphics.fill(width / 2 - 20, 28, width / 2 + 20, 40, 0xFF000000 | color);
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        renderBackground(g);
+        int rx = left + 24 + COL_W;
+        GuiPanels.panel(g, left, top, PANEL_W, PANEL_H);
+        GuiPanels.inset(g, left + 12, top + 26, COL_W, 14, 0xFF000000 | color);
+        GuiPanels.inset(g, rx, top + 26, COL_W, PANEL_H - 62, 0xFF1B1B22);
+        for (StepperRow row : rows) row.drawPlate(g);
+
+        super.render(g, mouseX, mouseY, partialTick);
+
+        g.drawCenteredString(font, title, left + PANEL_W / 2, top + 10, GuiPanels.TEXT);
+        for (StepperRow row : rows) row.drawText(g, font);
 
         RaceStartBlockEntity be = be();
         int gates = be != null ? be.getRouteSize() : 0;
-        graphics.drawCenteredString(font, Component.translatable("screen.fpv.race_yaw").append(": " + yaw + "°"),
-            width / 2, 146, 0xFFFFFF);
-        graphics.drawCenteredString(font, Component.translatable("screen.fpv.race_pitch").append(": " + pitch + "°"),
-            width / 2, 170, 0xFFFFFF);
-        graphics.drawCenteredString(font, Component.translatable("screen.fpv.race_offset").append(": " + offset),
-            width / 2, 194, 0xFFFFFF);
-        graphics.drawCenteredString(font, Component.translatable("screen.fpv.race_size").append(": " + size),
-            width / 2, 122, 0xFFFFFF);
-        graphics.drawCenteredString(font, Component.translatable("screen.fpv.race_route_size", gates),
-            width / 2, 214, 0xAAAAAA);
-
-        graphics.drawCenteredString(font, Component.translatable("screen.fpv.race_results"),
-            width / 2, 228, 0xFFD040);
+        g.drawString(font, Component.translatable("screen.fpv.race_results"), rx + 6, top + 32, 0xFFFFD040, false);
+        g.drawString(font, Component.translatable("screen.fpv.race_route_size", gates),
+            rx + 6, top + 44, GuiPanels.LABEL, false);
+        g.fill(rx + 6, top + 56, rx + COL_W - 6, top + 57, 0xFF3C3C46);
 
         List<RaceStartBlockEntity.Result> results = be != null ? be.getResults() : List.of();
-        int y = 242;
+        int y = top + 62;
+        int bottom = top + PANEL_H - 38;
         if (results.isEmpty()) {
-            graphics.drawCenteredString(font, Component.translatable("screen.fpv.race_no_results"),
-                width / 2, y, 0x888888);
+            g.drawString(font, Component.translatable("screen.fpv.race_no_results"), rx + 6, y, 0xFF888888, false);
         } else {
             int rank = 1;
             for (RaceStartBlockEntity.Result r : results) {
-                if (y > height - 60) break;
-                String line = String.format("%2d. %-16s %s", rank++, r.player(),
-                    RaceStartBlockEntity.formatTime(r.timeTicks()));
-                int col = rank == 2 ? 0xFFE860 : 0xCCCCCC;
-                graphics.drawString(font, line, width / 2 - 90, y, col);
+                if (y + 10 > bottom) break;
+                int col = rank == 1 ? 0xFFFFE860 : 0xFFCCCCCC;
+                String name = r.player();
+                if (font.width(name) > COL_W - 78) name = font.plainSubstrByWidth(name, COL_W - 84) + "..";
+                g.drawString(font, rank + ".", rx + 6, y, col, false);
+                g.drawString(font, name, rx + 22, y, col, false);
+                String time = RaceStartBlockEntity.formatTime(r.timeTicks());
+                g.drawString(font, time, rx + COL_W - 6 - font.width(time), y, col, false);
+                rank++;
                 y += 11;
             }
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override

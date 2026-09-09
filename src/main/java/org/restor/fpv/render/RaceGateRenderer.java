@@ -6,20 +6,22 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.core.BlockPos;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.restor.fpv.block.RaceGateBlock;
 import org.restor.fpv.block.entity.RaceGateBlockEntity;
 import org.restor.fpv.block.entity.RaceStartBlockEntity;
 
-// Draws each gate as a glowing coloured square frame oriented by its yaw/pitch, plus its
-// route order number floating at the centre.
+import java.util.ArrayList;
+import java.util.List;
+
+// Draws each gate as a solid banded hoop oriented by its yaw/pitch, with its route order
+// number at the centre and a tube leading to the next marker.
 public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity> {
     private final Font font;
 
@@ -34,111 +36,64 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
 
         int c = gate.getColor();
         float a = ((c >> 24) & 0xFF) / 255f; if (a <= 0f) a = 1f;
-        float r = ((c >> 16) & 0xFF) / 255f;
-        float g = ((c >> 8) & 0xFF) / 255f;
-        float b = (c & 0xFF) / 255f;
 
         float half = gate.getSize() / 2f;
         Vec3 worldCenter = gate.center();
-        Vector3f center = new Vector3f(
-            (float) (worldCenter.x - gate.getBlockPos().getX()),
-            (float) (worldCenter.y - gate.getBlockPos().getY()),
-            (float) (worldCenter.z - gate.getBlockPos().getZ()));
-
-        // In-plane basis from the frame normal.
+        Vector3f center = local(gate.getBlockPos(), worldCenter);
         Vector3f n = gate.normal().normalize();
-        Vector3f ref = Math.abs(n.y) > 0.99f ? new Vector3f(0, 0, 1) : new Vector3f(0, 1, 0);
-        Vector3f right = new Vector3f(ref).cross(n).normalize();
-        Vector3f up = new Vector3f(n).cross(right).normalize();
 
-        Vector3f[] corners = {
-            corner(center, right, up, -half, -half),
-            corner(center, right, up,  half, -half),
-            corner(center, right, up,  half,  half),
-            corner(center, right, up, -half,  half),
-        };
-
-        VertexConsumer vc = buffer.getBuffer(RenderType.lines());
+        VertexConsumer vc = buffer.getBuffer(RaceFrames.type());
         Matrix4f mat = pose.last().pose();
-        Matrix3f nrm = pose.last().normal();
-        if (gate.getRouteIndex() <= 0 || (FPVOverlay.raceActive() && gate.getRouteIndex() > FPVOverlay.raceGatesHit())) {
-            for (int i = 0; i < 4; i++) thickLine(vc, mat, nrm, corners[i], corners[(i + 1) % 4], right, up, n, r, g, b, a);
-        }
-        renderRouteLine(gate, center, vc, mat, nrm, r, g, b, a * 0.7f);
-
         int idx = gate.getRouteIndex();
-        if (idx > 0) renderNumber(String.valueOf(idx), center, pose, buffer);
+        int hit = FPVOverlay.raceGatesHit();
+        boolean next = idx > 0 && idx == hit + 1;
+
+        if (idx <= 0 || idx > hit) {
+            float[] main = next ? RaceFrames.NEXT : RaceFrames.shade(c, 1f);
+            float[] alt = next ? RaceFrames.WHITE : RaceFrames.shade(c, 0.32f);
+            RaceFrames.hoop(vc, mat, center, n, half, RaceGateBlock.FRAME_RADIUS, main, alt, a);
+        }
+
+        boolean activeSegment = idx > 0 && idx == hit;
+        float[] lineColor = activeSegment ? RaceFrames.NEXT : RaceFrames.shade(c, 0.85f);
+        renderRouteLine(gate, center, vc, mat, lineColor, a);
+
+        if (idx > 0) renderLabel(String.valueOf(idx), center, pose, buffer, 0.05f, 0xFFFFFFFF);
+        if (next) {
+            Vector3f[] axes = RaceFrames.basis(n);
+            Vector3f label = new Vector3f(center).add(new Vector3f(axes[1]).mul(half + 0.9f));
+            renderLabel("GATE", label, pose, buffer, 0.09f, 0xFF40FF60);
+        }
     }
 
-    private static Vector3f corner(Vector3f c, Vector3f right, Vector3f up, float u, float v) {
-        return new Vector3f(
-            c.x + right.x * u + up.x * v,
-            c.y + right.y * u + up.y * v,
-            c.z + right.z * u + up.z * v);
-    }
-
-    private static void line(VertexConsumer vc, Matrix4f mat, Matrix3f nrm,
-                             Vector3f p1, Vector3f p2, float r, float g, float b, float a) {
-        float dx = p2.x - p1.x, dy = p2.y - p1.y, dz = p2.z - p1.z;
-        float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (len < 1e-4f) len = 1f;
-        float nx = dx / len, ny = dy / len, nz = dz / len;
-        vc.vertex(mat, p1.x, p1.y, p1.z).color(r, g, b, a).normal(nrm, nx, ny, nz).endVertex();
-        vc.vertex(mat, p2.x, p2.y, p2.z).color(r, g, b, a).normal(nrm, nx, ny, nz).endVertex();
-    }
-
-    private static void thickLine(VertexConsumer vc, Matrix4f mat, Matrix3f nrm, Vector3f p1, Vector3f p2,
-                                  Vector3f right, Vector3f up, Vector3f normal, float r, float g, float b, float a) {
-        float s = 0.11f;
-        line(vc, mat, nrm, p1, p2, r, g, b, a);
-        offsetLine(vc, mat, nrm, p1, p2, right, s, r, g, b, a);
-        offsetLine(vc, mat, nrm, p1, p2, right, -s, r, g, b, a);
-        offsetLine(vc, mat, nrm, p1, p2, up, s, r, g, b, a);
-        offsetLine(vc, mat, nrm, p1, p2, up, -s, r, g, b, a);
-        offsetLine(vc, mat, nrm, p1, p2, normal, s, r, g, b, a);
-        offsetLine(vc, mat, nrm, p1, p2, normal, -s, r, g, b, a);
-    }
-
-    private static void offsetLine(VertexConsumer vc, Matrix4f mat, Matrix3f nrm, Vector3f p1, Vector3f p2,
-                                   Vector3f axis, float amount, float r, float g, float b, float a) {
-        Vector3f o = new Vector3f(axis).normalize().mul(amount);
-        line(vc, mat, nrm, new Vector3f(p1).add(o), new Vector3f(p2).add(o), r, g, b, a);
+    private static Vector3f local(BlockPos origin, Vec3 world) {
+        return new Vector3f((float) (world.x - origin.getX()), (float) (world.y - origin.getY()),
+            (float) (world.z - origin.getZ()));
     }
 
     private static void renderRouteLine(RaceGateBlockEntity gate, Vector3f from, VertexConsumer vc, Matrix4f mat,
-                                        Matrix3f nrm, float r, float g, float b, float a) {
+                                        float[] color, float alpha) {
         BlockPos next = gate.getNextRoutePos();
         if (next == null) return;
         if (gate.getRouteIndex() > 0 && gate.getRouteIndex() < FPVOverlay.raceGatesHit()) return;
         Vec3 source = gate.center();
+        BlockPos origin = gate.getBlockPos();
         Vec3 prevTarget = routeCenter(gate, gate.getPrevRoutePos(), source);
         Vec3 target = routeCenter(gate, next, source);
         Vec3 nextTarget = routeCenter(gate, nextNextPos(gate, next), target);
-        Vector3f prevPoint = new Vector3f(
-            (float) (prevTarget.x - gate.getBlockPos().getX()),
-            (float) (prevTarget.y - gate.getBlockPos().getY()),
-            (float) (prevTarget.z - gate.getBlockPos().getZ()));
-        Vector3f to = new Vector3f(
-            (float) (target.x - gate.getBlockPos().getX()),
-            (float) (target.y - gate.getBlockPos().getY()),
-            (float) (target.z - gate.getBlockPos().getZ()));
-        Vector3f nextPoint = new Vector3f(
-            (float) (nextTarget.x - gate.getBlockPos().getX()),
-            (float) (nextTarget.y - gate.getBlockPos().getY()),
-            (float) (nextTarget.z - gate.getBlockPos().getZ()));
+        Vector3f prevPoint = local(origin, prevTarget);
+        Vector3f to = local(origin, target);
+        Vector3f nextPoint = local(origin, nextTarget);
 
         float handleOut = curveHandle(from, prevPoint, to);
         float handleIn = curveHandle(to, from, nextPoint);
         Vector3f p1 = new Vector3f(from).add(tangent(from, prevPoint, to, handleOut));
         Vector3f p2 = new Vector3f(to).sub(tangent(to, from, nextPoint, handleIn));
 
-        Vector3f prev = new Vector3f(from);
-        for (int i = 1; i <= 24; i++) {
-            float t = i / 24.0f;
-            Vector3f point = cubic(from, p1, p2, to, t);
-            line(vc, mat, nrm, prev, point, r, g, b, a);
-            prev = point;
-        }
+        List<Vector3f> points = new ArrayList<>();
+        points.add(new Vector3f(from));
+        for (int i = 1; i <= 24; i++) points.add(cubic(from, p1, p2, to, i / 24.0f));
+        RaceFrames.ribbon(vc, mat, points, 0.11f, color, alpha, true);
     }
 
     private static Vec3 routeCenter(RaceGateBlockEntity gate, BlockPos pos, Vec3 fallback) {
@@ -193,13 +148,14 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
             inv2 * inv * a.z + 3.0f * inv2 * t * b.z + 3.0f * inv * t2 * c.z + t2 * t * d.z);
     }
 
-    private void renderNumber(String s, Vector3f center, PoseStack pose, MultiBufferSource buffer) {
+    private void renderLabel(String s, Vector3f at, PoseStack pose, MultiBufferSource buffer,
+                             float scale, int color) {
         pose.pushPose();
-        pose.translate(center.x, center.y, center.z);
+        pose.translate(at.x, at.y, at.z);
         pose.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
-        pose.scale(-0.05f, -0.05f, 0.05f);
+        pose.scale(-scale, -scale, scale);
         Matrix4f m = pose.last().pose();
-        font.drawInBatch(s, -font.width(s) / 2f, -4f, 0xFFFFFFFF, false, m, buffer,
+        font.drawInBatch(s, -font.width(s) / 2f, -4f, color, false, m, buffer,
             Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
         pose.popPose();
     }

@@ -1,0 +1,31 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ATA",
+    "GPG",
+    "EBE"
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:iron_ingot"
+    },
+    "T": {
+      "item": "fpv:vtx_800mw"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "P": {
+      "item": "fpv:rc_transmitter"
+    },
+    "E": {
+      "item": "minecraft:ender_pearl"
+    },
+    "B": {
+      "item": "fpv:battery_4s_650"
+    }
+  },
+  "result": {
+    "item": "fpv:rc_transmitter_lr"
+  }
+}

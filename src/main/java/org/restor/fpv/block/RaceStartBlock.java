@@ -20,11 +20,12 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
 import org.jetbrains.annotations.Nullable;
 import org.restor.fpv.block.entity.ModBlockEntities;
 import org.restor.fpv.block.entity.RaceStartBlockEntity;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 
 // Race start / finish line. Right-click opens the course screen (lap count + leaderboard).
 public class RaceStartBlock extends BaseEntityBlock {
@@ -35,12 +36,12 @@ public class RaceStartBlock extends BaseEntityBlock {
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
 
+
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
                                  InteractionHand hand, BlockHitResult hit) {
         if (level.isClientSide) {
-            DistExecutor.unsafeRunWhenOn(Dist.CLIENT,
-                () -> () -> org.restor.fpv.client.RaceMarkingClient.onStartClicked(pos));
+            org.restor.fpv.client.RaceMarkingClient.onStartClicked(pos);
         }
         return InteractionResult.SUCCESS;
     }
@@ -81,5 +82,10 @@ public class RaceStartBlock extends BaseEntityBlock {
     @Override
     public RenderShape getRenderShape(BlockState state) {
         return RenderShape.MODEL;
+    }
+
+    @Override
+    public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
+        return StationShapes.PEDESTAL;
     }
 }

@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:camera_standard",
+    "fpv:camera_wide"
+  ]
+}

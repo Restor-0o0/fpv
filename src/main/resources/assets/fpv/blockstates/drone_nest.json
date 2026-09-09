@@ -1,5 +1,19 @@
 {
   "variants": {
-    "": { "model": "fpv:block/drone_nest" }
+    "facing=north": {
+      "model": "fpv:block/drone_nest"
+    },
+    "facing=east": {
+      "model": "fpv:block/drone_nest",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "fpv:block/drone_nest",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "fpv:block/drone_nest",
+      "y": 270
+    }
   }
 }

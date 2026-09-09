@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:plane",
+    "fpv:plane_scout",
+    "fpv:plane_kamikaze",
+    "fpv:plane_delta",
+    "fpv:plane_glider",
+    "fpv:plane_cargo",
+    "fpv:plane_carrier",
+    "fpv:plane_shahed",
+    "fpv:plane_longrange",
+    "fpv:plane_interceptor"
+  ]
+}

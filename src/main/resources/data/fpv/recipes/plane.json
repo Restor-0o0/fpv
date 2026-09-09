@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["PFP", "MCM", "BVB"],
+  "key": {
+    "P": { "item": "minecraft:phantom_membrane" },
+    "F": { "item": "fpv:fc_f411" },
+    "M": { "item": "fpv:motor_2306_1700kv" },
+    "C": { "item": "fpv:camera_standard" },
+    "B": { "item": "fpv:battery_4s_1300" },
+    "V": { "item": "fpv:vtx_200mw" }
+  },
+  "result": { "item": "fpv:plane" }
+}

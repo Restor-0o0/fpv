@@ -4,11 +4,12 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
+import org.restor.fpv.warhead.WarheadType;
 
 // A fast (~50 m/s) FPV wing that detonates like TNT on the first block/entity contact once
 // airborne — a fixed-wing kamikaze. The pilot is returned to the launch point on impact.
 public class KamikazeWingEntity extends PlaneEntity {
-    private int airborneTicks;
+    private final org.restor.fpv.warhead.ContactFuze fuze = new org.restor.fpv.warhead.ContactFuze();
     private boolean exploded;
     private int explosionViewTicks;
     private net.minecraft.world.phys.Vec3 explosionLookTarget;
@@ -16,6 +17,7 @@ public class KamikazeWingEntity extends PlaneEntity {
     private net.minecraft.world.phys.Vec3 attackDirection;
     private int attackTicks;
     private final java.util.Set<Long> attackForcedChunks = new java.util.HashSet<>();
+    private WarheadType warhead = defaultWarhead();
 
     public KamikazeWingEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -48,17 +50,14 @@ public class KamikazeWingEntity extends PlaneEntity {
         super.tick();
         if (level().isClientSide) return;
 
-        if (isArmed() && !onGround()) airborneTicks++;
-        else if (!isArmed()) airborneTicks = 0;
-
-        // Grace period so arming/takeoff from the ground doesn't detonate instantly.
-        if (airborneTicks > 10) {
-            if (horizontalCollision || verticalCollision || onGround()) {
-                explodeNow();
-                return;
-            }
+        if (fuze.tick(this, isArmed())) {
+            explodeNow();
+            return;
+        }
+        if (fuze.isArmed()) {
             // Ramming a living target also detonates.
-            var hits = level().getEntities(this, getBoundingBox().inflate(0.2),
+            double radius = warhead.proximity() ? org.restor.fpv.warhead.ProximityFuze.TRIGGER_RADIUS : 0.2;
+            var hits = level().getEntities(this, getBoundingBox().inflate(radius),
                 e -> e instanceof net.minecraft.world.entity.LivingEntity && !hasPassenger(e));
             if (!hits.isEmpty()) explodeNow();
         }
@@ -78,6 +77,44 @@ public class KamikazeWingEntity extends PlaneEntity {
     @Override
     protected net.minecraft.world.item.Item getDropItem() {
         return org.restor.fpv.item.ModItems.PLANE_KAMIKAZE.get();
+    }
+
+    @Override
+    public net.minecraft.world.InteractionResult interact(net.minecraft.world.entity.player.Player player,
+                                                          net.minecraft.world.InteractionHand hand) {
+        net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
+        if (org.restor.fpv.warhead.WarheadLoading.isWarhead(held)) {
+            if (!level().isClientSide) {
+                org.restor.fpv.warhead.WarheadLoading.swap(player, held, warhead,
+                    warheadCapacityKg(), this::setWarhead);
+            }
+            return net.minecraft.world.InteractionResult.sidedSuccess(level().isClientSide);
+        }
+        return super.interact(player, hand);
+    }
+
+    protected WarheadType defaultWarhead() { return WarheadType.HE; }
+
+    /** How much warhead this airframe can lift, in kg. */
+    public float warheadCapacityKg() { return 4.0f; }
+
+    public WarheadType getWarhead() { return warhead; }
+
+    public void setWarhead(WarheadType type) { this.warhead = type == null ? defaultWarhead() : type; }
+
+    @Override
+    protected float payloadMass() { return warhead.mass(); }
+
+    @Override
+    protected void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
+        if (tag.contains("Warhead")) warhead = WarheadType.byId(tag.getString("Warhead"));
+    }
+
+    @Override
+    protected void addAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putString("Warhead", warhead.id());
     }
 
     public void beginAttackRun(net.minecraft.world.phys.Vec3 target, net.minecraft.world.phys.Vec3 spawn) {
@@ -190,18 +227,10 @@ public class KamikazeWingEntity extends PlaneEntity {
     private void explodeNow() {
         if (exploded) return;
         exploded = true;
-        float power = (float) org.restor.fpv.Config.DEV_EXPLOSION_POWER.get().doubleValue();
         boolean cinematic = attackTarget == null && org.restor.fpv.Config.DEV_EXPLOSION_CAMERA_BACKSTEP.get() > 0.0;
         net.minecraft.world.phys.Vec3 impact = cinematic ? KamikazeExplosionEffects.moveCameraBack(this) : position();
         if (!cinematic) ejectPassengers();
-        KamikazeExplosionEffects.flingBlocks(level(), impact.x, impact.y, impact.z, power);
-        java.util.Map<net.minecraft.core.BlockPos, net.minecraft.world.level.block.state.BlockState> before =
-            KamikazeExplosionEffects.captureBreakableBlocks(level(), impact.x, impact.y, impact.z, power);
-        level().explode(this, impact.x, impact.y, impact.z, power, Level.ExplosionInteraction.TNT);
-        KamikazeExplosionEffects.restoreUnbrokenBlocks(level(), before, impact.x, impact.y, impact.z);
-        KamikazeExplosionEffects.removeFloatingBlocks(level(), impact.x, impact.y, impact.z, power);
-        KamikazeExplosionEffects.damageMobs(level(), this, impact.x, impact.y, impact.z, power);
-        KamikazeExplosionEffects.spawn(level(), impact.x, impact.y, impact.z, power);
+        WarheadDetonation.detonate(level(), this, impact, warhead);
         if (cinematic) {
             explosionLookTarget = impact;
             explosionViewTicks = Math.max(0, (int) Math.round(org.restor.fpv.Config.DEV_EXPLOSION_CAMERA_SECONDS.get() * 20.0));

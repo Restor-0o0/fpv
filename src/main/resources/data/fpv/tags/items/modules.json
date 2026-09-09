@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:module_payload_bay",
+    "fpv:module_warhead",
+    "fpv:module_dart_gun",
+    "fpv:module_storage"
+  ]
+}

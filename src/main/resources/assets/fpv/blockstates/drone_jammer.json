@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "powered=false": { "model": "fpv:block/drone_jammer" },
+    "powered=true": { "model": "fpv:block/drone_jammer_active" }
+  }
+}

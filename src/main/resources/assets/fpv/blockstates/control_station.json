@@ -1,5 +1,19 @@
 {
   "variants": {
-    "": { "model": "fpv:block/control_station" }
+    "facing=north": {
+      "model": "fpv:block/control_station"
+    },
+    "facing=east": {
+      "model": "fpv:block/control_station",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "fpv:block/control_station",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "fpv:block/control_station",
+      "y": 270
+    }
   }
 }

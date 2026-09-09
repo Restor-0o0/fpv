@@ -18,6 +18,7 @@ import org.joml.Quaternionf;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.race.GhostFrame;
 import org.restor.fpv.race.GhostRecording;
+import org.restor.fpv.replay.ReplayRecording;
 import org.restor.fpv.render.FPVOverlay;
 
 // Client-only playback of race ghosts (FPV_IDEAS §1 "Рендер"). Ghosts are NOT server entities:
@@ -54,7 +55,11 @@ public final class GhostRenderer {
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
-        if (GHOSTS.isEmpty() || MC.level == null || !FPVOverlay.raceActive()) return;
+        if (MC.level == null) return;
+
+        boolean renderRaceGhosts = !GHOSTS.isEmpty() && FPVOverlay.raceActive();
+        ReplayRecording replay = ReplayManager.playback();
+        if (!renderRaceGhosts && replay == null) return;
 
         float partial = event.getPartialTick();
         float elapsed = (MC.level.getGameTime() - startTime) + partial;
@@ -65,9 +70,12 @@ public final class GhostRenderer {
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
         VertexConsumer vc = buffers.getBuffer(RenderType.entityTranslucentCull(TEXTURE));
 
-        for (Ghost ghost : GHOSTS) {
-            drawGhost(ghost, elapsed, cam, pose, vc);
+        if (renderRaceGhosts) {
+            for (Ghost ghost : GHOSTS) {
+                drawGhost(ghost, elapsed, cam, pose, vc);
+            }
         }
+        if (replay != null) drawReplay(replay, ReplayManager.renderFrame(partial), cam, pose, vc);
         buffers.endBatch(RenderType.entityTranslucentCull(TEXTURE));
     }
 
@@ -84,6 +92,21 @@ public final class GhostRenderer {
         GhostFrame f0 = rec.frame(i0);
         GhostFrame f1 = rec.frame(i1);
 
+        drawModel(rec.modelType(), f0, f1, t, cam, pose, vc, ghost.r(), ghost.g(), ghost.b());
+    }
+
+    private static void drawReplay(ReplayRecording replay, double frame, Vec3 cam,
+                                   PoseStack pose, VertexConsumer vc) {
+        int i0 = (int) Math.floor(frame);
+        int i1 = Math.min(i0 + 1, replay.frameCount() - 1);
+        float t = (float) (frame - i0);
+        drawModel(replay.modelType(), replay.frame(i0), replay.frame(i1), t,
+            cam, pose, vc, 1.0f, 0.35f, 0.22f);
+    }
+
+    private static void drawModel(int modelType, GhostFrame f0, GhostFrame f1, float t,
+                                  Vec3 cam, PoseStack pose, VertexConsumer vc,
+                                  float r, float g, float b) {
         double x = Mth.lerp(t, f0.x(), f1.x());
         double y = Mth.lerp(t, f0.y(), f1.y());
         double z = Mth.lerp(t, f0.z(), f1.z());
@@ -96,22 +119,22 @@ public final class GhostRenderer {
         pose.pushPose();
         pose.translate(x - cam.x, y - cam.y, z - cam.z);
         pose.mulPose(q);
-        float s = scaleFor(rec.modelType());
+        float s = scaleFor(modelType);
         pose.scale(s, s, s);
 
         Matrix4f mat = pose.last().pose();
         int light = 0xF000F0; // full bright so ghosts read in shadow
-        if (rec.modelType() == 3) drawPlane(vc, mat, light, ghost);
-        else drawQuad(vc, mat, light, ghost);
+        if (modelType == 3) drawPlane(vc, mat, light, r, g, b);
+        else drawQuad(vc, mat, light, r, g, b);
         pose.popPose();
     }
 
     // Same composition DroneRenderer uses for the world-space model: Ry(yaw-180)Rx(-pitch)Rz(roll).
     private static Quaternionf modelQuat(float yaw, float pitch, float roll) {
         return new Quaternionf()
-            .rotateY((float) Math.toRadians(yaw - 180f))
+            .rotateY((float) Math.toRadians(180f - yaw))
             .rotateX((float) Math.toRadians(-pitch))
-            .rotateZ((float) Math.toRadians(roll));
+            .rotateZ((float) Math.toRadians(-roll));
     }
 
     private static float scaleFor(int modelType) {
@@ -123,26 +146,26 @@ public final class GhostRenderer {
         };
     }
 
-    private static void drawQuad(VertexConsumer vc, Matrix4f mat, int light, Ghost g) {
-        float r = g.r(), gr = g.g(), b = g.b();
+    private static void drawQuad(VertexConsumer vc, Matrix4f mat, int light,
+                                 float r, float g, float b) {
         // Central body.
-        box(vc, mat, light, -0.18f, -0.06f, -0.14f, 0.18f, 0.06f, 0.18f, r, gr, b);
+        box(vc, mat, light, -0.18f, -0.06f, -0.14f, 0.18f, 0.06f, 0.18f, r, g, b);
         // Four arms + prop discs at the corners.
         float al = 0.5f, at = 0.03f;
         float[][] corners = {{al, -al}, {-al, -al}, {al, al}, {-al, al}};
         for (float[] c : corners) {
             float cx = c[0], cz = c[1];
-            box(vc, mat, light, Math.min(0, cx), -at, Math.min(0, cz), Math.max(0, cx), at, Math.max(0, cz), r, gr, b);
-            box(vc, mat, light, cx - 0.2f, 0.03f, cz - 0.2f, cx + 0.2f, 0.05f, cz + 0.2f, r, gr, b);
+            box(vc, mat, light, Math.min(0, cx), -at, Math.min(0, cz), Math.max(0, cx), at, Math.max(0, cz), r, g, b);
+            box(vc, mat, light, cx - 0.2f, 0.03f, cz - 0.2f, cx + 0.2f, 0.05f, cz + 0.2f, r, g, b);
         }
     }
 
-    private static void drawPlane(VertexConsumer vc, Matrix4f mat, int light, Ghost g) {
-        float r = g.r(), gr = g.g(), b = g.b();
-        box(vc, mat, light, -0.08f, -0.05f, -0.5f, 0.08f, 0.06f, 0.5f, r, gr, b);   // fuselage
-        box(vc, mat, light, -0.7f, -0.01f, -0.05f, 0.7f, 0.02f, 0.18f, r, gr, b);   // wings
-        box(vc, mat, light, -0.25f, -0.01f, 0.38f, 0.25f, 0.02f, 0.5f, r, gr, b);   // tailplane
-        box(vc, mat, light, -0.02f, 0.02f, 0.4f, 0.02f, 0.22f, 0.5f, r, gr, b);     // fin
+    private static void drawPlane(VertexConsumer vc, Matrix4f mat, int light,
+                                  float r, float g, float b) {
+        box(vc, mat, light, -0.08f, -0.05f, -0.5f, 0.08f, 0.06f, 0.5f, r, g, b);   // fuselage
+        box(vc, mat, light, -0.7f, -0.01f, -0.05f, 0.7f, 0.02f, 0.18f, r, g, b);   // wings
+        box(vc, mat, light, -0.25f, -0.01f, 0.38f, 0.25f, 0.02f, 0.5f, r, g, b);   // tailplane
+        box(vc, mat, light, -0.02f, 0.02f, 0.4f, 0.02f, 0.22f, 0.5f, r, g, b);     // fin
     }
 
     // Translucent axis-aligned box in the current pose (mirrors DroneRenderer.renderBox but with alpha).

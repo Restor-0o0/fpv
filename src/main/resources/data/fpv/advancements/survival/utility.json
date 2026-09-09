@@ -1,0 +1,24 @@
+{
+  "parent": "fpv:survival/racing",
+  "display": {
+    "icon": { "item": "fpv:control_station" },
+    "title": { "translate": "advancement.fpv.utility.title" },
+    "description": { "translate": "advancement.fpv.utility.description" },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_control_station": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": { "items": [{ "items": ["fpv:control_station"] }] }
+    }
+  },
+  "rewards": {
+    "recipes": [
+      "fpv:frame_octo_8inch", "fpv:motor_3115_900kv", "fpv:module_warhead",
+      "fpv:module_dart_gun", "fpv:kamikaze_station", "fpv:plane_kamikaze"
+    ]
+  }
+}

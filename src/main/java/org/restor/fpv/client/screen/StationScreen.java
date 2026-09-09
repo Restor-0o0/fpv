@@ -1,23 +1,30 @@
 package org.restor.fpv.client.screen;
 
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import org.restor.fpv.compat.PacketDistributor;
 import org.restor.fpv.block.entity.ControlStationBlockEntity;
-import org.restor.fpv.network.ModNetworking;
 import org.restor.fpv.network.StationCodesPacket;
 import org.restor.fpv.network.StartRemoteControlPacket;
 
+import java.util.ArrayList;
 import java.util.List;
 
-// Control station UI: saved code list — pick a drone to fly, add or remove codes.
 public class StationScreen extends Screen {
+    private static final int PANEL_W = 232;
+    private static final int ROW_H = 22;
+
     private final BlockPos pos;
     private EditBox codeBox;
+    private int left;
+    private int top;
+    private int panelH;
+    private int listY;
+    private final List<Integer> rowY = new ArrayList<>();
 
     public StationScreen(BlockPos pos) {
         super(Component.translatable("screen.fpv.station"));
@@ -34,43 +41,48 @@ public class StationScreen extends Screen {
 
     @Override
     protected void init() {
-        int cx = width / 2;
-        int y = 40;
+        List<String> codes = codes();
+        int rows = Math.max(codes.size(), 1);
+        panelH = 44 + rows * ROW_H + 12 + 26 + 12 + 20 + 12;
+        left = (width - PANEL_W) / 2;
+        top = (height - panelH) / 2;
+        listY = top + 44;
 
-        for (String code : codes()) {
+        rowY.clear();
+        int y = listY;
+        for (String code : codes) {
             String c = code;
-            addRenderableWidget(Button.builder(
-                    Component.literal(c + "  ").append(Component.translatable("screen.fpv.station_fly")),
-                    b -> fly(c))
-                .bounds(cx - 90, y, 150, 20).build());
-            addRenderableWidget(Button.builder(Component.literal("X"), b -> removeCode(c))
-                .bounds(cx + 64, y, 20, 20).build());
-            y += 24;
+            rowY.add(y);
+            addRenderableWidget(Button.builder(Component.translatable("screen.fpv.station_fly"), b -> fly(c))
+                .bounds(left + PANEL_W - 96, y, 60, 20).build());
+            addRenderableWidget(Button.builder(Component.literal("\u2715"), b -> removeCode(c))
+                .bounds(left + PANEL_W - 32, y, 20, 20).build());
+            y += ROW_H;
         }
+        if (codes.isEmpty()) y += ROW_H;
 
-        y += 8;
-        codeBox = new EditBox(font, cx - 90, y, 120, 20, Component.empty());
+        y += 12;
+        codeBox = new EditBox(font, left + 12, y, PANEL_W - 88, 20, Component.empty());
         codeBox.setMaxLength(6);
-        codeBox.setFilter(s -> s.matches("\\d*"));
+        codeBox.setFilter(s -> s.matches("[0-9]*"));
+        codeBox.setHint(Component.translatable("screen.fpv.station_code_hint"));
         addRenderableWidget(codeBox);
         addRenderableWidget(Button.builder(Component.translatable("screen.fpv.station_add"), b -> addCode())
-            .bounds(cx + 34, y, 50, 20).build());
-        y += 28;
+            .bounds(left + PANEL_W - 68, y, 56, 20).build());
 
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
-            .bounds(cx - 75, y, 150, 20).build());
+            .bounds(left + (PANEL_W - 120) / 2, top + panelH - 32, 120, 20).build());
     }
 
     private void fly(String code) {
-        ModNetworking.CHANNEL.sendToServer(new StartRemoteControlPacket(code));
+        PacketDistributor.sendToServer(new StartRemoteControlPacket(code));
         onClose();
     }
 
     private void addCode() {
         String code = codeBox.getValue();
         if (code.length() != 6) return;
-        ModNetworking.CHANNEL.sendToServer(new StationCodesPacket(pos, code, true));
-        // Optimistic local update so the list refreshes immediately (server re-syncs).
+        PacketDistributor.sendToServer(new StationCodesPacket(pos, code, true));
         if (minecraft.level.getBlockEntity(pos) instanceof ControlStationBlockEntity be) {
             be.addCode(code);
         }
@@ -78,7 +90,7 @@ public class StationScreen extends Screen {
     }
 
     private void removeCode(String code) {
-        ModNetworking.CHANNEL.sendToServer(new StationCodesPacket(pos, code, false));
+        PacketDistributor.sendToServer(new StationCodesPacket(pos, code, false));
         if (minecraft.level.getBlockEntity(pos) instanceof ControlStationBlockEntity be) {
             be.removeCode(code);
         }
@@ -87,7 +99,7 @@ public class StationScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if ((keyCode == 257 || keyCode == 335) && codeBox.isFocused()) { // Enter
+        if ((keyCode == 257 || keyCode == 335) && codeBox.isFocused()) {
             addCode();
             return true;
         }
@@ -95,14 +107,28 @@ public class StationScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
-        graphics.drawCenteredString(font, title, width / 2, 14, 0xFFFFFF);
-        graphics.drawCenteredString(font, Component.translatable("screen.fpv.station_hint"), width / 2, 26, 0xAAAAAA);
-        if (codes().isEmpty()) {
-            graphics.drawCenteredString(font, Component.translatable("screen.fpv.station_empty"), width / 2, 44, 0x888888);
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        renderBackground(g);
+        GuiPanels.panel(g, left, top, PANEL_W, panelH);
+        List<String> codes = codes();
+        int rows = Math.max(codes.size(), 1);
+        GuiPanels.inset(g, left + 8, listY - 6, PANEL_W - 16, rows * ROW_H + 6, 0xFF1B1B22);
+        for (int y : rowY) {
+            GuiPanels.inset(g, left + 12, y, PANEL_W - 108, 20, 0xFF15151B);
         }
-        super.render(graphics, mouseX, mouseY, partialTick);
+
+        super.render(g, mouseX, mouseY, partialTick);
+
+        g.drawCenteredString(font, title, left + PANEL_W / 2, top + 12, GuiPanels.TEXT);
+        g.drawCenteredString(font, Component.translatable("screen.fpv.station_hint"),
+            left + PANEL_W / 2, top + 26, GuiPanels.LABEL);
+        for (int i = 0; i < rowY.size(); i++) {
+            g.drawString(font, codes.get(i), left + 20, rowY.get(i) + 6, GuiPanels.ACCENT, false);
+        }
+        if (codes.isEmpty()) {
+            g.drawCenteredString(font, Component.translatable("screen.fpv.station_empty"),
+                left + PANEL_W / 2, listY + 6, GuiPanels.LABEL);
+        }
     }
 
     @Override

@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:control_station",
+    "fpv:kamikaze_station",
+    "fpv:assembly_station",
+    "fpv:race_start",
+    "fpv:race_finish",
+    "fpv:race_gate",
+    "fpv:charging_station",
+    "fpv:drone_nest",
+    "fpv:drone_detector",
+    "fpv:drone_jammer"
+  ]
+}

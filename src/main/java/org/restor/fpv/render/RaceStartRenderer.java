@@ -4,18 +4,19 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.restor.fpv.block.entity.RaceGateBlockEntity;
 import org.restor.fpv.block.entity.RaceStartBlockEntity;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEntity> {
     private final Font font;
@@ -29,56 +30,58 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
                        MultiBufferSource buffer, int packedLight, int packedOverlay) {
         if (start.getRouteSize() <= 0) return;
         int c = start.getColor();
-        float r = ((c >> 16) & 0xFF) / 255f;
-        float g = ((c >> 8) & 0xFF) / 255f;
-        float b = (c & 0xFF) / 255f;
         float a = ((c >> 24) & 0xFF) / 255f;
         if (a <= 0f) a = 1f;
 
-        VertexConsumer vc = buffer.getBuffer(RenderType.lines());
+        VertexConsumer vc = buffer.getBuffer(RaceFrames.type());
         Matrix4f mat = pose.last().pose();
-        Matrix3f nrm = pose.last().normal();
+        BlockPos origin = start.getBlockPos();
         float half = start.getSize() / 2.0f;
-        Vec3 worldCenter = start.frameCenter();
-        Vector3f center = new Vector3f(
-            (float) (worldCenter.x - start.getBlockPos().getX()),
-            (float) (worldCenter.y - start.getBlockPos().getY()),
-            (float) (worldCenter.z - start.getBlockPos().getZ()));
+        Vector3f center = local(origin, start.frameCenter());
         Vector3f n = start.normal().normalize();
-        Vector3f ref = Math.abs(n.y) > 0.99f ? new Vector3f(0, 0, 1) : new Vector3f(0, 1, 0);
-        Vector3f right = new Vector3f(ref).cross(n).normalize();
-        Vector3f up = new Vector3f(n).cross(right).normalize();
-        Vector3f[] corners = {
-            corner(center, right, up, -half, -half),
-            corner(center, right, up,  half, -half),
-            corner(center, right, up,  half,  half),
-            corner(center, right, up, -half,  half),
-        };
-        for (int i = 0; i < 4; i++) line(vc, mat, nrm, corners[i], corners[(i + 1) % 4], r, g, b, a);
-        renderStartText(pose, buffer, center, n, up);
-        vc = buffer.getBuffer(RenderType.lines());
-        if (FPVOverlay.raceActive()) renderFirstSegment(start, vc, mat, nrm, r, g, b, a * 0.7f);
+
+        RaceFrames.hoop(vc, mat, center, n, half, org.restor.fpv.block.RaceGateBlock.FRAME_RADIUS,
+            RaceFrames.shade(c, 1f), RaceFrames.WHITE, a);
+        renderPlateText(pose, buffer, center, n, half, "START", 0xFF40FF40);
+
+        if (FPVOverlay.raceActive()) {
+            BlockPos finishPos = start.getFinishPos();
+            if (finishPos != null) {
+                Vec3 fn = start.finishNormal();
+                Vector3f finishNormal = new Vector3f((float) fn.x, (float) fn.y, (float) fn.z);
+                if (finishNormal.lengthSquared() > 1e-6f) {
+                    Vector3f finishCenter = local(origin, start.finishCenter());
+                    RaceFrames.hoop(vc, mat, finishCenter, finishNormal, half, org.restor.fpv.block.RaceGateBlock.FRAME_RADIUS,
+                        RaceFrames.WHITE, RaceFrames.DARK, a);
+                    renderPlateText(pose, buffer, finishCenter, finishNormal, half, "FINISH", 0xFFFFFFFF);
+                }
+            }
+            renderFirstSegment(start, vc, mat, a);
+        }
     }
 
-    private void renderStartText(PoseStack pose, MultiBufferSource buffer, Vector3f center, Vector3f normal, Vector3f up) {
-        Vector3f p = new Vector3f(center).add(new Vector3f(up).mul(1.25f)).add(new Vector3f(normal).mul(0.04f));
+    private void renderPlateText(PoseStack pose, MultiBufferSource buffer, Vector3f center, Vector3f normal,
+                                 float half, String text, int color) {
+        Vector3f[] axes = RaceFrames.basis(normal);
+        Vector3f p = new Vector3f(center)
+            .add(new Vector3f(axes[1]).mul(half + 1.0f))
+            .add(new Vector3f(axes[2]).mul(0.36f));
         pose.pushPose();
         pose.translate(p.x, p.y, p.z);
         pose.mulPose(new org.joml.Quaternionf().rotationTo(new Vector3f(0, 0, 1), new Vector3f(normal).normalize()));
-        pose.scale(-0.06f, -0.06f, 0.06f);
+        pose.scale(-0.14f, -0.14f, 0.14f);
         Matrix4f m = pose.last().pose();
-        String s = "START";
-        font.drawInBatch(s, -font.width(s) / 2f, -4f, 0xFF40FF40, false, m, buffer,
+        font.drawInBatch(text, -font.width(text) / 2f, -4f, color, false, m, buffer,
             Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
         pose.popPose();
     }
 
-    private static Vector3f corner(Vector3f c, Vector3f right, Vector3f up, float u, float v) {
-        return new Vector3f(c.x + right.x * u + up.x * v, c.y + right.y * u + up.y * v, c.z + right.z * u + up.z * v);
+    private static Vector3f local(BlockPos origin, Vec3 world) {
+        return new Vector3f((float) (world.x - origin.getX()), (float) (world.y - origin.getY()),
+            (float) (world.z - origin.getZ()));
     }
 
-    private static void renderFirstSegment(RaceStartBlockEntity start, VertexConsumer vc, Matrix4f mat,
-                                           Matrix3f nrm, float r, float g, float b, float a) {
+    private static void renderFirstSegment(RaceStartBlockEntity start, VertexConsumer vc, Matrix4f mat, float alpha) {
         if (FPVOverlay.raceGatesHit() > 0) return;
         BlockPos first = start.getFirstRoutePos();
         if (first == null) return;
@@ -93,19 +96,10 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
             nextTarget = routeCenter(level, gate.getNextRoutePos(), target);
         }
 
-        Vec3 source = start.frameCenter();
-        Vector3f from = new Vector3f(
-            (float) (source.x - start.getBlockPos().getX()),
-            (float) (source.y - start.getBlockPos().getY()),
-            (float) (source.z - start.getBlockPos().getZ()));
-        Vector3f to = new Vector3f(
-            (float) (target.x - start.getBlockPos().getX()),
-            (float) (target.y - start.getBlockPos().getY()),
-            (float) (target.z - start.getBlockPos().getZ()));
-        Vector3f nextPoint = new Vector3f(
-            (float) (nextTarget.x - start.getBlockPos().getX()),
-            (float) (nextTarget.y - start.getBlockPos().getY()),
-            (float) (nextTarget.z - start.getBlockPos().getZ()));
+        BlockPos origin = start.getBlockPos();
+        Vector3f from = local(origin, start.frameCenter());
+        Vector3f to = local(origin, target);
+        Vector3f nextPoint = local(origin, nextTarget);
         Vector3f dir = new Vector3f(to).sub(from);
         if (dir.lengthSquared() < 1e-4f) return;
         float handleOut = curveHandle(from, from, to);
@@ -113,22 +107,10 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
         Vector3f p1 = new Vector3f(from).add(dir.normalize().mul(handleOut));
         Vector3f p2 = new Vector3f(to).sub(tangent(to, from, nextPoint, handleIn));
 
-        Vector3f prev = new Vector3f(from);
-        for (int i = 1; i <= 24; i++) {
-            float t = i / 24.0f;
-            Vector3f point = cubic(from, p1, p2, to, t);
-            line(vc, mat, nrm, prev, point, r, g, b, a);
-            prev = point;
-        }
-    }
-
-    private static void line(VertexConsumer vc, Matrix4f mat, Matrix3f nrm,
-                             Vector3f p1, Vector3f p2, float r, float g, float b, float a) {
-        float dx = p2.x - p1.x, dy = p2.y - p1.y, dz = p2.z - p1.z;
-        float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (len < 1e-4f) len = 1f;
-        vc.vertex(mat, p1.x, p1.y, p1.z).color(r, g, b, a).normal(nrm, dx / len, dy / len, dz / len).endVertex();
-        vc.vertex(mat, p2.x, p2.y, p2.z).color(r, g, b, a).normal(nrm, dx / len, dy / len, dz / len).endVertex();
+        List<Vector3f> points = new ArrayList<>();
+        points.add(new Vector3f(from));
+        for (int i = 1; i <= 24; i++) points.add(cubic(from, p1, p2, to, i / 24.0f));
+        RaceFrames.ribbon(vc, mat, points, 0.11f, RaceFrames.NEXT, alpha, true);
     }
 
     private static Vec3 routeCenter(Level level, BlockPos pos, Vec3 fallback) {
@@ -175,5 +157,10 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
     @Override
     public boolean shouldRenderOffScreen(RaceStartBlockEntity start) {
         return true;
+    }
+
+    @Override
+    public int getViewDistance() {
+        return 256;
     }
 }

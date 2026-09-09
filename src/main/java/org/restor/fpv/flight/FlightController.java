@@ -134,6 +134,11 @@ public class FlightController {
         return mode;
     }
 
+    /** Heavy-lift rigs fly stabilized; everything else stays on ACRO. */
+    public void setMode(FlightMode mode) {
+        this.mode = mode;
+    }
+
     public boolean isArmed() {
         return armed;
     }

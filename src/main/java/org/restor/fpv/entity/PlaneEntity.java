@@ -8,6 +8,7 @@ import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -24,7 +25,8 @@ import org.slf4j.Logger;
 
 // Simple fixed-wing FPV plane: thrust + airspeed-driven lift/drag, banked-turn yaw
 // coordination. Riding-only (no remote-control station like the drones have).
-public class PlaneEntity extends Entity implements Pilotable {
+public class PlaneEntity extends Entity
+    implements Pilotable, org.restor.fpv.antidrone.RadioInterferenceReceiver {
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
@@ -45,18 +47,14 @@ public class PlaneEntity extends Entity implements Pilotable {
     private static final EntityDataAccessor<Float>   DATA_ORB_Y        = SynchedEntityData.defineId(PlaneEntity.class, EntityDataSerializers.FLOAT);
 
     // Same SI convention as DroneEntity: 1 block = 1 m, velocities in blocks/tick.
-    private static final float GRAVITY = 9.81f;
+    protected static final float GRAVITY = 9.81f;
     private static final float MS2_TO_BT = 0.05f / 20f;
 
     // Airframe constants shared by all plane types.
-    private static final float MASS = 30f;             // kg
-    private static final float WING_AREA = 6f;         // arbitrary lift-coefficient scale
-    private static final float DRAG_COEFF = 0.045f;
-    private static final float MAX_ROLL_RATE = 140f;   // deg/s
-    private static final float MAX_PITCH_RATE = 60f;   // deg/s
-    private static final float MAX_YAW_RATE = 40f;     // deg/s (rudder trim, on top of bank-turn)
-    private static final float ROTATION_RESPONSIVENESS = 6f;
+
     private static final float ALIGN_RESPONSIVENESS = 6f; // 1/s, max flight-path-to-nose alignment rate at speed
+    private static final float TURN_AUTHORITY = 1.8f;  // nose leads the lift-driven turn by this much
+    private static final float MAX_TURN_RATE = 85f;    // deg/s cap on the bank-driven heading change
 
     // Per-type airframe tuning — subclasses override in their constructor.
     protected float maxThrust = 320f;                  // N
@@ -64,6 +62,13 @@ public class PlaneEntity extends Entity implements Pilotable {
     protected float liftCoeff = 0.12f;                 // lift balances gravity at ~20 m/s
     protected float maxLiftAccel = GRAVITY * 1.6f;     // cap climb force so extra speed doesn't rocket up
     protected float maxSpeedBt = 4.0f;                 // hard speed cap in blocks/tick (×20 = m/s)
+    protected float dryMass = 30f;                     // kg, empty airframe
+    protected float wingArea = 6f;                     // arbitrary lift-coefficient scale
+    protected float maxRollRate = 180f;                // deg/s
+    protected float maxPitchRate = 95f;                // deg/s
+    protected float maxYawRate = 55f;                  // deg/s (rudder trim, on top of bank-turn)
+    protected float rotationResponsiveness = 9f;
+    protected float dragCoeff = 0.045f;
 
     public float rollO;
     private float displayRoll;
@@ -92,6 +97,9 @@ public class PlaneEntity extends Entity implements Pilotable {
 
     private Vec3 mountReturnPos;
     private java.util.UUID dummyId;
+
+    private final org.restor.fpv.antidrone.RadioJamState jamState = new org.restor.fpv.antidrone.RadioJamState();
+    private static final float JAM_LINK_LOSS = 0.25f;
 
     // Orbit autopilot: circle a fixed point (the camera-lock target) at a set radius.
     private static final float ORBIT_RADIUS_MARGIN = 3.0f;
@@ -146,20 +154,20 @@ public class PlaneEntity extends Entity implements Pilotable {
 
     @Override
     protected void defineSynchedData() {
-        entityData.define(DATA_ROLL,         0f);
-        entityData.define(DATA_THROTTLE,     0f);
-        entityData.define(DATA_ARMED,        false);
-        entityData.define(DATA_YAW_SYNC,     0f);
-        entityData.define(DATA_PITCH_SYNC,   0f);
-        entityData.define(DATA_ANGVEL_ROLL,  0f);
-        entityData.define(DATA_ANGVEL_PITCH, 0f);
-        entityData.define(DATA_ANGVEL_YAW,   0f);
-        entityData.define(DATA_ORBIT,        false);
-        entityData.define(DATA_ORB_CX,       0f);
-        entityData.define(DATA_ORB_CZ,       0f);
-        entityData.define(DATA_ORB_R,        12f);
-        entityData.define(DATA_ORB_DIR,      1f);
-        entityData.define(DATA_ORB_Y,        0f);
+        this.entityData.define(DATA_ROLL,         0f);
+        this.entityData.define(DATA_THROTTLE,     0f);
+        this.entityData.define(DATA_ARMED,        false);
+        this.entityData.define(DATA_YAW_SYNC,     0f);
+        this.entityData.define(DATA_PITCH_SYNC,   0f);
+        this.entityData.define(DATA_ANGVEL_ROLL,  0f);
+        this.entityData.define(DATA_ANGVEL_PITCH, 0f);
+        this.entityData.define(DATA_ANGVEL_YAW,   0f);
+        this.entityData.define(DATA_ORBIT,        false);
+        this.entityData.define(DATA_ORB_CX,       0f);
+        this.entityData.define(DATA_ORB_CZ,       0f);
+        this.entityData.define(DATA_ORB_R,        12f);
+        this.entityData.define(DATA_ORB_DIR,      1f);
+        this.entityData.define(DATA_ORB_Y,        0f);
     }
 
     @Override
@@ -178,6 +186,16 @@ public class PlaneEntity extends Entity implements Pilotable {
 
     private void serverTick() {
         ServerPlayer pilot = getControllingPassenger() instanceof ServerPlayer sp ? sp : null;
+        if (jamState.refresh(level().getGameTime()) > JAM_LINK_LOSS) {
+            // Link lost: the failsafe cuts the motor and centres the surfaces, so a jammed
+            // plane glides down instead of flying on.
+            ctrlThrottle = 0f;
+            ctrlPitch = 0f;
+            ctrlRoll = 0f;
+            ctrlYaw = 0f;
+            ctrlArm = false;
+            if (orbitActive) setOrbit(false, Vec3.ZERO, 0);
+        }
         if (pilot != null) {
             // Keep a hard-loaded bubble around the plane so flying far and fast never
             // outruns chunk loading (which was dumping the pilot back to the launch point).
@@ -201,7 +219,12 @@ public class PlaneEntity extends Entity implements Pilotable {
                 float pitchTarget = applyDeadband(ctrlPitch, 0.05f);
                 float rollTarget  = applyDeadband(ctrlRoll,  0.05f);
                 float yawTarget   = applyDeadband(ctrlYaw,   0.05f);
+                boolean wasArmed = armed;
                 if (ctrlArm) armed = true;
+                if (!wasArmed && armed && throttleInput > 0.10f
+                    && getDeltaMovement().horizontalDistanceSqr() < 0.0025) {
+                    handLaunch();
+                }
                 if (armed && throttleInput < 0.01f && onGround()) armed = false;
 
                 float dt = 0.05f;
@@ -219,7 +242,9 @@ public class PlaneEntity extends Entity implements Pilotable {
             armed = false;
             throttleInput = 0;
             angVelRoll = 0; angVelPitch = 0; angVelYaw = 0;
-            applyAerodynamics(0.05f);
+            // Parked planes get no aerodynamics: lift plus the velocity-to-nose alignment
+            // turned the gravity tick into forward speed, so an untouched plane crept away.
+            if (!onGround()) applyAerodynamics(0.05f);
             applyGravity();
             clearForcedChunks();
             clearTargetStreaming();
@@ -229,7 +254,7 @@ public class PlaneEntity extends Entity implements Pilotable {
 
         if (pilot != null) {
             serverLogTick++;
-            if (serverLogTick >= 20) {
+            if (org.restor.fpv.CommonConfig.DEV_VERBOSE_LOG.get() && serverLogTick >= 20) {
                 serverLogTick = 0;
                 LOGGER.info("[PLANE-SRV] ctrlThr={} armed={} thrIn={} vel={} yaw={} pitch={} roll={} onGround={}",
                     String.format("%.3f", ctrlThrottle),
@@ -253,7 +278,7 @@ public class PlaneEntity extends Entity implements Pilotable {
     }
 
     private void applyFlightPhysics(float dt, float throttle, float pitchIn, float rollIn, float yawIn) {
-        float thrustAccel = throttle * maxThrust / MASS;
+        float thrustAccel = throttle * maxThrust / totalMass();
         float curRoll = entityData.get(DATA_ROLL);
         Vec3 fwd = bodyForward(curRoll);
         float dv = thrustAccel * MS2_TO_BT;
@@ -263,21 +288,69 @@ public class PlaneEntity extends Entity implements Pilotable {
         // pitch — no self-leveling and no angle limits, so full-stick gives unlimited rolls
         // and loops and the plane holds whatever attitude you leave it in. Body-frame is
         // what makes it feel like a plane: banked + elevator carves a turn, not a climb.
-        float targetRollRate  = clamp(rollIn,  -1f, 1f) * MAX_ROLL_RATE;
-        float targetPitchRate = clamp(pitchIn, -1f, 1f) * MAX_PITCH_RATE;
+        float targetRollRate  = clamp(rollIn,  -1f, 1f) * maxRollRate;
+        float targetPitchRate = clamp(pitchIn, -1f, 1f) * maxPitchRate;
         // Pure rudder only — no bank-induced auto-yaw. At steep bank the body-yaw axis is
         // near-horizontal, so auto-coordinating yaw there rotated the nose UP in the world
         // (the "banked 90° + elevator pulls up instead of turning" bug). Turns now come
         // purely from body-pitch (elevator) swinging the nose around, like real acro flight.
-        float targetYawRate = -clamp(yawIn, -1f, 1f) * MAX_YAW_RATE;
+        float targetYawRate = -clamp(yawIn, -1f, 1f) * maxYawRate;
 
-        float resp = Math.min(ROTATION_RESPONSIVENESS * dt, 1.0f);
+        float resp = Math.min(rotationResponsiveness * dt, 1.0f);
         angVelRoll  += (targetRollRate  - angVelRoll)  * resp;
         angVelPitch += (targetPitchRate - angVelPitch) * resp;
         angVelYaw   += (targetYawRate   - angVelYaw)   * resp;
 
         float newRoll = integrateRotation(dt, angVelRoll, angVelPitch, angVelYaw, curRoll);
+        newRoll = applyCoordinatedTurn(dt, newRoll);
         entityData.set(DATA_ROLL, newRoll);
+    }
+
+    /**
+     * Banked lift pulls the aircraft sideways; without swinging the nose with it the airframe
+     * just slips and the flight-path alignment drags it straight again. This is what makes a
+     * roll actually turn the plane.
+     */
+    private float applyCoordinatedTurn(float dt, float roll) {
+        double speedMs = getDeltaMovement().length() * 20.0;
+        if (speedMs < stallSpeed * 0.8) return roll;
+        Vector3f up = bodyUp(roll);
+        Vec3 fwd = bodyForward(roll);
+        double fh = Math.hypot(fwd.x, fwd.z);
+        if (fh < 1e-3) return roll;
+        double lateral = (fwd.z * up.x - fwd.x * up.z) / fh;
+        if (Math.abs(lateral) < 1e-4) return roll;
+
+        float liftFactor = (float) Math.min(1.0, speedMs / stallSpeed);
+        double liftAccel = Math.min(maxLiftAccel,
+            liftFactor * liftCoeff * wingArea * speedMs * speedMs / totalMass());
+        double rate = Math.toDegrees(liftAccel * lateral * TURN_AUTHORITY / speedMs);
+        rate = clamp((float) rate, -MAX_TURN_RATE, MAX_TURN_RATE);
+
+        attitude.rotateLocalY((float) Math.toRadians(rate * dt)).normalize();
+        float[] a = DroneEntity.decomposeAttitude(attitude);
+        setYRot(normalizeYaw(a[0]));
+        setXRot(a[1]);
+        return a[2];
+    }
+
+    private void handLaunch() {
+        // Fixed wings have no wheel/ground-roll model, and lift only balances weight well
+        // above stall speed — a low-lift airframe thrown at walking pace sinks back into the
+        // ground long before thrust can build the airspeed it needs. So the throw puts it at
+        // flying speed straight away and gives it a little climb to work with.
+        Vec3 forward = bodyForward(entityData.get(DATA_ROLL)).normalize();
+        double speedMs = Math.min(maxSpeedBt * 20.0 * 0.85,
+            Math.max(stallSpeed * 1.25, levelFlightSpeed() * 0.95));
+        double launchSpeed = speedMs / 20.0;
+        setPos(getX(), getY() + 0.35, getZ());
+        setDeltaMovement(forward.x * launchSpeed, Math.max(0.15, forward.y * launchSpeed),
+            forward.z * launchSpeed);
+    }
+
+    /** Airspeed at which lift balances weight — below it the airframe sinks whatever the stick says. */
+    protected float levelFlightSpeed() {
+        return (float) Math.sqrt(GRAVITY * totalMass() / (liftCoeff * wingArea));
     }
 
     private float integrateRotation(float dt, float rRoll, float rPitch, float rYaw, float curRoll) {
@@ -330,13 +403,13 @@ public class PlaneEntity extends Entity implements Pilotable {
         float liftFactor = (float) Math.min(1.0, speedMs / stallSpeed);
         // liftCoeff tuned so lift balances gravity at the type's cruise speed; capped by
         // maxLiftAccel so extra speed doesn't rocket the plane vertically.
-        float liftAccel = Math.min(maxLiftAccel, liftFactor * liftCoeff * WING_AREA * (float) (speedMs * speedMs) / MASS);
+        float liftAccel = Math.min(maxLiftAccel, liftFactor * liftCoeff * wingArea * (float) (speedMs * speedMs) / totalMass());
         float liftDv = liftAccel * MS2_TO_BT;
         setDeltaMovement(getDeltaMovement().add(up.x * liftDv, up.y * liftDv, up.z * liftDv));
 
         // Quadratic drag opposing velocity.
         vel = getDeltaMovement();
-        double dragAccel = 0.5 * 1.225 * DRAG_COEFF * speedMs * speedMs / MASS;
+        double dragAccel = 0.5 * 1.225 * dragCoeff * speedMs * speedMs / totalMass();
         double drag = Math.min(dragAccel * MS2_TO_BT, vel.length() * 0.5);
         if (vel.length() > 1e-4) {
             setDeltaMovement(vel.subtract(vel.normalize().scale(drag)));
@@ -376,7 +449,7 @@ public class PlaneEntity extends Entity implements Pilotable {
         return up;
     }
 
-    private void applyGravity() {
+    protected void applyGravity() {
         setDeltaMovement(getDeltaMovement().add(0, -GRAVITY * MS2_TO_BT, 0));
         Vec3 vel = getDeltaMovement();
         double max = maxSpeedBt;
@@ -387,11 +460,19 @@ public class PlaneEntity extends Entity implements Pilotable {
 
     private void applyMovement() {
         Vec3 vel = getDeltaMovement();
-        if (onGround() && vel.y < 0) {
+        if (onGround()) {
             // Only clip the sink rate so the plane doesn't dig into the ground each tick —
             // killing horizontal speed too (as a prior version did) capped ground-roll speed
             // at a crawl far below stall speed, so the plane could never build up to takeoff.
-            vel = new Vec3(vel.x, 0, vel.z);
+            // Ground friction applies only when it isn't under power, so an idle plane stops.
+            double vy = Math.min(vel.y, 0) < 0 ? 0 : vel.y;
+            double vx = vel.x;
+            double vz = vel.z;
+            if (!armed) {
+                vx = Math.abs(vx) < 0.002 ? 0 : vx * 0.6;
+                vz = Math.abs(vz) < 0.002 ? 0 : vz * 0.6;
+            }
+            vel = new Vec3(vx, vy, vz);
             setDeltaMovement(vel);
         }
         move(MoverType.SELF, vel);
@@ -442,15 +523,16 @@ public class PlaneEntity extends Entity implements Pilotable {
                 float yawIn   = applyDeadband(predYaw,   0.05f);
                 float curRoll = displayRoll;
 
-                float targetRollRate  = clamp(rollIn, -1f, 1f) * MAX_ROLL_RATE;
-                float targetPitchRate = clamp(pitchIn, -1f, 1f) * MAX_PITCH_RATE;
-                float targetYawRate = -clamp(yawIn, -1f, 1f) * MAX_YAW_RATE;
-                float resp = Math.min(ROTATION_RESPONSIVENESS * dt, 1.0f);
+                float targetRollRate  = clamp(rollIn, -1f, 1f) * maxRollRate;
+                float targetPitchRate = clamp(pitchIn, -1f, 1f) * maxPitchRate;
+                float targetYawRate = -clamp(yawIn, -1f, 1f) * maxYawRate;
+                float resp = Math.min(rotationResponsiveness * dt, 1.0f);
                 angVelRoll  += (targetRollRate  - angVelRoll)  * resp;
                 angVelPitch += (targetPitchRate - angVelPitch) * resp;
                 angVelYaw   += (targetYawRate   - angVelYaw)   * resp;
 
                 displayRoll = integrateRotation(dt, angVelRoll, angVelPitch, angVelYaw, curRoll);
+                displayRoll = applyCoordinatedTurn(dt, displayRoll);
             } else {
                 angVelRoll = 0; angVelPitch = 0; angVelYaw = 0;
             }
@@ -530,39 +612,71 @@ public class PlaneEntity extends Entity implements Pilotable {
     public InteractionResult interact(Player player, InteractionHand hand) {
         if (player.isSecondaryUseActive()) return InteractionResult.PASS;
         if (!level().isClientSide && !hasPassenger(player)) {
-            Vec3 boardPos = player.position();
-            if (player.startRiding(this) && player instanceof ServerPlayer sp) {
-                mountReturnPos = boardPos;
-                sp.setInvisible(true);
-                spawnDummy(sp, boardPos);
+            if (player instanceof ServerPlayer sp) {
+                if (!org.restor.fpv.item.RcLink.hasTransmitter(sp)) {
+                    sp.displayClientMessage(Component.translatable("msg.fpv.need_transmitter"), true);
+                } else if (!mountPilot(sp)) {
+                    sp.displayClientMessage(Component.translatable("msg.fpv.need_goggles"), true);
+                }
             }
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;
     }
 
+    /** Boards the pilot for a mounted FPV flight; fails when the goggles are missing. */
+    public boolean mountPilot(ServerPlayer player) {
+        if (level().isClientSide || hasAnyPilot()) return false;
+        if (!org.restor.fpv.item.RcLink.hasGoggles(player)) return false;
+        Vec3 boardPos = safeReturnPos(player);
+        if (!player.startRiding(this)) return false;
+        mountReturnPos = boardPos;
+        PilotSessions.open(player, this);
+        player.setInvisible(true);
+        PilotSessions.syncFlagsToSelf(player);
+        spawnDummy(player, boardPos);
+        return true;
+    }
+
     @Override
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
         if (!level().isClientSide && passenger instanceof ServerPlayer sp) {
+            PilotSessions.close(sp);
             sp.setInvisible(false);
+            PilotSessions.syncFlagsToSelf(sp);
             discardDummy();
-            if (mountReturnPos != null) {
+            if (mountReturnPos != null && sp.level() == level()) {
                 sp.teleportTo(mountReturnPos.x, mountReturnPos.y, mountReturnPos.z);
-                mountReturnPos = null;
             }
         }
     }
 
+    /** Boarding spot to come back to; never the plane itself, which would strand the pilot midair. */
+    protected Vec3 safeReturnPos(Player player) {
+        Vec3 pos = player.position();
+        return pos.distanceToSqr(position()) < 1.0E-4 ? pos.add(0, 1.0, 0) : pos;
+    }
+
     private void spawnDummy(ServerPlayer player, Vec3 at) {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel sl)) return;
+        discardDummy();
         OperatorDummyEntity dummy = ModEntities.OPERATOR_DUMMY.get().create(sl);
         if (dummy == null) return;
         dummy.setPos(at.x, at.y, at.z);
         dummy.setYRot(player.getYRot());
         dummy.bindTo(this, player.getUUID());
+        dummy.setRadio(defaultRadio(player));
+        dummy.setHeadGear(player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD));
         sl.addFreshEntity(dummy);
         dummyId = dummy.getUUID();
+    }
+
+    private static net.minecraft.world.item.ItemStack defaultRadio(ServerPlayer player) {
+        net.minecraft.world.item.ItemStack held = org.restor.fpv.item.RcLink.heldTransmitter(player);
+        return held.isEmpty()
+            ? new net.minecraft.world.item.ItemStack(org.restor.fpv.item.ModItems.RC_TRANSMITTER.get())
+            : held;
     }
 
     private void discardDummy() {
@@ -647,52 +761,63 @@ public class PlaneEntity extends Entity implements Pilotable {
         if (center == null) clearTargetStreaming();
     }
 
+    private static final int MAX_STREAM_SENDS_PER_TICK = 4;
+    private static final int MAX_STREAM_TICKETS = 6;
+    private long lastForcedCenter = Long.MIN_VALUE;
+    private long lastSelfCacheCenter = Long.MIN_VALUE;
+
     private void updateForcedChunks() {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel sl)) return;
-        int r = 3; // a small bubble ahead/behind is enough with the pilot's own view tickets
-        int cx = blockPosition().getX() >> 4;
-        int cz = blockPosition().getZ() >> 4;
+        // r=1: the pilot rides the plane, so their own player ticket already keeps a full
+        // view distance loaded and ticking around it. This is only a head start on the chunk
+        // the plane is about to enter — a wider ring meant force-ticking dozens of chunks of
+        // other mods' block entities and contraptions at 20 Hz for nothing.
+        int r = 1;
+        long center = net.minecraft.world.level.ChunkPos.asLong(
+            blockPosition().getX() >> 4, blockPosition().getZ() >> 4);
+        if (center == lastForcedCenter && !forcedChunks.isEmpty()) return;
+        lastForcedCenter = center;
+        int cx = net.minecraft.world.level.ChunkPos.getX(center);
+        int cz = net.minecraft.world.level.ChunkPos.getZ(center);
         java.util.Set<Long> want = new java.util.HashSet<>();
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
                 want.add(net.minecraft.world.level.ChunkPos.asLong(cx + dx, cz + dz));
             }
         }
-        if (want.equals(forcedChunks)) return;
-        for (long c : forcedChunks) {
-            if (!want.contains(c)) {
-                sl.setChunkForced(net.minecraft.world.level.ChunkPos.getX(c), net.minecraft.world.level.ChunkPos.getZ(c), false);
-            }
-        }
-        for (long c : want) {
-            if (!forcedChunks.contains(c)) {
-                sl.setChunkForced(net.minecraft.world.level.ChunkPos.getX(c), net.minecraft.world.level.ChunkPos.getZ(c), true);
-            }
-        }
-        forcedChunks.clear();
-        forcedChunks.addAll(want);
+        syncForcedChunkSet(sl, forcedChunks, want);
     }
 
     private void clearForcedChunks() {
+        lastForcedCenter = Long.MIN_VALUE;
         if (forcedChunks.isEmpty()) return;
         if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
-            for (long c : forcedChunks) {
-                sl.setChunkForced(net.minecraft.world.level.ChunkPos.getX(c), net.minecraft.world.level.ChunkPos.getZ(c), false);
-            }
+            syncForcedChunkSet(sl, forcedChunks, java.util.Collections.emptySet());
+        } else {
+            forcedChunks.clear();
         }
-        forcedChunks.clear();
     }
 
     private void updateTargetStreaming(ServerPlayer pilot) {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel sl) || targetStreamCenter == null) {
+            // Only when the plane actually changed chunk — this used to fire every tick, and
+            // every one of those packets re-centres the client's chunk cache.
             if (pilot != null) {
                 net.minecraft.world.level.ChunkPos self = chunkPosition();
-                pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket(self.x, self.z));
+                if (self.toLong() != lastSelfCacheCenter) {
+                    lastSelfCacheCenter = self.toLong();
+                    pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket(self.x, self.z));
+                }
             }
             clearTargetStreaming();
             return;
         }
-        int r = net.minecraft.util.Mth.clamp(org.restor.fpv.Config.DEV_CHUNK_RADIUS.get(), 1, 12);
+        lastSelfCacheCenter = Long.MIN_VALUE;
+        int r = net.minecraft.util.Mth.clamp(org.restor.fpv.Config.DEV_CHUNK_RADIUS.get(), 0, 12);
+        if (r == 0) {
+            clearTargetStreaming();
+            return;
+        }
         net.minecraft.world.level.ChunkPos center = new net.minecraft.world.level.ChunkPos(
             ((int) Math.floor(targetStreamCenter.x)) >> 4,
             ((int) Math.floor(targetStreamCenter.z)) >> 4);
@@ -717,22 +842,27 @@ public class PlaneEntity extends Entity implements Pilotable {
         syncForcedChunkSet(sl, targetForcedChunks, wantForced);
 
         int sentThisTick = 0;
-        for (int dx = -r; dx <= r && sentThisTick < 12; dx++) {
-            for (int dz = -r; dz <= r && sentThisTick < 12; dz++) {
-                int cx = center.x + dx;
-                int cz = center.z + dz;
-                long key = net.minecraft.world.level.ChunkPos.asLong(cx, cz);
-                if (targetStreamedChunks.contains(key)) continue;
-                net.minecraft.world.level.chunk.LevelChunk chunk = sl.getChunkSource().getChunkNow(cx, cz);
-                if (chunk != null) {
-                    pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(
-                        chunk, sl.getLightEngine(), null, null));
-                    targetStreamedChunks.add(key);
-                    if (targetStreamTickets.remove(key)) removeStreamTicket(sl, key);
-                    sentThisTick++;
-                } else if (targetStreamTickets.add(key)) {
-                    net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(cx, cz);
-                    sl.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 1, cp);
+        ring:
+        for (int d = 0; d <= r; d++) {
+            for (int dx = -d; dx <= d; dx++) {
+                for (int dz = -d; dz <= d; dz++) {
+                    if (d > 0 && Math.abs(dx) != d && Math.abs(dz) != d) continue;
+                    if (sentThisTick >= MAX_STREAM_SENDS_PER_TICK) break ring;
+                    int cx = center.x + dx;
+                    int cz = center.z + dz;
+                    long key = net.minecraft.world.level.ChunkPos.asLong(cx, cz);
+                    if (targetStreamedChunks.contains(key)) continue;
+                    net.minecraft.world.level.chunk.LevelChunk chunk = sl.getChunkSource().getChunkNow(cx, cz);
+                    if (chunk != null) {
+                        pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket(
+                            chunk, sl.getLightEngine(), null, null));
+                        targetStreamedChunks.add(key);
+                        if (targetStreamTickets.remove(key)) removeStreamTicket(sl, key);
+                        sentThisTick++;
+                    } else if (targetStreamTickets.size() < MAX_STREAM_TICKETS && targetStreamTickets.add(key)) {
+                        net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(cx, cz);
+                        sl.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 1, cp);
+                    }
                 }
             }
         }
@@ -760,21 +890,27 @@ public class PlaneEntity extends Entity implements Pilotable {
         targetCacheCenterRefresh = 0;
     }
 
+    // Entity-ticking tickets (level 31), not ServerLevel#setChunkForced: the latter writes
+    // ForcedChunksSavedData and marks it dirty every time the bubble moves, and leaks the
+    // whole bubble into the save file if the game dies mid-flight.
     private static void syncForcedChunkSet(net.minecraft.server.level.ServerLevel sl, java.util.Set<Long> current,
                                            java.util.Set<Long> wanted) {
         if (current.equals(wanted)) return;
         for (long c : current) {
-            if (!wanted.contains(c)) {
-                sl.setChunkForced(net.minecraft.world.level.ChunkPos.getX(c), net.minecraft.world.level.ChunkPos.getZ(c), false);
-            }
+            if (!wanted.contains(c)) setEntityTicking(sl, c, false);
         }
         for (long c : wanted) {
-            if (!current.contains(c)) {
-                sl.setChunkForced(net.minecraft.world.level.ChunkPos.getX(c), net.minecraft.world.level.ChunkPos.getZ(c), true);
-            }
+            if (!current.contains(c)) setEntityTicking(sl, c, true);
         }
         current.clear();
         current.addAll(wanted);
+    }
+
+    private static void setEntityTicking(net.minecraft.server.level.ServerLevel sl, long key, boolean add) {
+        net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(
+            net.minecraft.world.level.ChunkPos.getX(key), net.minecraft.world.level.ChunkPos.getZ(key));
+        if (add) sl.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 2, cp);
+        else sl.getChunkSource().removeRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 2, cp);
     }
 
     private static int chunkDist(long key, net.minecraft.world.level.ChunkPos center) {
@@ -809,9 +945,6 @@ public class PlaneEntity extends Entity implements Pilotable {
     protected boolean canRide(Entity entity) { return entity instanceof Player; }
 
     @Override
-    public double getPassengersRidingOffset() { return 0.0; }
-
-    @Override
     public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
         return mountReturnPos != null ? mountReturnPos : position().add(0, 1.5, 0);
     }
@@ -834,7 +967,7 @@ public class PlaneEntity extends Entity implements Pilotable {
     public boolean isPickable() { return true; }
 
     @Override
-    public boolean isPushable() { return false; }
+    public boolean isPushable() { return !isFlightReady(); }
 
     @Override
     public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
@@ -843,12 +976,30 @@ public class PlaneEntity extends Entity implements Pilotable {
         if (level().isClientSide) return true;
 
         boolean explosion = source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION);
-        boolean creative = source.getEntity() instanceof Player p && p.getAbilities().instabuild;
-        if (!explosion && !creative) {
+        if (!explosion && source.getEntity() instanceof Player p) {
+            org.restor.fpv.util.CraftPickup.giveTo(p, getDropStack());
+        } else if (!explosion) {
             spawnAtLocation(getDropStack());
         }
         discard();
         return true;
+    }
+
+    /** Airframe plus whatever is bolted on; heavier planes accelerate, climb and turn worse. */
+    public float totalMass() {
+        return dryMass + payloadMass();
+    }
+
+    protected float payloadMass() {
+        return 0f;
+    }
+
+    public float getModelScale() {
+        return 1.0f;
+    }
+
+    public net.minecraft.world.item.Item getModelItem() {
+        return getDropItem();
     }
 
     protected net.minecraft.world.item.Item getDropItem() {
@@ -876,7 +1027,27 @@ public class PlaneEntity extends Entity implements Pilotable {
     public void clearControllerInput() { useController = false; ctrlAge = 0; }
 
     @Override
+    public void applyRadioInterference(long sourceId, float strength, int durationTicks) {
+        if (level().isClientSide || !org.restor.fpv.CommonConfig.REALISTIC_RADIO.get()) return;
+        ServerPlayer pilot = getControllingPassenger() instanceof ServerPlayer sp ? sp : null;
+        if (pilot != null && (pilot.isCreative() || pilot.hasPermissions(2))) return;
+        jamState.apply(sourceId, strength, durationTicks, level().getGameTime());
+    }
+
+    @Override
+    public ServerPlayer radioOperator() {
+        return getControllingPassenger() instanceof ServerPlayer sp ? sp : null;
+    }
+
+    public boolean isRadioJammed() { return jamState.strength() > JAM_LINK_LOSS; }
+
+    @Override
     public boolean hasAnyPilot() { return getControllingPassenger() != null; }
+
+    @Override
+    public boolean isActiveDummy(java.util.UUID dummy) {
+        return dummyId != null && dummyId.equals(dummy);
+    }
 
     public float getRoll() { return displayRoll; }
     public float getPrevRoll() { return rollO; }

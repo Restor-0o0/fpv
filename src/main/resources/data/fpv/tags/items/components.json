@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    "#fpv:frames",
+    "#fpv:batteries",
+    "#fpv:motors",
+    "#fpv:propellers",
+    "#fpv:video_transmitters",
+    "#fpv:cameras",
+    "#fpv:flight_controllers",
+    "#fpv:modules"
+  ]
+}

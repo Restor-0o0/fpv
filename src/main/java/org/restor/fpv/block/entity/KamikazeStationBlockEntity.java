@@ -7,14 +7,17 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import org.restor.fpv.entity.KamikazeDroneEntity;
-import org.restor.fpv.entity.ModEntities;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.HopperBlockEntity;
+import org.restor.fpv.entity.DroneEntity;
+import org.restor.fpv.item.DroneItem;
 
 import java.util.UUID;
 
-// Kamikaze launch station: use → spawns a kamikaze drone and puts the player in
-// control. When the drone detonates, the next one spawns automatically and control
-// re-engages — an endless launch loop until the pilot exits with sneak.
+// Kamikaze launch station: use → pulls an armed drone out of an adjacent container and
+// puts the player in control. When it detonates, the next one is drawn from the same
+// magazine — the loop runs until the pilot sneaks out or the container runs dry.
 public class KamikazeStationBlockEntity extends BlockEntity {
     private UUID pilotId;
     private UUID droneId;
@@ -26,6 +29,11 @@ public class KamikazeStationBlockEntity extends BlockEntity {
 
     public void startSession(ServerPlayer player) {
         if (pilotId != null && !player.getUUID().equals(pilotId)) return; // occupied
+        if (!org.restor.fpv.item.RcLink.hasGoggles(player)) {
+            player.displayClientMessage(
+                net.minecraft.network.chat.Component.translatable("msg.fpv.need_goggles"), true);
+            return;
+        }
         pilotId = player.getUUID();
         spawnAndControl((ServerLevel) level, player);
     }
@@ -45,9 +53,9 @@ public class KamikazeStationBlockEntity extends BlockEntity {
         }
 
         Entity e = droneId != null ? sl.getEntity(droneId) : null;
-        if (e instanceof KamikazeDroneEntity drone && drone.isAlive()) {
+        if (e instanceof DroneEntity drone && drone.isAlive()) {
             // Pilot pressed sneak (session ended, drone survived) → stop the loop.
-            if (!drone.hasRemotePilot()) reset();
+            if (!drone.hasPassenger(pilot)) reset();
             return;
         }
 
@@ -62,14 +70,36 @@ public class KamikazeStationBlockEntity extends BlockEntity {
     }
 
     private void spawnAndControl(ServerLevel sl, ServerPlayer pilot) {
-        KamikazeDroneEntity drone = ModEntities.KAMIKAZE.get().create(sl);
-        if (drone == null) return;
-        drone.setPos(worldPosition.getX() + 0.5, worldPosition.getY() + 1.1, worldPosition.getZ() + 0.5);
-        drone.setYRot(pilot.getYRot());
-        String def = org.restor.fpv.Config.DEFAULT_LINK_CODE.get();
-        if (def.matches("\\d{6}")) drone.setLinkCode(def);
-        sl.addFreshEntity(drone);
-        drone.beginRemoteControl(pilot);
+        Container magazine = null;
+        int slot = -1;
+        for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+            Container c = HopperBlockEntity.getContainerAt(sl, worldPosition.relative(dir));
+            if (c == null) continue;
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                if (DroneItem.isArmed(c.getItem(i))) { magazine = c; slot = i; break; }
+            }
+            if (magazine != null) break;
+        }
+        if (magazine == null) {
+            pilot.displayClientMessage(
+                net.minecraft.network.chat.Component.translatable("msg.fpv.station_empty"), true);
+            reset();
+            return;
+        }
+
+        ItemStack stack = magazine.getItem(slot);
+        DroneEntity drone = ((DroneItem) stack.getItem()).spawn(sl,
+            new net.minecraft.world.phys.Vec3(worldPosition.getX() + 0.5,
+                worldPosition.getY() + 1.1, worldPosition.getZ() + 0.5),
+            pilot.getYRot(), stack, pilot);
+        if (drone == null) { reset(); return; }
+        if (!drone.beginRidingControl(pilot)) {
+            drone.discard();
+            reset();
+            return;
+        }
+        magazine.removeItem(slot, 1);
+        magazine.setChanged();
         droneId = drone.getUUID();
         cooldown = 30; // ~1.5s between waves
     }

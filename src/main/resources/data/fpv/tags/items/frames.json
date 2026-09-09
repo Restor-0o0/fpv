@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:frame_5inch",
+    "fpv:frame_7inch",
+    "fpv:frame_tiny_whoop",
+    "fpv:frame_cinewhoop",
+    "fpv:frame_hexa_6inch",
+    "fpv:frame_octo_8inch"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "fpv:rc_transmitter",
+    "fpv:rc_transmitter_lr"
+  ]
+}

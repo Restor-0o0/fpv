@@ -1,5 +1,169 @@
 {
   "variants": {
-    "": { "model": "fpv:block/assembly_station" }
+    "facing=north,wood=oak": {
+      "model": "fpv:block/assembly_station_oak"
+    },
+    "facing=east,wood=oak": {
+      "model": "fpv:block/assembly_station_oak",
+      "y": 90
+    },
+    "facing=south,wood=oak": {
+      "model": "fpv:block/assembly_station_oak",
+      "y": 180
+    },
+    "facing=west,wood=oak": {
+      "model": "fpv:block/assembly_station_oak",
+      "y": 270
+    },
+    "facing=north,wood=spruce": {
+      "model": "fpv:block/assembly_station_spruce"
+    },
+    "facing=east,wood=spruce": {
+      "model": "fpv:block/assembly_station_spruce",
+      "y": 90
+    },
+    "facing=south,wood=spruce": {
+      "model": "fpv:block/assembly_station_spruce",
+      "y": 180
+    },
+    "facing=west,wood=spruce": {
+      "model": "fpv:block/assembly_station_spruce",
+      "y": 270
+    },
+    "facing=north,wood=birch": {
+      "model": "fpv:block/assembly_station_birch"
+    },
+    "facing=east,wood=birch": {
+      "model": "fpv:block/assembly_station_birch",
+      "y": 90
+    },
+    "facing=south,wood=birch": {
+      "model": "fpv:block/assembly_station_birch",
+      "y": 180
+    },
+    "facing=west,wood=birch": {
+      "model": "fpv:block/assembly_station_birch",
+      "y": 270
+    },
+    "facing=north,wood=jungle": {
+      "model": "fpv:block/assembly_station_jungle"
+    },
+    "facing=east,wood=jungle": {
+      "model": "fpv:block/assembly_station_jungle",
+      "y": 90
+    },
+    "facing=south,wood=jungle": {
+      "model": "fpv:block/assembly_station_jungle",
+      "y": 180
+    },
+    "facing=west,wood=jungle": {
+      "model": "fpv:block/assembly_station_jungle",
+      "y": 270
+    },
+    "facing=north,wood=acacia": {
+      "model": "fpv:block/assembly_station_acacia"
+    },
+    "facing=east,wood=acacia": {
+      "model": "fpv:block/assembly_station_acacia",
+      "y": 90
+    },
+    "facing=south,wood=acacia": {
+      "model": "fpv:block/assembly_station_acacia",
+      "y": 180
+    },
+    "facing=west,wood=acacia": {
+      "model": "fpv:block/assembly_station_acacia",
+      "y": 270
+    },
+    "facing=north,wood=dark_oak": {
+      "model": "fpv:block/assembly_station_dark_oak"
+    },
+    "facing=east,wood=dark_oak": {
+      "model": "fpv:block/assembly_station_dark_oak",
+      "y": 90
+    },
+    "facing=south,wood=dark_oak": {
+      "model": "fpv:block/assembly_station_dark_oak",
+      "y": 180
+    },
+    "facing=west,wood=dark_oak": {
+      "model": "fpv:block/assembly_station_dark_oak",
+      "y": 270
+    },
+    "facing=north,wood=mangrove": {
+      "model": "fpv:block/assembly_station_mangrove"
+    },
+    "facing=east,wood=mangrove": {
+      "model": "fpv:block/assembly_station_mangrove",
+      "y": 90
+    },
+    "facing=south,wood=mangrove": {
+      "model": "fpv:block/assembly_station_mangrove",
+      "y": 180
+    },
+    "facing=west,wood=mangrove": {
+      "model": "fpv:block/assembly_station_mangrove",
+      "y": 270
+    },
+    "facing=north,wood=cherry": {
+      "model": "fpv:block/assembly_station_cherry"
+    },
+    "facing=east,wood=cherry": {
+      "model": "fpv:block/assembly_station_cherry",
+      "y": 90
+    },
+    "facing=south,wood=cherry": {
+      "model": "fpv:block/assembly_station_cherry",
+      "y": 180
+    },
+    "facing=west,wood=cherry": {
+      "model": "fpv:block/assembly_station_cherry",
+      "y": 270
+    },
+    "facing=north,wood=bamboo": {
+      "model": "fpv:block/assembly_station_bamboo"
+    },
+    "facing=east,wood=bamboo": {
+      "model": "fpv:block/assembly_station_bamboo",
+      "y": 90
+    },
+    "facing=south,wood=bamboo": {
+      "model": "fpv:block/assembly_station_bamboo",
+      "y": 180
+    },
+    "facing=west,wood=bamboo": {
+      "model": "fpv:block/assembly_station_bamboo",
+      "y": 270
+    },
+    "facing=north,wood=crimson": {
+      "model": "fpv:block/assembly_station_crimson"
+    },
+    "facing=east,wood=crimson": {
+      "model": "fpv:block/assembly_station_crimson",
+      "y": 90
+    },
+    "facing=south,wood=crimson": {
+      "model": "fpv:block/assembly_station_crimson",
+      "y": 180
+    },
+    "facing=west,wood=crimson": {
+      "model": "fpv:block/assembly_station_crimson",
+      "y": 270
+    },
+    "facing=north,wood=warped": {
+      "model": "fpv:block/assembly_station_warped"
+    },
+    "facing=east,wood=warped": {
+      "model": "fpv:block/assembly_station_warped",
+      "y": 90
+    },
+    "facing=south,wood=warped": {
+      "model": "fpv:block/assembly_station_warped",
+      "y": 180
+    },
+    "facing=west,wood=warped": {
+      "model": "fpv:block/assembly_station_warped",
+      "y": 270
+    }
   }
 }
