@@ -15,8 +15,8 @@ import net.minecraft.world.phys.Vec3;
 public class MiniRocketEntity extends net.minecraft.world.entity.projectile.ThrowableItemProjectile {
 
     private static final int MAX_LIFE = 120;
-    private static final float BLAST_RADIUS = 1.4f;
-    private static final float IMPACT_DAMAGE = 5.0f;
+    public static final float BLAST_RADIUS = 1.4f;
+    public static final float IMPACT_DAMAGE = 5.0f;
     // Blocks tougher than this shrug the warhead off — obsidian, ancient debris, bedrock.
     private static final float MAX_BREAK_HARDNESS = 6.0f;
 
