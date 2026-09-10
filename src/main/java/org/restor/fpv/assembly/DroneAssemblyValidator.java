@@ -21,6 +21,8 @@ public final class DroneAssemblyValidator {
     public enum IssueCode {
         NO_FRAME("assembly.validation.no_frame", true),
         NO_BATTERY("assembly.validation.no_battery", true),
+        NO_FC("assembly.validation.no_fc", true),
+        NO_VTX("assembly.validation.no_vtx", true),
         NO_LIFT("assembly.validation.no_lift", true),
         MISSING_PARTS("assembly.validation.missing_parts", false),
         NO_CAMERA("assembly.validation.no_camera", false),
@@ -69,7 +71,9 @@ public final class DroneAssemblyValidator {
         float thrustN,
         float[] motorThrustFactors,
         float cameraCondition,
-        boolean fixedWing
+        boolean fixedWing,
+        boolean fcPresent,
+        boolean vtxPresent
     ) {}
 
     public record Metrics(float massKg, float thrustN, float twr, float hoverThrottle) {}
@@ -110,6 +114,8 @@ public final class DroneAssemblyValidator {
 
         addIf(errors, !input.framePresent(), IssueCode.NO_FRAME);
         addIf(errors, input.battery() == null, IssueCode.NO_BATTERY);
+        addIf(errors, !input.fcPresent(), IssueCode.NO_FC);
+        addIf(errors, !input.vtxPresent(), IssueCode.NO_VTX);
         // A wing is carried by its wing, not by its prop: it only needs enough thrust to stay
         // above stall speed.
         float liftoff = wing ? WING_MIN_TWR : LIFTOFF_TWR;

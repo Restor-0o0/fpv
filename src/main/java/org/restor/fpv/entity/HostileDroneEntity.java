@@ -2,8 +2,8 @@ package org.restor.fpv.entity;
 
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.player.Player;
@@ -37,14 +37,16 @@ public class HostileDroneEntity extends NpcDroneEntity {
     public void tick() {
         super.tick();
         // Contact detonation while chasing.
-        if (!level().isClientSide && getTarget() != null && getTarget().isAlive()
-            && distanceToSqr(getTarget()) < RAM_TRIGGER_DIST_SQR) {
-            explode();
-        }
+        if (level().isClientSide) return;
+        Entity t = engagementTarget();
+        if (t != null && t.isAlive() && distanceToSqr(t) < RAM_TRIGGER_DIST_SQR) explode();
     }
 
     @Override
     protected NpcDroneBuilds.Role buildRole() { return NpcDroneBuilds.Role.KAMIKAZE; }
+
+    @Override
+    protected boolean attacksAircraft() { return true; }
 
     private void explode() {
         if (exploded || level().isClientSide) return;
@@ -74,7 +76,7 @@ public class HostileDroneEntity extends NpcDroneEntity {
 
         @Override
         public boolean canUse() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             return t != null && t.isAlive();
         }
 
@@ -83,7 +85,7 @@ public class HostileDroneEntity extends NpcDroneEntity {
 
         @Override
         public void tick() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             if (t == null) return;
             if (!beeped) {
                 beeped = true;

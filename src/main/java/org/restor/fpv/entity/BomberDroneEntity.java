@@ -1,7 +1,7 @@
 package org.restor.fpv.entity;
 
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -40,6 +40,9 @@ public class BomberDroneEntity extends NpcDroneEntity {
     protected NpcDroneBuilds.Role buildRole() { return NpcDroneBuilds.Role.BOMBER; }
 
     @Override
+    protected boolean attacksAircraft() { return true; }
+
+    @Override
     protected void registerGoals() {
         goalSelector.addGoal(1, new BombingRunGoal());
         goalSelector.addGoal(3, new PatrolGoal());
@@ -64,7 +67,7 @@ public class BomberDroneEntity extends NpcDroneEntity {
 
         @Override
         public boolean canUse() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             return t != null && t.isAlive();
         }
 
@@ -73,7 +76,7 @@ public class BomberDroneEntity extends NpcDroneEntity {
 
         @Override
         public void tick() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             if (t == null) return;
             getLookControl().setLookAt(t, 30f, 30f);
 

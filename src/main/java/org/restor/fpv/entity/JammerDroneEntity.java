@@ -47,6 +47,9 @@ public class JammerDroneEntity extends NpcDroneEntity {
     protected NpcDroneBuilds.Role buildRole() { return NpcDroneBuilds.Role.JAMMER; }
 
     @Override
+    protected boolean attacksAircraft() { return true; }
+
+    @Override
     protected void registerGoals() {
         goalSelector.addGoal(1, new ShadowGoal());
         goalSelector.addGoal(3, new PatrolGoal());
@@ -99,7 +102,7 @@ public class JammerDroneEntity extends NpcDroneEntity {
 
         @Override
         public boolean canUse() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             return t != null && t.isAlive();
         }
 
@@ -108,7 +111,7 @@ public class JammerDroneEntity extends NpcDroneEntity {
 
         @Override
         public void tick() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             if (t == null) return;
             getLookControl().setLookAt(t, 30f, 30f);
             orbitAngle += 0.015f;

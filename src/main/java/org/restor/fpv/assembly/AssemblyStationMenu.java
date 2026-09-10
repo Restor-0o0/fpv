@@ -271,9 +271,12 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         DroneAssemblyValidator.ValidationResult validation = a.validate();
         updateDiagnosticData(a, validation);
         // A half-built wing still leaves the bench: it sets down as an airframe you cannot
-        // fly but can pick back up and keep working on.
+        // fly but can pick back up and keep working on. So does a build whose only gap is
+        // the avionics — it comes out as a shell with no flight controller or video link.
         boolean partialWing = DroneAssembly.isPlaneFrame(a.frame) && !a.isBareFrame();
-        if (validation.isComplete() || partialWing) {
+        boolean avionicsOnly = validation.errors().stream().allMatch(
+            e -> e == DroneAssemblyValidator.IssueCode.NO_FC || e == DroneAssemblyValidator.IssueCode.NO_VTX);
+        if (avionicsOnly || partialWing) {
             ItemStack result = new ItemStack(DroneAssembly.isPlaneFrame(a.frame)
                 ? ModItems.MODULAR_PLANE.get() : ModItems.MODULAR_DRONE.get());
             CustomData.update(DataComponents.CUSTOM_DATA, result, t -> t.put("Assembly", a.save()));

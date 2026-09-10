@@ -2,6 +2,7 @@ package org.restor.fpv.entity;
 
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -43,6 +44,9 @@ public class ScoutDroneEntity extends NpcDroneEntity {
     protected NpcDroneBuilds.Role buildRole() { return NpcDroneBuilds.Role.SCOUT; }
 
     @Override
+    protected boolean attacksAircraft() { return true; }
+
+    @Override
     protected void registerGoals() {
         goalSelector.addGoal(1, new SpotGoal());
         goalSelector.addGoal(3, new PatrolGoal());
@@ -66,13 +70,13 @@ public class ScoutDroneEntity extends NpcDroneEntity {
 
         @Override
         public boolean canUse() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             return t != null && t.isAlive();
         }
 
         @Override
         public void tick() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             if (t == null) return;
             getLookControl().setLookAt(t, 30f, 30f);
 
@@ -85,16 +89,19 @@ public class ScoutDroneEntity extends NpcDroneEntity {
 
             if (--markTimer > 0 || !hasLineOfSight(t)) return;
             markTimer = MARK_INTERVAL;
-            t.addEffect(new MobEffectInstance(MobEffects.GLOWING, MARK_INTERVAL + 20, 0, false, false));
+            if (t instanceof LivingEntity living) {
+                living.addEffect(new MobEffectInstance(MobEffects.GLOWING, MARK_INTERVAL + 20, 0, false, false));
+            }
             playSound(org.restor.fpv.sound.ModSounds.DETECTOR_ALERT.get(), 0.6f, 1.8f);
             relay(t);
         }
 
-        private void relay(LivingEntity t) {
+        private void relay(Entity t) {
             for (NpcDroneEntity other : level().getEntitiesOfClass(NpcDroneEntity.class,
                 new AABB(blockPosition()).inflate(RELAY_RADIUS),
-                d -> d != ScoutDroneEntity.this && d.isAlive() && d.getTarget() == null)) {
-                other.setTarget(t);
+                d -> d != ScoutDroneEntity.this && d.isAlive() && d.engagementTarget() == null)) {
+                if (t instanceof LivingEntity living) other.setTarget(living);
+                else other.setAircraftTarget(t);
             }
         }
     }

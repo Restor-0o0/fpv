@@ -36,6 +36,7 @@ public class ModularDroneItem extends DroneItem {
                     tooltip.add(Component.translatable("tooltip.fpv.assembly.unbalanced"));
                 }
             }
+            if (!a.isComplete()) tooltip.add(Component.translatable("tooltip.fpv.assembly_incomplete"));
         }
     }
 }

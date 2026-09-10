@@ -1,6 +1,7 @@
 package org.restor.fpv.entity;
 
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -44,6 +45,9 @@ public class PatrolDroneEntity extends NpcDroneEntity {
     @Override
     protected NpcDroneBuilds.Role buildRole() { return NpcDroneBuilds.Role.PATROL; }
 
+    @Override
+    protected boolean attacksAircraft() { return true; }
+
     private boolean bombs() {
         return hasModule(org.restor.fpv.component.ModuleType.PAYLOAD_BAY);
     }
@@ -78,7 +82,7 @@ public class PatrolDroneEntity extends NpcDroneEntity {
 
         @Override
         public boolean canUse() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             return t != null && t.isAlive();
         }
 
@@ -90,7 +94,7 @@ public class PatrolDroneEntity extends NpcDroneEntity {
 
         @Override
         public void tick() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             if (t == null) return;
 
             // Slowly circle the target at standoff range, slightly above eye level.
@@ -114,7 +118,9 @@ public class PatrolDroneEntity extends NpcDroneEntity {
                 if (--cooldown <= 0 && distanceToSqr(t) < 3.5) {
                     cooldown = RAM_COOLDOWN;
                     t.hurt(damageSources().mobAttack(PatrolDroneEntity.this), RAM_DAMAGE);
-                    t.knockback(0.4, getX() - t.getX(), getZ() - t.getZ());
+                    if (t instanceof LivingEntity living) {
+                        living.knockback(0.4, getX() - t.getX(), getZ() - t.getZ());
+                    }
                     playSound(SoundEvents.PLAYER_ATTACK_STRONG, 0.7f, 1.4f);
                     setDeltaMovement(getDeltaMovement().add(
                         new Vec3(getX() - t.getX(), 0.25, getZ() - t.getZ()).normalize().scale(0.45)));
@@ -142,7 +148,7 @@ public class PatrolDroneEntity extends NpcDroneEntity {
             playSound(org.restor.fpv.sound.ModSounds.WARHEAD_ARM.get(), 0.7f, 1.2f);
         }
 
-        private void shootDart(LivingEntity t) {
+        private void shootDart(Entity t) {
             Arrow dart = new Arrow(level(), PatrolDroneEntity.this, ItemStack.EMPTY, null);
             dart.setBaseDamage(1.5);
             dart.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
