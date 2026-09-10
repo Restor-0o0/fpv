@@ -18,6 +18,11 @@ public class WarheadItem extends Item {
 
     public WarheadType getType() { return type; }
 
+    @Override
+    public net.minecraft.world.InteractionResult useOn(net.minecraft.world.item.context.UseOnContext ctx) {
+        return org.restor.fpv.block.PartsPiles.placeOn(ctx);
+    }
+
     public static WarheadType typeOf(ItemStack stack) {
         return stack.getItem() instanceof WarheadItem w ? w.type : null;
     }
@@ -25,6 +30,10 @@ public class WarheadItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.fpv.warhead.power", String.format("%.1f", type.power()))
+            .withStyle(net.minecraft.ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip.fpv.ordnance.terrain", String.format("%.1f", type.blockPower()))
+            .withStyle(net.minecraft.ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip.fpv.ordnance.mob", String.format("%.1f", type.mobDamageMul()))
             .withStyle(net.minecraft.ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.warhead.mass", String.format("%.1f", type.mass()))
             .withStyle(net.minecraft.ChatFormatting.GRAY));
@@ -44,6 +53,7 @@ public class WarheadItem extends Item {
             .withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.warhead.carriers", carriers())
             .withStyle(net.minecraft.ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.translatable("tooltip.fpv.component_place"));
     }
 
     private static final String[][] CARRIERS = {

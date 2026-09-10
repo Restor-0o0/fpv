@@ -32,11 +32,11 @@ public class ModItems {
     // Payload module (FPV_IDEAS §4): sneak-right-click a drone with these to load its payload
     // slot; the pilot drops one with the FIRE_PAYLOAD key. Each loaded charge adds mass.
     public static final DeferredHolder<Item, Item> DROP_CHARGE = ITEMS.register("drop_charge",
-        () -> new Item(new Item.Properties()));
+        DropChargeItem::new);
 
     // Ammunition for the rocket pod module: sneak-right-click a drone to load its rails.
     public static final DeferredHolder<Item, Item> MINI_ROCKET = ITEMS.register("mini_rocket",
-        () -> new Item(new Item.Properties()));
+        MiniRocketItem::new);
 
     public static final DeferredHolder<Item, Item> MODULAR_PLANE = ITEMS.register("modular_plane",
         () -> new org.restor.fpv.assembly.ModularPlaneItem());

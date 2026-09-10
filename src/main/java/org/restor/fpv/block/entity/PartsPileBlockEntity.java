@@ -23,7 +23,10 @@ public class PartsPileBlockEntity extends BlockEntity {
     }
 
     public static boolean isStorable(ItemStack stack) {
-        return stack.getItem() instanceof ComponentItem;
+        return stack.getItem() instanceof ComponentItem
+            || stack.getItem() instanceof org.restor.fpv.warhead.WarheadItem
+            || stack.getItem() instanceof org.restor.fpv.item.DropChargeItem
+            || stack.getItem() instanceof org.restor.fpv.item.MiniRocketItem;
     }
 
     public ItemStack stored() {
@@ -72,6 +75,11 @@ public class PartsPileBlockEntity extends BlockEntity {
     }
 
     public static Layout layoutFor(ItemStack stack) {
+        if (stack.getItem() instanceof org.restor.fpv.warhead.WarheadItem w) {
+            return grid(Mth.clamp(3.0f + w.getType().mass() * 0.45f, 3.4f, 7.4f), 3, 0.55f, 0f, 0f);
+        }
+        if (stack.getItem() instanceof org.restor.fpv.item.DropChargeItem) return grid(4.0f, 3, 0.55f, 0f, 0f);
+        if (stack.getItem() instanceof org.restor.fpv.item.MiniRocketItem) return grid(3.0f, 4, 0.35f, 22f, 0f);
         if (!(stack.getItem() instanceof ComponentItem item)) return grid(6f, 2, 0.5f, 0f, 0f);
         ComponentStats s = item.getStats();
         return switch (s.type()) {
