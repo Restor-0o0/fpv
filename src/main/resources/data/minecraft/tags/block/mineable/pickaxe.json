@@ -10,6 +10,7 @@
     "fpv:charging_station",
     "fpv:drone_nest",
     "fpv:drone_detector",
-    "fpv:drone_jammer"
+    "fpv:drone_jammer",
+    "fpv:guard_station"
   ]
 }

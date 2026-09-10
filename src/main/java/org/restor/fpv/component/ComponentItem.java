@@ -22,8 +22,21 @@ public class ComponentItem extends Item {
     private final ComponentStats stats;
 
     public ComponentItem(ComponentStats stats) {
-        super(new Item.Properties().stacksTo(16));
+        super(new Item.Properties().stacksTo(stackSizeFor(stats)));
         this.stats = stats;
+    }
+
+    /**
+     * Parts stack by how much of a crate they take up, in powers of two so a full stack always
+     * divides a 64-item block: a 2 g whoop prop goes to 64, a 320 g plane motor to 8.
+     */
+    private static int stackSizeFor(ComponentStats stats) {
+        float grams = stats.weight();
+        if (grams <= 15f) return 64;
+        if (grams <= 60f) return 32;
+        if (grams <= 200f) return 16;
+        if (grams <= 800f) return 8;
+        return 4;
     }
 
     public ComponentStats getStats() {
@@ -71,42 +84,43 @@ public class ComponentItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.literal("§7Type: " + getLocalizedName()));
+        tooltip.add(Component.translatable("tooltip.fpv.part.type", Component.translatable(typeKey())));
         tooltip.add(Component.translatable("tooltip.fpv.component_condition", ComponentCondition.percent(stack)));
         switch (stats.type()) {
             case FRAME -> {
-                tooltip.add(Component.literal("§8Size: " + stats.frameSize() + "mm"));
-                tooltip.add(Component.literal("§8Weight: " + stats.weight() + "g"));
+                tooltip.add(Component.translatable("tooltip.fpv.part.size", fmt(stats.frameSize())));
+                tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
                 appendFrameTuning(stack, tooltip);
             }
             case MOTOR -> {
-                tooltip.add(Component.literal("§8KV: " + (int) stats.motorKv()));
-                tooltip.add(Component.literal("§8Power: " + stats.motorPower()));
-                tooltip.add(Component.literal("§8Weight: " + stats.weight() + "g"));
+                tooltip.add(Component.translatable("tooltip.fpv.part.kv", (int) stats.motorKv()));
+                tooltip.add(Component.translatable("tooltip.fpv.part.power", fmt(stats.motorPower())));
+                tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
             }
             case BATTERY -> {
-                tooltip.add(Component.literal("§8" + stats.batteryCells() + "S " + stats.batteryCapacity() + "mAh"));
-                tooltip.add(Component.literal("§8Discharge: " + stats.batteryMaxDischarge() + "C"));
-                tooltip.add(Component.literal("§8Weight: " + stats.weight() + "g"));
+                tooltip.add(Component.translatable("tooltip.fpv.part.cells", stats.batteryCells(), stats.batteryCapacity()));
+                tooltip.add(Component.translatable("tooltip.fpv.part.discharge", fmt(stats.batteryMaxDischarge())));
+                tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
             }
             case PROPELLER -> {
-                tooltip.add(Component.literal("§8" + stats.propDiameter() + "x" + stats.propPitch() + "x" + stats.propBlades()));
-                tooltip.add(Component.literal("§8Weight: " + stats.weight() + "g"));
+                tooltip.add(Component.translatable("tooltip.fpv.part.prop_size",
+                    fmt(stats.propDiameter()), fmt(stats.propPitch()), stats.propBlades()));
+                tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
             }
             case VTX -> {
-                tooltip.add(Component.literal("§8Power: " + stats.vtxPowerMw() + "mW"));
-                tooltip.add(Component.literal("§8Range: x" + stats.vtxRangeMultiplier()));
+                tooltip.add(Component.translatable("tooltip.fpv.part.vtx_power", stats.vtxPowerMw()));
+                tooltip.add(Component.translatable("tooltip.fpv.part.vtx_range", fmt(stats.vtxRangeMultiplier())));
             }
             case CAMERA -> {
-                tooltip.add(Component.literal("§8FOV: " + (int) stats.cameraFov() + "°"));
-                tooltip.add(Component.literal("§8Tilt: " + (int) stats.cameraTiltAngle() + "°"));
+                tooltip.add(Component.translatable("tooltip.fpv.part.fov", (int) stats.cameraFov()));
+                tooltip.add(Component.translatable("tooltip.fpv.part.tilt", (int) stats.cameraTiltAngle()));
             }
             case FLIGHT_CONTROLLER -> {
-                if (stats.fcHasOsd()) tooltip.add(Component.literal("§8Has OSD"));
-                if (stats.fcHasBlackbox()) tooltip.add(Component.literal("§8Has Blackbox"));
-                tooltip.add(Component.literal("§8Weight: " + stats.weight() + "g"));
+                if (stats.fcHasOsd()) tooltip.add(Component.translatable("tooltip.fpv.part.osd"));
+                if (stats.fcHasBlackbox()) tooltip.add(Component.translatable("tooltip.fpv.part.blackbox"));
+                tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
             }
-            case MODULE, FIRMWARE -> tooltip.add(Component.literal("§8Weight: " + stats.weight() + "g"));
+            case MODULE, FIRMWARE -> tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
         }
         tooltip.add(Component.translatable("tooltip.fpv.component_place"));
     }
@@ -116,13 +130,11 @@ public class ComponentItem extends Item {
         if (spec == null) return;
         var t = spec.tuning();
         if (spec.isFixedWing()) {
-            tooltip.add(Component.literal("§8Wing: " + fmt(t.wingArea()) + " m² · Cl " + fmt(t.liftCoeff())));
-            tooltip.add(Component.literal("§8Stall: " + fmt(t.stallSpeed()) + " m/s · Vmax "
-                + Math.round(t.maxSpeed()) + " m/s"));
+            tooltip.add(Component.translatable("tooltip.fpv.part.wing", fmt(t.wingArea()), fmt(t.liftCoeff())));
+            tooltip.add(Component.translatable("tooltip.fpv.part.stall", fmt(t.stallSpeed()), Math.round(t.maxSpeed())));
         }
-        tooltip.add(Component.literal("§8Agility x" + fmt(t.agility()) + " · Drag x" + fmt(t.dragFactor())));
-        tooltip.add(Component.literal("§8Toughness x" + fmt(t.toughness()) + " · Payload "
-            + fmt(t.liftCapacityKg()) + " kg"));
+        tooltip.add(Component.translatable("tooltip.fpv.part.agility", fmt(t.agility()), fmt(t.dragFactor())));
+        tooltip.add(Component.translatable("tooltip.fpv.part.toughness", fmt(t.toughness()), fmt(t.liftCapacityKg())));
     }
 
     private static String fmt(float v) {
@@ -131,17 +143,17 @@ public class ComponentItem extends Item {
         return out.endsWith(".") ? out.substring(0, out.length() - 1) : out;
     }
 
-    private String getLocalizedName() {
+    private String typeKey() {
         return switch (stats.type()) {
-            case FRAME -> "Frame";
-            case MOTOR -> "Motor";
-            case BATTERY -> "Battery";
-            case PROPELLER -> "Propeller";
-            case VTX -> "VTX";
-            case CAMERA -> "Camera";
-            case FLIGHT_CONTROLLER -> "Flight Controller";
-            case MODULE -> "Module";
-            case FIRMWARE -> "Firmware";
+            case FRAME -> "screen.fpv.assembly.part.frame";
+            case MOTOR -> "tooltip.fpv.part.type_motor";
+            case BATTERY -> "screen.fpv.assembly.part.battery";
+            case PROPELLER -> "tooltip.fpv.part.type_propeller";
+            case VTX -> "tooltip.fpv.part.type_vtx";
+            case CAMERA -> "screen.fpv.assembly.part.camera";
+            case FLIGHT_CONTROLLER -> "tooltip.fpv.part.type_fc";
+            case MODULE -> "screen.fpv.assembly.part.module";
+            case FIRMWARE -> "tooltip.fpv.part.type_firmware";
         };
     }
 }

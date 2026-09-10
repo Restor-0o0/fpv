@@ -19,6 +19,9 @@ public class ModMenus {
     public static final DeferredHolder<MenuType<?>, MenuType<ChargingStationMenu>> CHARGING_STATION = MENUS.register("charging_station",
         () -> IMenuTypeExtension.create(ChargingStationMenu::new));
 
+    public static final DeferredHolder<MenuType<?>, MenuType<GuardStationMenu>> GUARD_STATION = MENUS.register("guard_station",
+        () -> IMenuTypeExtension.create(GuardStationMenu::new));
+
     public static final DeferredHolder<MenuType<?>, MenuType<org.restor.fpv.assembly.AssemblyStationMenu>> ASSEMBLY_STATION = MENUS.register("assembly_station",
         () -> IMenuTypeExtension.create(org.restor.fpv.assembly.AssemblyStationMenu::new));
 }

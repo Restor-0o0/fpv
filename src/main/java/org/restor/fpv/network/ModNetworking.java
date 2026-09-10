@@ -25,9 +25,9 @@ public class ModNetworking {
         registrar.playToServer(PlaneStrikePacket.TYPE, PlaneStrikePacket.STREAM_CODEC, PlaneStrikePacket::handle);
         registrar.playToClient(ExplosionParticlesPacket.TYPE, ExplosionParticlesPacket.STREAM_CODEC, ExplosionParticlesPacket::handle);
         registrar.playToServer(PlaneTargetStreamPacket.TYPE, PlaneTargetStreamPacket.STREAM_CODEC, PlaneTargetStreamPacket::handle);
-        registrar.playToServer(DevDroneGivePacket.TYPE, DevDroneGivePacket.STREAM_CODEC, DevDroneGivePacket::handle);
         registrar.playToClient(GhostDataPacket.TYPE, GhostDataPacket.STREAM_CODEC, GhostDataPacket::handle);
         registrar.playToServer(FirePayloadPacket.TYPE, FirePayloadPacket.STREAM_CODEC, FirePayloadPacket::handle);
+        registrar.playToServer(FireWeaponPacket.TYPE, FireWeaponPacket.STREAM_CODEC, FireWeaponPacket::handle);
         registrar.playToServer(DronePosePacket.TYPE, DronePosePacket.STREAM_CODEC, DronePosePacket::handle);
         registrar.playToServer(DroneDismountPacket.TYPE, DroneDismountPacket.STREAM_CODEC, DroneDismountPacket::handle);
         registrar.playToClient(LineOfSightPacket.TYPE, LineOfSightPacket.STREAM_CODEC, LineOfSightPacket::handle);

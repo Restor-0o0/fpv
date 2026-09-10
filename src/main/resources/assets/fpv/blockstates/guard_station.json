@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "fpv:block/guard_station"
+    },
+    "facing=east": {
+      "model": "fpv:block/guard_station",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "fpv:block/guard_station",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "fpv:block/guard_station",
+      "y": 270
+    }
+  }
+}

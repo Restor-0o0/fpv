@@ -50,6 +50,7 @@ public class Fpv {
                 output.accept(ModBlocks.RACE_FINISH.get());
                 output.accept(ModBlocks.RACE_GATE.get());
                 output.accept(ModBlocks.CHARGING_STATION.get());
+                output.accept(ModBlocks.GUARD_STATION.get());
                 output.accept(ModBlocks.DRONE_NEST.get());
                 output.accept(ModBlocks.DRONE_DETECTOR.get());
                 output.accept(ModBlocks.DRONE_JAMMER.get());
@@ -59,10 +60,16 @@ public class Fpv {
                 for (var preset : org.restor.fpv.assembly.DronePresets.all()) output.accept(preset);
                 for (var card : org.restor.fpv.assembly.DronePresets.cards()) output.accept(card);
                 output.accept(ModItems.DROP_CHARGE.get());
+                output.accept(ModItems.MINI_ROCKET.get());
                 for (var holder : ModItems.WARHEADS.values()) output.accept(holder.get());
                 output.accept(ModItems.HOSTILE_DRONE_SPAWN_EGG.get());
                 output.accept(ModItems.PATROL_DRONE_SPAWN_EGG.get());
                 output.accept(ModItems.INTERCEPTOR_DRONE_SPAWN_EGG.get());
+                output.accept(ModItems.BOMBER_DRONE_SPAWN_EGG.get());
+                output.accept(ModItems.ROCKET_DRONE_SPAWN_EGG.get());
+                output.accept(ModItems.SCOUT_DRONE_SPAWN_EGG.get());
+                output.accept(ModItems.JAMMER_DRONE_SPAWN_EGG.get());
+                output.accept(ModItems.VILLAGE_DRONE_SPAWN_EGG.get());
                 output.accept(ModComponents.FRAME_5INCH.get());
                 output.accept(ModComponents.FRAME_7INCH.get());
                 output.accept(ModComponents.FRAME_TINY_WHOOP.get());
@@ -113,6 +120,7 @@ public class Fpv {
                 output.accept(ModComponents.MODULE_DART_GUN.get());
                 output.accept(ModComponents.MODULE_STORAGE.get());
                 output.accept(ModComponents.MODULE_TARGETING.get());
+                output.accept(ModComponents.MODULE_ROCKET_POD.get());
                 output.accept(ModComponents.FIRMWARE_COMPANION.get());
                 output.accept(ModComponents.FIRMWARE_SCOUT.get());
                 output.accept(ModComponents.FIRMWARE_GUARDIAN.get());

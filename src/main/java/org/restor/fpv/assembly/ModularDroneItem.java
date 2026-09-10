@@ -33,7 +33,7 @@ public class ModularDroneItem extends DroneItem {
                     spec.motorCount(), a.totalMassKg() * 1000, a.totalThrustN())));
                 float[] trim = a.computeTrim();
                 if (Math.abs(trim[0]) > 1 || Math.abs(trim[1]) > 1 || Math.abs(trim[2]) > 1) {
-                    tooltip.add(Component.literal("§c⚠ несбалансированные моторы/пропы (перекос в полёте)"));
+                    tooltip.add(Component.translatable("tooltip.fpv.assembly.unbalanced"));
                 }
             }
         }

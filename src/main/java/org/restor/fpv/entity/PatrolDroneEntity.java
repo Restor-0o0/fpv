@@ -25,6 +25,8 @@ public class PatrolDroneEntity extends NpcDroneEntity {
     private static final double STANDOFF_DIST = 9.0;   // preferred firing range
     private static final int FIRE_COOLDOWN = 25;       // ticks between shots
     private static final int BOMB_COOLDOWN = 70;
+    private static final int RAM_COOLDOWN = 20;
+    private static final float RAM_DAMAGE = 3.0f;
 
     public PatrolDroneEntity(EntityType<? extends PatrolDroneEntity> type, Level level) {
         super(type, level);
@@ -96,11 +98,26 @@ public class PatrolDroneEntity extends NpcDroneEntity {
 
             if (bombs()) {
                 // Bombing run: sit right above the target and kick a charge out of the bay.
-                setFlightTarget(new Vec3(t.getX(), t.getEyeY() + 7.0, t.getZ()), 1.1);
-                boolean overhead = t.distanceToSqr(getX(), t.getY(), getZ()) < 4.0;
-                if (--cooldown <= 0 && overhead && getY() - t.getY() > 3.0) {
+                setFlightTarget(new Vec3(t.getX(), t.getEyeY() + 5.0, t.getZ()), 1.2);
+                boolean overhead = t.distanceToSqr(getX(), t.getY(), getZ()) < 9.0;
+                if (--cooldown <= 0 && overhead && getY() - t.getY() > 2.0) {
                     cooldown = BOMB_COOLDOWN;
                     dropCharge();
+                }
+                return;
+            }
+
+            // A build with no weapon module used to just loiter at standoff forever; without
+            // darts or a bay the only thing it can do is fly into the target and bump it.
+            if (!shoots()) {
+                setFlightTarget(t.getEyePosition(), 1.5);
+                if (--cooldown <= 0 && distanceToSqr(t) < 3.5) {
+                    cooldown = RAM_COOLDOWN;
+                    t.hurt(damageSources().mobAttack(PatrolDroneEntity.this), RAM_DAMAGE);
+                    t.knockback(0.4, getX() - t.getX(), getZ() - t.getZ());
+                    playSound(SoundEvents.PLAYER_ATTACK_STRONG, 0.7f, 1.4f);
+                    setDeltaMovement(getDeltaMovement().add(
+                        new Vec3(getX() - t.getX(), 0.25, getZ() - t.getZ()).normalize().scale(0.45)));
                 }
                 return;
             }
@@ -111,7 +128,6 @@ public class PatrolDroneEntity extends NpcDroneEntity {
             double wz = t.getZ() + Math.sin(orbitAngle) * STANDOFF_DIST;
             setFlightTarget(new Vec3(wx, wy, wz), 1.0);
 
-            if (!shoots()) return;
             if (--cooldown <= 0 && hasLineOfSight(t) && distanceToSqr(t) < 20 * 20) {
                 cooldown = FIRE_COOLDOWN;
                 shootDart(t);

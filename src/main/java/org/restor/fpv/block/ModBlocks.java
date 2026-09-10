@@ -50,6 +50,9 @@ public class ModBlocks {
         () -> new DroneJammerBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_PURPLE).strength(3f).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()
             .lightLevel(state -> state.getValue(DroneJammerBlock.POWERED) ? 5 : 0)));
 
+    public static final DeferredHolder<Block, Block> GUARD_STATION = register("guard_station",
+        () -> new GuardStationBlock(BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_LIGHT_GRAY).strength(3f).sound(SoundType.METAL).requiresCorrectToolForDrops().noOcclusion()));
+
     // No block item: a pile only exists where a component was set down.
     public static final DeferredHolder<Block, PartsPileBlock> PARTS_PILE = BLOCKS.register("parts_pile",
         () -> new PartsPileBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.2f).sound(SoundType.METAL).noOcclusion().instabreak()));

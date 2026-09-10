@@ -13,6 +13,7 @@ public class ModScreens {
     public static void onRegisterScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenus.ASSEMBLY_STATION.get(), AssemblyStationScreen::new);
         event.register(ModMenus.CHARGING_STATION.get(), ChargingStationScreen::new);
+        event.register(ModMenus.GUARD_STATION.get(), GuardStationScreen::new);
         event.register(ModMenus.CARRIER.get(), CarrierScreen::new);
         event.register(ModMenus.CARGO_BAY.get(), CargoBayScreen::new);
     }

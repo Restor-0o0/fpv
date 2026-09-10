@@ -45,6 +45,7 @@ public final class CommonConfig {
     public static final ModConfigSpec.DoubleValue DEV_HITBOX_SCALE;
     public static final ModConfigSpec.DoubleValue DEV_HITBOX_Y_OFFSET;
     public static final ModConfigSpec.DoubleValue FPV_CAMERA_HEIGHT;
+    public static final ModConfigSpec.BooleanValue DEV_NO_DAMAGE;
     public static final ModConfigSpec.BooleanValue DEV_VERBOSE_LOG;
     public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> QUIET_LOGGERS;
     public static final ModConfigSpec.BooleanValue CLIENT_PHYSICS;
@@ -109,6 +110,8 @@ public final class CommonConfig {
         DEV_HITBOX_SCALE = BUILDER.defineInRange("hitboxScale", 1.0, 0.2, 3.0);
         DEV_HITBOX_Y_OFFSET = BUILDER.defineInRange("hitboxYOffset", 0.0, -1.0, 1.0);
         FPV_CAMERA_HEIGHT = BUILDER.defineInRange("fpvCameraHeight", 0.5, 0.0, 1.5);
+        DEV_NO_DAMAGE = BUILDER.comment("Drones and their components take no wear or crash damage.")
+            .define("noDamage", false);
         DEV_VERBOSE_LOG = BUILDER.comment("Write per-tick flight/controller/chunk traces to the log. Costly: only for debugging.")
             .define("verboseLog", false);
         BUILDER.pop();

@@ -24,13 +24,16 @@ public class DroneAssembly {
     // Thrust per motor-power unit. A 4×2207+5x4x3 4S build lands at ~TWR 5 — enough that level
     // cruise sits at ~40-45° pitch (not 65°, which TWR ~8+ forced), while low drag still gives a
     // high top speed. More cells (6S) or stronger motors push TWR up for a punchier build.
-    private static final float THRUST_N_PER_POWER = 5.5f;
+    private static final float THRUST_N_PER_POWER = 6.6f;
 
     public ItemStack frame = ItemStack.EMPTY;
     public ItemStack battery = ItemStack.EMPTY;
     public ItemStack camera = ItemStack.EMPTY;
     public ItemStack module = ItemStack.EMPTY; // optional payload/utility module (FPV_IDEAS §4-5)
     public ItemStack firmware = ItemStack.EMPTY; // optional autonomy chip, independent of the module slot
+    public ItemStack vtx = ItemStack.EMPTY;      // video transmitter: sets the link range and the channel
+    public ItemStack fc = ItemStack.EMPTY;       // flight controller: OSD and blackbox
+    public int channel = org.restor.fpv.component.RadioChannel.DEFAULT;
     public final ItemStack[] motors = new ItemStack[MAX_MOTORS];
     public final ItemStack[] props = new ItemStack[MAX_MOTORS];
     /** Drone cards stowed aboard — only frames whose role opens a bay ever hold any. */
@@ -54,6 +57,9 @@ public class DroneAssembly {
         putStack(tag, "Camera", camera);
         if (!module.isEmpty()) putStack(tag, "Module", module);
         if (!firmware.isEmpty()) putStack(tag, "Firmware", firmware);
+        if (!vtx.isEmpty()) putStack(tag, "Vtx", vtx);
+        if (!fc.isEmpty()) putStack(tag, "Fc", fc);
+        tag.putInt("Channel", channel);
         for (int i = 0; i < MAX_MOTORS; i++) {
             if (!motors[i].isEmpty()) putStack(tag, "Motor" + i, motors[i]);
             if (!props[i].isEmpty())  putStack(tag, "Prop" + i,  props[i]);
@@ -83,6 +89,9 @@ public class DroneAssembly {
         a.camera = readStack(tag, "Camera");
         if (tag.contains("Module")) a.module = readStack(tag, "Module");
         if (tag.contains("Firmware")) a.firmware = readStack(tag, "Firmware");
+        if (tag.contains("Vtx")) a.vtx = readStack(tag, "Vtx");
+        if (tag.contains("Fc")) a.fc = readStack(tag, "Fc");
+        a.channel = org.restor.fpv.component.RadioChannel.clamp(tag.getInt("Channel"));
         for (int i = 0; i < MAX_MOTORS; i++) {
             if (tag.contains("Motor" + i)) a.motors[i] = readStack(tag, "Motor" + i);
             if (tag.contains("Prop" + i))  a.props[i]  = readStack(tag, "Prop" + i);
@@ -127,6 +136,7 @@ public class DroneAssembly {
     public boolean isBareFrame() {
         if (frame.isEmpty()) return false;
         if (!battery.isEmpty() || !camera.isEmpty() || !module.isEmpty() || !firmware.isEmpty()) return false;
+        if (!vtx.isEmpty() || !fc.isEmpty()) return false;
         for (int i = 0; i < MAX_MOTORS; i++) {
             if (!motors[i].isEmpty() || !props[i].isEmpty()) return false;
         }
@@ -148,6 +158,8 @@ public class DroneAssembly {
         frameCompatible &= compatibleIfPresent(camera);
         frameCompatible &= compatibleIfPresent(module);
         frameCompatible &= compatibleIfPresent(firmware);
+        frameCompatible &= compatibleIfPresent(vtx);
+        frameCompatible &= compatibleIfPresent(fc);
         for (int i = 0; i < MAX_MOTORS; i++) {
             ComponentStats motor = stats(motors[i], ComponentType.MOTOR);
             ComponentStats prop = stats(props[i], ComponentType.PROPELLER);
@@ -206,7 +218,7 @@ public class DroneAssembly {
             case PROPELLER -> wing ? compatiblePlaneProp(frameSize, stats) : compatibleProp(frameSize, stats);
             case BATTERY -> compatibleBattery(frame, stats);
             case CAMERA -> compatibleCamera(frameSize, stats);
-            case MODULE -> compatibleModule(frameSize, component);
+            case MODULE -> compatibleModule(frameSize, wing, component);
             case FIRMWARE -> component.getItem() instanceof org.restor.fpv.component.FirmwareItem fi
                 && frameSize >= fi.getFirmwareType().minFrameSize();
             default -> true;
@@ -270,14 +282,24 @@ public class DroneAssembly {
 
     // Which modules fit which frames (FPV_IDEAS §4 "тяжелое оружие доступно только большим
     // рамам"). Tiny whoops (≤2") carry no modules at all.
-    private static boolean compatibleModule(float frameSize, ItemStack module) {
+    private static boolean compatibleModule(float frameSize, boolean wing, ItemStack module) {
         if (!(module.getItem() instanceof org.restor.fpv.component.ModuleItem mi)) return false;
+        // An airframe has no belly rack and nothing to aim, so only the three modules a plane
+        // can actually fly with fit the slot — the rest used to install and then do nothing.
+        if (wing) {
+            return switch (mi.getModuleType()) {
+                case WARHEAD, STORAGE -> true;
+                case TARGETING -> frameSize >= 8.0f;
+                default -> false;
+            };
+        }
         return switch (mi.getModuleType()) {
             case PAYLOAD_BAY -> frameSize >= 3.5f;  // cinewhoop and up
             case WARHEAD -> frameSize >= 5.0f;      // 5" and up — it's 150g of explosives
             case DART_GUN -> frameSize >= 5.0f;     // recoil needs a 5"+ frame
             case STORAGE -> frameSize >= 3.5f;      // cargo box needs some belly room
             case TARGETING -> frameSize >= 8.0f;    // needs a big airframe to haul the optics
+            case ROCKET_POD -> frameSize >= 5.0f;   // the rails and blast need a 5"+ frame
         };
     }
 
@@ -362,6 +384,25 @@ public class DroneAssembly {
         return new RepairTarget(type, index, stack, condition);
     }
 
+    /** Link range factor of the installed video transmitter; a build with no VTX flies stock range. */
+    private static final float NO_VTX_RANGE = 0.4f;
+
+    public float vtxRangeMultiplier() {
+        ComponentStats stats = stats(vtx, ComponentType.VTX);
+        return stats != null ? stats.vtxRangeMultiplier() : NO_VTX_RANGE;
+    }
+
+    public boolean hasOsd() {
+        ComponentStats stats = stats(fc, ComponentType.FLIGHT_CONTROLLER);
+        return stats != null && stats.fcHasOsd();
+    }
+
+    /** Frame size in inches (prop class), or 5 when the frame slot is empty. */
+    public float frameSizeInches() {
+        ComponentStats frameStats = stats(frame, ComponentType.FRAME);
+        return frameStats != null ? frameStats.frameSize() : 5f;
+    }
+
     private static ComponentStats stats(ItemStack stack, ComponentType type) {
         if (!stack.isEmpty() && stack.getItem() instanceof ComponentItem ci && ci.getComponentType() == type) {
             return ci.getStats();
@@ -393,6 +434,7 @@ public class DroneAssembly {
         // a few grams, a 7" a full stack. A flat baseline made small builds absurdly heavy.
         float g = 8f + frameSize * 14f;
         g += weight(frame) + weight(battery) + weight(camera) + weight(module) + weight(firmware);
+        g += weight(vtx) + weight(fc);
         for (int i = 0; i < MAX_MOTORS; i++) g += weight(motors[i]) + weight(props[i]);
         return Math.max(0.02f, g / 1000f);
     }
@@ -554,7 +596,7 @@ public class DroneAssembly {
 
         // Bigger frames rotate slower; responsiveness drops with size too.
         float rate = Math.max(200f, 700f - frameSize * 50f) * tuning.agility();
-        float resp = Math.max(6f, 18f - frameSize * 1.2f) * tuning.responsiveness();
+        float resp = Math.max(10f, 26f - frameSize * 1.5f) * tuning.responsiveness();
 
         if (spec != null && spec.isHeavyLift()) {
             camTilt = -45f;

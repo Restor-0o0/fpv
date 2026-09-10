@@ -56,6 +56,22 @@ public class DroneJammerBlock extends BaseEntityBlock {
     }
 
     @Override
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
+                                                                   Player player,
+                                                                   net.minecraft.world.phys.BlockHitResult hit) {
+        if (level.isClientSide) return net.minecraft.world.InteractionResult.SUCCESS;
+        if (!(level.getBlockEntity(pos) instanceof DroneJammerBlockEntity jammer)) {
+            return net.minecraft.world.InteractionResult.PASS;
+        }
+        int channel = jammer.cycleChannel();
+        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+            "block.fpv.drone_jammer.channel", org.restor.fpv.component.RadioChannel.name(channel)), true);
+        level.playSound(null, pos, net.minecraft.sounds.SoundEvents.LEVER_CLICK,
+            net.minecraft.sounds.SoundSource.BLOCKS, 0.6f, channel == 0 ? 0.8f : 1.2f);
+        return net.minecraft.world.InteractionResult.CONSUME;
+    }
+
+    @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
         if (!level.isClientSide && placer instanceof Player player

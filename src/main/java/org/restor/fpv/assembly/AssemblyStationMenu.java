@@ -40,7 +40,9 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
     public static final int SLOT_PROP_FIRST = SLOT_MOTOR_FIRST + DroneAssembly.MAX_MOTORS; // 11..18
     public static final int SLOT_MODULE = SLOT_PROP_FIRST + DroneAssembly.MAX_MOTORS;      // 19
     public static final int SLOT_FIRMWARE = SLOT_MODULE + 1;                                // 20
-    public static final int SLOT_REPAIR_MATERIAL = SLOT_FIRMWARE + 1;                        // 21
+    public static final int SLOT_VTX = SLOT_FIRMWARE + 1;                                    // 21
+    public static final int SLOT_FC = SLOT_VTX + 1;                                          // 22
+    public static final int SLOT_REPAIR_MATERIAL = SLOT_FC + 1;                              // 23
     public static final int SLOT_CARD_IN = SLOT_REPAIR_MATERIAL + 1;                         // 22
     public static final int SLOT_BAY_FIRST = SLOT_CARD_IN + 1;                               // 23..26
     public static final int SLOT_RESULT = SLOT_BAY_FIRST + DroneAssembly.BAY_SIZE;           // 27
@@ -48,6 +50,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
     public static final int SLOT_COUNT = SLOT_CARD_OUT + 1;
     public static final int INPUT_SLOT_COUNT = SLOT_RESULT;
     public static final int BUTTON_REPAIR = 0;
+    public static final int BUTTON_CHANNEL = 1;
     private static final int REPAIR_PER_ITEM = 250;
     private static final int DATA_ISSUES = 0;
     private static final int DATA_MASS_GRAMS = 1;
@@ -104,6 +107,8 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
 
         addSlot(new TypedSlot(container, SLOT_MODULE, 104, 55, ComponentType.MODULE, -1));
         addSlot(new TypedSlot(container, SLOT_FIRMWARE, 56, 55, ComponentType.FIRMWARE, -1));
+        addSlot(new TypedSlot(container, SLOT_VTX, 56, 93, ComponentType.VTX, -1));
+        addSlot(new TypedSlot(container, SLOT_FC, 104, 93, ComponentType.FLIGHT_CONTROLLER, -1));
         addSlot(new Slot(container, SLOT_REPAIR_MATERIAL, 184, 183) {
             @Override public boolean mayPlace(ItemStack stack) { return isRepairMaterial(stack); }
         });
@@ -200,6 +205,9 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         a.camera = container.getItem(SLOT_CAMERA);
         a.module = container.getItem(SLOT_MODULE);
         a.firmware = container.getItem(SLOT_FIRMWARE);
+        a.vtx = container.getItem(SLOT_VTX);
+        a.fc = container.getItem(SLOT_FC);
+        a.channel = org.restor.fpv.component.RadioChannel.of(a.vtx);
         for (int i = 0; i < DroneAssembly.MAX_MOTORS; i++) {
             a.motors[i] = container.getItem(SLOT_MOTOR_FIRST + i);
             a.props[i] = container.getItem(SLOT_PROP_FIRST + i);
@@ -357,6 +365,10 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         container.setItem(SLOT_CAMERA, a.camera.copy());
         container.setItem(SLOT_MODULE, a.module.copy());
         container.setItem(SLOT_FIRMWARE, a.firmware.copy());
+        ItemStack radio = a.vtx.copy();
+        if (!radio.isEmpty()) org.restor.fpv.component.RadioChannel.set(radio, a.channel);
+        container.setItem(SLOT_VTX, radio);
+        container.setItem(SLOT_FC, a.fc.copy());
         for (int i = 0; i < spec.motorCount(); i++) {
             container.setItem(SLOT_MOTOR_FIRST + i, a.motors[i].copy());
             container.setItem(SLOT_PROP_FIRST + i, a.props[i].copy());
@@ -369,7 +381,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
     }
 
     private boolean areComponentSlotsEmpty() {
-        for (int i = SLOT_FRAME; i <= SLOT_FIRMWARE; i++) {
+        for (int i = SLOT_FRAME; i <= SLOT_FC; i++) {
             if (!container.getItem(i).isEmpty()) return false;
         }
         for (int i = 0; i < DroneAssembly.BAY_SIZE; i++) {
@@ -378,8 +390,29 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         return true;
     }
 
+    /** The channel dialled on the installed video transmitter. */
+    public int channel() {
+        return org.restor.fpv.component.RadioChannel.of(container.getItem(SLOT_VTX));
+    }
+
+    public boolean hasRadio() {
+        return !container.getItem(SLOT_VTX).isEmpty();
+    }
+
     @Override
     public boolean clickMenuButton(Player player, int id) {
+        if (id == BUTTON_CHANNEL) {
+            if (player.level().isClientSide) return true;
+            ItemStack radio = container.getItem(SLOT_VTX);
+            if (radio.isEmpty()) return false;
+            org.restor.fpv.component.RadioChannel.set(radio,
+                org.restor.fpv.component.RadioChannel.next(org.restor.fpv.component.RadioChannel.of(radio)));
+            container.setItem(SLOT_VTX, radio);
+            container.setChanged();
+            slotsChanged(container);
+            broadcastChanges();
+            return true;
+        }
         if (id != BUTTON_REPAIR) return false;
         if (player.level().isClientSide) return true;
         DroneAssembly.RepairTarget target = buildAssembly().repairTarget();
@@ -427,6 +460,8 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
             shrinkSlot(SLOT_CAMERA);
             shrinkSlot(SLOT_MODULE);
             shrinkSlot(SLOT_FIRMWARE);
+            shrinkSlot(SLOT_VTX);
+            shrinkSlot(SLOT_FC);
             for (int i = 0; i < n; i++) {
                 shrinkSlot(SLOT_MOTOR_FIRST + i);
                 shrinkSlot(SLOT_PROP_FIRST + i);
@@ -471,6 +506,8 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
                 case PROPELLER -> { from = SLOT_PROP_FIRST; to = SLOT_PROP_FIRST + DroneAssembly.MAX_MOTORS; }
                 case MODULE -> { from = SLOT_MODULE; to = SLOT_MODULE + 1; }
                 case FIRMWARE -> { from = SLOT_FIRMWARE; to = SLOT_FIRMWARE + 1; }
+                case VTX -> { from = SLOT_VTX; to = SLOT_VTX + 1; }
+                case FLIGHT_CONTROLLER -> { from = SLOT_FC; to = SLOT_FC + 1; }
                 default -> { return ItemStack.EMPTY; }
             }
             if (!moveItemStackTo(stack, from, to, false)) return ItemStack.EMPTY;
