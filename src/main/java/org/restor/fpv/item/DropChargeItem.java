@@ -33,6 +33,7 @@ public class DropChargeItem extends Item {
         tooltip.add(Component.translatable("tooltip.fpv.ordnance.mob", fmt(blast.mobDamageMul()))
             .withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.drop_charge.load").withStyle(ChatFormatting.GOLD));
+        tooltip.add(Component.translatable("tooltip.fpv.ordnance.unload").withStyle(ChatFormatting.GOLD));
         tooltip.add(Component.translatable("tooltip.fpv.drop_charge.fuze").withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.component_place"));
     }

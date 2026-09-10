@@ -29,6 +29,7 @@ public class ModularDroneEntity extends DroneEntity {
         SynchedEntityData.defineId(ModularDroneEntity.class, EntityDataSerializers.COMPOUND_TAG);
 
     private DroneAssembly assembly = new DroneAssembly();
+    private boolean flightReady;
     private float trimRoll, trimPitch, trimYaw; // °/s at full throttle
     private boolean clientAssemblyInitialized;
     // Scraping a wall damages parts several ticks in a row; re-serialising and
@@ -62,6 +63,11 @@ public class ModularDroneEntity extends DroneEntity {
 
     public DroneAssembly getAssembly() {
         return assembly;
+    }
+
+    @Override
+    public boolean isFlightReady() {
+        return flightReady;
     }
 
     @Override
@@ -105,6 +111,7 @@ public class ModularDroneEntity extends DroneEntity {
 
     // Derive flight characteristics from the installed components.
     private void applyAssembly() {
+        flightReady = assembly != null && assembly.isComplete();
         updateWearEffects();
         this.flightController = controllerFor();
         this.battery = new Battery(droneData.batteryCapacity, 4.2f);

@@ -192,7 +192,9 @@ public class DroneAssembly {
             totalThrustN(),
             thrustFactors,
             ComponentCondition.ratio(camera),
-            isPlaneFrame(frame)
+            isPlaneFrame(frame),
+            stats(fc, ComponentType.FLIGHT_CONTROLLER) != null,
+            stats(vtx, ComponentType.VTX) != null
         ));
     }
 

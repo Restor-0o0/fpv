@@ -59,7 +59,7 @@ class DroneAssemblyValidatorTest {
             2, true, true, false,
             new DroneAssemblyValidator.MotorSpec[]{MOTOR, MOTOR},
             new DroneAssemblyValidator.PropSpec[]{oversizedProp, oversizedProp},
-            new DroneAssemblyValidator.BatterySpec(4), 1, 30, new float[]{1, 1}, 1, false));
+            new DroneAssemblyValidator.BatterySpec(4), 1, 30, new float[]{1, 1}, 1, false, true, true));
         assertTrue(result.warnings().contains(FRAME_COMPONENT_MISMATCH));
         assertTrue(result.warnings().contains(MOTOR_PROP_INCOMPATIBLE));
         assertTrue(result.isComplete());
@@ -82,7 +82,7 @@ class DroneAssemblyValidatorTest {
             2, true, true, true,
             new DroneAssemblyValidator.MotorSpec[]{MOTOR, MOTOR},
             new DroneAssemblyValidator.PropSpec[]{PROP, PROP},
-            new DroneAssemblyValidator.BatterySpec(4), 1, 30, new float[]{1, 1}, 0.5f, false));
+            new DroneAssemblyValidator.BatterySpec(4), 1, 30, new float[]{1, 1}, 0.5f, false, true, true));
         assertTrue(result.warnings().contains(DAMAGED_CAMERA));
     }
 
@@ -103,6 +103,6 @@ class DroneAssemblyValidatorTest {
         float[] factors
     ) {
         return DroneAssemblyValidator.validate(new DroneAssemblyValidator.Input(
-            motors.length, true, true, true, motors, props, battery, 1, thrust, factors, 1, false));
+            motors.length, true, true, true, motors, props, battery, 1, thrust, factors, 1, false, true, true));
     }
 }

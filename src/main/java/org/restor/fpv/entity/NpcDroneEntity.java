@@ -6,7 +6,9 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.MoveControl;
@@ -19,6 +21,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -36,6 +39,8 @@ public abstract class NpcDroneEntity extends Monster
     private static final int PATH_CHECK_INTERVAL = 6;
     private static final int STUCK_CHECK_INTERVAL = 10;
     private static final int STUCK_TIMEOUT = 60;
+    private static final double AIRCRAFT_SCAN_RADIUS = 32.0;
+    private static final int AIRCRAFT_SCAN_INTERVAL = 10;
 
     private static final net.minecraft.network.syncher.EntityDataAccessor<CompoundTag> DATA_ASSEMBLY =
         net.minecraft.network.syncher.SynchedEntityData.defineId(NpcDroneEntity.class,
@@ -53,6 +58,8 @@ public abstract class NpcDroneEntity extends Monster
     private int nextPathCheck;
     private int stuckTicks;
     private int recoveryUntil;
+    private Entity aircraftTarget;
+    private int nextAircraftScan;
 
     private static final float JAM_LINK_LOSS = 0.25f;
     private final org.restor.fpv.antidrone.RadioJamState jamState = new org.restor.fpv.antidrone.RadioJamState();
@@ -103,6 +110,44 @@ public abstract class NpcDroneEntity extends Monster
     }
 
     protected abstract NpcDroneBuilds.Role buildRole();
+
+    /** A player aircraft is a plain Entity, so the vanilla target selector never sees it. */
+    public static boolean isPlayerAircraft(Entity e) {
+        return e instanceof DroneEntity || e instanceof PlaneEntity;
+    }
+
+    protected boolean attacksAircraft() { return false; }
+
+    public void setAircraftTarget(Entity e) { aircraftTarget = e; }
+
+    public Entity getAircraftTarget() {
+        if (aircraftTarget != null && !aircraftTarget.isAlive()) aircraftTarget = null;
+        return aircraftTarget;
+    }
+
+    protected Entity engagementTarget() {
+        LivingEntity living = getTarget();
+        if (living != null && living.isAlive()) return living;
+        return getAircraftTarget();
+    }
+
+    private Entity nearestAircraft() {
+        AABB box = new AABB(blockPosition()).inflate(AIRCRAFT_SCAN_RADIUS);
+        Entity best = nearestOf(level().getEntitiesOfClass(DroneEntity.class, box, Entity::isAlive), null);
+        return nearestOf(level().getEntitiesOfClass(PlaneEntity.class, box, Entity::isAlive), best);
+    }
+
+    private Entity nearestOf(List<? extends Entity> candidates, Entity best) {
+        double bestSqr = best == null ? Double.MAX_VALUE : distanceToSqr(best);
+        for (Entity e : candidates) {
+            double sqr = distanceToSqr(e);
+            if (sqr < bestSqr) {
+                bestSqr = sqr;
+                best = e;
+            }
+        }
+        return best;
+    }
 
     @Override
     public net.minecraft.world.entity.SpawnGroupData finalizeSpawn(
@@ -158,6 +203,7 @@ public abstract class NpcDroneEntity extends Monster
         super.customServerAiStep();
         if (jamState.refresh(level().getGameTime()) <= JAM_LINK_LOSS) return;
         setTarget(null);
+        aircraftTarget = null;
         getNavigation().stop();
         setDeltaMovement(getDeltaMovement().multiply(0.82, 1.0, 0.82).add(0.0, -0.035, 0.0));
     }
@@ -169,6 +215,10 @@ public abstract class NpcDroneEntity extends Monster
         if (isRadioJammed()) return;
         if (anchor == null) anchor = blockPosition();
         if (entityData.get(DATA_ASSEMBLY).isEmpty()) setAssembly(NpcDroneBuilds.roll(random, buildRole()));
+        if (attacksAircraft() && tickCount >= nextAircraftScan) {
+            nextAircraftScan = tickCount + AIRCRAFT_SCAN_INTERVAL;
+            aircraftTarget = nearestAircraft();
+        }
         tickNavigationSafety();
         // Hover bob so it never reads as frozen mid-air.
         if (getDeltaMovement().lengthSqr() < 0.003) {

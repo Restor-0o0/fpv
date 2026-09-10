@@ -1,7 +1,7 @@
 package org.restor.fpv.entity;
 
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -37,6 +37,9 @@ public class RocketDroneEntity extends NpcDroneEntity {
     protected NpcDroneBuilds.Role buildRole() { return NpcDroneBuilds.Role.ROCKET; }
 
     @Override
+    protected boolean attacksAircraft() { return true; }
+
+    @Override
     protected void registerGoals() {
         goalSelector.addGoal(1, new SalvoGoal());
         goalSelector.addGoal(3, new PatrolGoal());
@@ -61,7 +64,7 @@ public class RocketDroneEntity extends NpcDroneEntity {
 
         @Override
         public boolean canUse() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             return t != null && t.isAlive();
         }
 
@@ -73,7 +76,7 @@ public class RocketDroneEntity extends NpcDroneEntity {
 
         @Override
         public void tick() {
-            LivingEntity t = getTarget();
+            Entity t = engagementTarget();
             if (t == null) return;
             getLookControl().setLookAt(t, 30f, 30f);
 
@@ -93,7 +96,7 @@ public class RocketDroneEntity extends NpcDroneEntity {
             }
         }
 
-        private void launch(LivingEntity t) {
+        private void launch(Entity t) {
             MiniRocketEntity rocket = new MiniRocketEntity(level(), getX(), getY() - 0.2, getZ());
             rocket.setOwner(RocketDroneEntity.this);
             Vec3 aim = t.position().add(t.getDeltaMovement().scale(8.0)).add(0, t.getBbHeight() * 0.5, 0);

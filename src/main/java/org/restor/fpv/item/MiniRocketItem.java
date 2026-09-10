@@ -32,6 +32,7 @@ public class MiniRocketItem extends Item {
         tooltip.add(Component.translatable("tooltip.fpv.mini_rocket.terrain").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.mini_rocket.load",
             org.restor.fpv.entity.DroneEntity.MAX_ROCKETS).withStyle(ChatFormatting.GOLD));
+        tooltip.add(Component.translatable("tooltip.fpv.ordnance.unload").withStyle(ChatFormatting.GOLD));
         tooltip.add(Component.translatable("tooltip.fpv.mini_rocket.fire").withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.component_place"));
     }

@@ -1087,7 +1087,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
                 return InteractionResult.sidedSuccess(level().isClientSide);
             }
             if (held.isEmpty()) {
-                if (!level().isClientSide) cycleMode(player);
+                if (!level().isClientSide && !unloadOrdnance(player)) cycleMode(player);
                 return InteractionResult.sidedSuccess(level().isClientSide);
             }
             return InteractionResult.PASS;
@@ -1111,6 +1111,11 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     /** Radio entry point: goggles give the mounted FPV feed, bare eyes give line-of-sight. */
     public boolean startPilotSession(ServerPlayer player) {
+        if (!isFlightReady()) {
+            player.displayClientMessage(
+                net.minecraft.network.chat.Component.translatable("msg.fpv.airframe_incomplete"), true);
+            return false;
+        }
         if (!org.restor.fpv.item.RcLink.hasTransmitter(player)) {
             player.displayClientMessage(
                 net.minecraft.network.chat.Component.translatable("msg.fpv.need_transmitter"), true);
@@ -1496,6 +1501,11 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     /** Cycles through the modes the installed firmware supports; a bare FC flies nothing on its own. */
     public void cycleMode(Player player) {
+        if (!isFlightReady()) {
+            player.displayClientMessage(
+                net.minecraft.network.chat.Component.translatable("msg.fpv.airframe_incomplete"), true);
+            return;
+        }
         org.restor.fpv.component.FirmwareType fw = firmware();
         if (fw == null) {
             player.displayClientMessage(
@@ -1759,6 +1769,32 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
             "msg.fpv.rocket_loaded", getRocketAmmo(), rocketCapacity()), true);
         playSound(org.restor.fpv.sound.ModSounds.PAYLOAD_RELEASE.get(), 0.6f, 1.2f);
+    }
+
+    // Sneak + empty hand strips the rails and the bay back into the pilot's hands; once
+    // nothing is loaded the same click falls through to the mode cycle.
+    private boolean unloadOrdnance(Player player) {
+        int rockets = getRocketAmmo();
+        int charges = getPayloadAmmo();
+        if (rockets <= 0 && charges <= 0) return false;
+        if (rockets > 0) {
+            entityData.set(DATA_ROCKET_AMMO, 0);
+            giveBack(player, new net.minecraft.world.item.ItemStack(
+                org.restor.fpv.item.ModItems.MINI_ROCKET.get(), rockets));
+        }
+        if (charges > 0) {
+            entityData.set(DATA_PAYLOAD_AMMO, 0);
+            giveBack(player, new net.minecraft.world.item.ItemStack(
+                org.restor.fpv.item.ModItems.DROP_CHARGE.get(), charges));
+        }
+        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+            "msg.fpv.ordnance_unloaded", rockets, charges), true);
+        playSound(org.restor.fpv.sound.ModSounds.PAYLOAD_RELEASE.get(), 0.6f, 0.9f);
+        return true;
+    }
+
+    private void giveBack(Player player, net.minecraft.world.item.ItemStack stack) {
+        if (!player.addItem(stack)) player.drop(stack, false);
     }
 
     /** Weapon key: launches a rocket off the rails, or fires the dart gun straight ahead. */
