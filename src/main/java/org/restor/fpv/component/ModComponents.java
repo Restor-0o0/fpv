@@ -131,6 +131,8 @@ public class ModComponents {
         () -> new ModuleItem(ComponentStats.module("Cargo Box", 60), ModuleType.STORAGE));
     public static final RegistryObject<Item> MODULE_TARGETING = COMPONENTS.register("module_targeting",
         () -> new ModuleItem(ComponentStats.module("Targeting Pod", 90), ModuleType.TARGETING));
+    public static final RegistryObject<Item> MODULE_ROCKET_POD = COMPONENTS.register("module_rocket_pod",
+        () -> new ModuleItem(ComponentStats.module("Rocket Pod", 110), ModuleType.ROCKET_POD));
 
     // Firmware chips (separate slot from the modules above). They teach the FC the
     // autonomous modes the owner cycles by right-clicking the drone.

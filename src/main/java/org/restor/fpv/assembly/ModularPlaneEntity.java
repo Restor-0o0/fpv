@@ -54,6 +54,11 @@ public class ModularPlaneEntity extends PlaneEntity {
         this.entityData.define(DATA_ASSEMBLY, new CompoundTag());
     }
 
+    @Override
+    public int radioChannel() {
+        return assembly.channel;
+    }
+
     public DroneAssembly getAssembly() {
         return assembly;
     }

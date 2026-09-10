@@ -79,22 +79,19 @@ public class InterceptorDroneEntity extends NpcDroneEntity {
             beeped = true;
             playSound(org.restor.fpv.sound.ModSounds.DETECTOR_ALERT.get(), 1.2f, 2.0f);
         }
-        // Intercept course: aim slightly ahead of the drone's velocity.
-        var lead = prey.position().add(prey.getDeltaMovement().scale(6));
+        // Intercept course: aim ahead of the prey, but only as far ahead as the closing time
+        // justifies, or a fast pass sends the interceptor chasing empty air.
+        double closing = Math.max(1.0, Math.sqrt(distanceToSqr(prey)) / 0.9);
+        var lead = prey.position().add(prey.getDeltaMovement().scale(Math.min(closing, 8.0)));
         setFlightTarget(lead, 1.6);
 
         if (distanceToSqr(prey) < HIT_DIST_SQR) {
-            // Any real damage breaks a drone (its hurt() drops the item and discards).
-            prey.hurt(damageSources().mobAttack(this), 5.0f);
+            // The interception IS the warhead going off: the blast is what wrecks the prey,
+            // so the ram damage stays small and the unit never survives its own run.
             playSound(org.restor.fpv.sound.ModSounds.CRASH.get(), 1.0f, 0.8f);
-            if (hasModule(org.restor.fpv.component.ModuleType.WARHEAD)) {
-                WarheadDetonation.detonate(level(), this, position(), org.restor.fpv.warhead.WarheadType.FRAG);
-                discard();
-                return;
-            }
-            prey = null;
-            beeped = false;
-            setHunting(false);
+            prey.hurt(damageSources().mobAttack(this), 2.0f);
+            WarheadDetonation.detonate(level(), this, position(), org.restor.fpv.warhead.WarheadType.FRAG);
+            discard();
         }
     }
 

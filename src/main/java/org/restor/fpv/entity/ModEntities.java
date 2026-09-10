@@ -149,9 +149,40 @@ public class ModEntities {
             .updateInterval(2)
             .build("drop_charge"));
 
+    public static final RegistryObject<EntityType<MiniRocketEntity>> MINI_ROCKET = ENTITIES.register("mini_rocket",
+        () -> EntityType.Builder.<MiniRocketEntity>of(MiniRocketEntity::new, MobCategory.MISC)
+            .sized(0.25f, 0.25f)
+            .clientTrackingRange(128)
+            .updateInterval(1)
+            .build("mini_rocket"));
+
     public static final RegistryObject<EntityType<InterceptorDroneEntity>> INTERCEPTOR_DRONE = ENTITIES.register("interceptor_drone",
         () -> EntityType.Builder.<InterceptorDroneEntity>of(InterceptorDroneEntity::new, MobCategory.MONSTER)
             .sized(0.7f, 0.35f)
             .clientTrackingRange(64)
             .build("interceptor_drone"));
+
+    public static final RegistryObject<EntityType<BomberDroneEntity>> BOMBER_DRONE = ENTITIES.register("bomber_drone",
+        () -> EntityType.Builder.<BomberDroneEntity>of(BomberDroneEntity::new, MobCategory.MONSTER)
+            .sized(1.0f, 0.45f)
+            .clientTrackingRange(96)
+            .build("bomber_drone"));
+
+    public static final RegistryObject<EntityType<RocketDroneEntity>> ROCKET_DRONE = ENTITIES.register("rocket_drone",
+        () -> EntityType.Builder.<RocketDroneEntity>of(RocketDroneEntity::new, MobCategory.MONSTER)
+            .sized(0.8f, 0.4f)
+            .clientTrackingRange(96)
+            .build("rocket_drone"));
+
+    public static final RegistryObject<EntityType<ScoutDroneEntity>> SCOUT_DRONE = ENTITIES.register("scout_drone",
+        () -> EntityType.Builder.<ScoutDroneEntity>of(ScoutDroneEntity::new, MobCategory.MONSTER)
+            .sized(0.6f, 0.3f)
+            .clientTrackingRange(96)
+            .build("scout_drone"));
+
+    public static final RegistryObject<EntityType<JammerDroneEntity>> JAMMER_DRONE = ENTITIES.register("jammer_drone",
+        () -> EntityType.Builder.<JammerDroneEntity>of(JammerDroneEntity::new, MobCategory.MONSTER)
+            .sized(0.8f, 0.4f)
+            .clientTrackingRange(96)
+            .build("jammer_drone"));
 }

@@ -79,6 +79,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private static final EntityDataAccessor<String>  DATA_LINK_CODE     = SynchedEntityData.defineId(DroneEntity.class, EntityDataSerializers.STRING);
     // Loaded payload charges (FPV_IDEAS §4). Synced so the OSD and belly model reflect the count.
     private static final EntityDataAccessor<Integer> DATA_PAYLOAD_AMMO  = SynchedEntityData.defineId(DroneEntity.class, EntityDataSerializers.INT);
+    // Mini rockets on the rocket-pod rails, fired by the pilot with the weapon key.
+    private static final EntityDataAccessor<Integer> DATA_ROCKET_AMMO   = SynchedEntityData.defineId(DroneEntity.class, EntityDataSerializers.INT);
     // Link diagnostics: last control packet the server acted on, and its tick cost.
     private static final EntityDataAccessor<Integer> DATA_ACK_SEQ       = SynchedEntityData.defineId(DroneEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_SRV_MSPT      = SynchedEntityData.defineId(DroneEntity.class, EntityDataSerializers.INT);
@@ -194,6 +196,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         this.droneData = data;
         this.flightController = new FlightController(data);
         this.battery = new Battery(data.batteryCapacity, 4.2f);
+        applyEnduranceProfile();
         this.entityData.set(DATA_CAMERA_ANGLE, data.cameraAngle);
         this.blocksBuilding = true;
         if (!level.isClientSide) {
@@ -227,6 +230,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         this.entityData.define(DATA_RATE_YAW,     1f);
         this.entityData.define(DATA_LINK_CODE,    "");
         this.entityData.define(DATA_PAYLOAD_AMMO, 0);
+        this.entityData.define(DATA_ROCKET_AMMO, 0);
         this.entityData.define(DATA_ACK_SEQ, 0);
         this.entityData.define(DATA_SRV_MSPT, 0);
         this.entityData.define(DATA_POSE_LOCK, false);
@@ -237,7 +241,12 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private static final float MIN_PAYLOAD_TWR = 1.6f;  // thrust/weight kept in hand when fully loaded
     private static final float CHARGE_MASS = 0.10f;  // kg each — extra mass hurts the flight
     private static final int   FIRE_COOLDOWN = 12;   // ticks between drops
+    public  static final int   MAX_ROCKETS = 6;
+    private static final float ROCKET_MASS = 0.07f;
+    private static final int   WEAPON_COOLDOWN = 10;
+    private static final float DART_SHOT_POWER = 2.0f;
     private int payloadCooldown;
+    private int weaponCooldown;
 
     // ---- Autonomy (FPV_IDEAS §3 "Добрые дроны игрока") ----
     // A firmware chip in the assembly's firmware slot decides which modes the owner can cycle
@@ -246,6 +255,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private DroneMode autoMode = DroneMode.OFF;
     private java.util.UUID companionOwnerId;
     private net.minecraft.core.BlockPos anchor;
+    private boolean recalled;
     private LivingEntity autoTarget;
     private int targetScanCooldown;
     private float patrolPhase;
@@ -299,6 +309,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         poseGround = false;
         refreshRadioInterference();
         if (payloadCooldown > 0) payloadCooldown--;
+        if (weaponCooldown > 0) weaponCooldown--;
         ServerPlayer pilot = getControllingPassenger() instanceof ServerPlayer sp ? sp : resolveRemotePilot();
         activePilot = pilot;
         boolean hasPilot = pilot != null;
@@ -896,7 +907,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // returns the new roll angle (roll storage differs — entityData server, displayRoll client).
     private float integrateRotation(float dt, float ro, float po, float yo, float curRoll) {
         // Target angular rates in °/s from stick output, scaled by this drone's multipliers.
-        // Yaw negated: Minecraft yRot increases = CCW (left), so positive yaw output = CW (right) = yRot decreasing.
+        // Yaw negated: Minecraft yRot increases to the right, so positive yaw output = yRot decreasing = left.
         float rateRoll  = entityData.get(DATA_RATE_ROLL);
         float ratePitch = entityData.get(DATA_RATE_PITCH);
         float rateYaw   = entityData.get(DATA_RATE_YAW);
@@ -909,7 +920,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         // Lerp angular velocity toward target. Heavier drones rotate AND stop rotating more
         // sluggishly — this is where mass is "felt" in the sticks. Referenced to a 0.5 kg
         // nominal quad; a 1 kg rig turns ~1.3× lazier, a whoop snappier.
-        float massInertia = Mth.clamp((float) Math.pow(mass() / 0.5f, 0.65f), 0.5f, 3.0f);
+        float massInertia = Mth.clamp((float) Math.pow(mass() / 0.5f, 0.45f), 0.5f, 2.0f);
         float resp = Math.min(droneData.rotationResponsiveness / massInertia * dt, 1.0f);
         angVelRoll  += (targetRollRate  - angVelRoll)  * resp;
         angVelPitch += (targetPitchRate - angVelPitch) * resp;
@@ -976,7 +987,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // the drone sink instead of translating — the opposite of how a real quad converts tilt to
     // speed. The split is deterministic (no normalize of the tiny near-hover velocity), so it
     // does not jitter at low speed the way a single normalized-velocity CdA did.
-    private static final double AXIAL_DRAG_MULT = 1.15;
+    private static final double AXIAL_DRAG_MULT = 0.95;
 
     // Disc drag while DESCENDING is scaled between these two by throttle. Off the throttle the
     // rotor is unloaded and barely brakes, so the drone drops fast (FALL ≈ ¼ of the powered disc
@@ -991,7 +1002,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // speed so it does NOT lower max speed. Deliberately NOT applied to vertical velocity — doing
     // so parachuted the fall and made the drone feel airy; falls should stay fast. Tied to the
     // Drag dev slider so the overall horizontal "inertia / glide" feel is tunable.
-    private static final double LINEAR_DAMP = 0.5;
+    private static final double LINEAR_DAMP = 0.18;
 
     private void applyDrag(float dt) {
         Vec3 vel = getDeltaMovement();
@@ -1037,7 +1048,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // thrust & drag accel, terminal fall speed, rotation inertia (via rotationResponsiveness),
     // impact damage and (via hover throttle) battery drain.
     private float mass() {
-        return Math.max(0.01f, droneData.mass + getPayloadAmmo() * CHARGE_MASS);
+        return Math.max(0.01f, droneData.mass + getPayloadAmmo() * CHARGE_MASS + getRocketAmmo() * ROCKET_MASS);
     }
 
     // Max thrust in Newtons from this drone's build, times a global fine-test multiplier.
@@ -1069,6 +1080,10 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
             if (held.is(org.restor.fpv.item.ModItems.DROP_CHARGE.get())) {
                 if (!level().isClientSide) loadPayload(player, held);
+                return InteractionResult.sidedSuccess(level().isClientSide);
+            }
+            if (held.is(org.restor.fpv.item.ModItems.MINI_ROCKET.get())) {
+                if (!level().isClientSide) loadRockets(player, held);
                 return InteractionResult.sidedSuccess(level().isClientSide);
             }
             if (held.isEmpty()) {
@@ -1211,6 +1226,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     @Override
     public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
         if (isInvulnerableTo(source)) return false;
+        if (org.restor.fpv.CommonConfig.DEV_NO_DAMAGE.get() && !(source.getEntity() instanceof Player)) return false;
         if (source.getEntity() instanceof Player && hasPassenger(source.getEntity())) return false;
         if (level().isClientSide) return true;
         if (!isAuthorizedPlayerDamage(source)) return false;
@@ -1277,6 +1293,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (tag.contains("LinkCode")) entityData.set(DATA_LINK_CODE, tag.getString("LinkCode"));
         if (tag.contains("PayloadAmmo")) entityData.set(DATA_PAYLOAD_AMMO,
             Math.max(0, Math.min(MAX_PAYLOAD, tag.getInt("PayloadAmmo"))));
+        if (tag.contains("RocketAmmo")) entityData.set(DATA_ROCKET_AMMO,
+            Math.max(0, Math.min(MAX_ROCKETS, tag.getInt("RocketAmmo"))));
         autoMode = tag.contains("AutoMode") ? DroneMode.byOrdinal(tag.getInt("AutoMode"))
             : tag.getBoolean("Follow") ? DroneMode.FOLLOW : DroneMode.OFF;
         if (tag.contains("Anchor")) anchor = net.minecraft.core.BlockPos.of(tag.getLong("Anchor"));
@@ -1304,6 +1322,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         tag.putFloat("RateYaw",   entityData.get(DATA_RATE_YAW));
         tag.putString("LinkCode", entityData.get(DATA_LINK_CODE));
         tag.putInt("PayloadAmmo", getPayloadAmmo());
+        tag.putInt("RocketAmmo", getRocketAmmo());
         tag.putInt("AutoMode", autoMode.ordinal());
         if (anchor != null) tag.putLong("Anchor", anchor.asLong());
         if (companionOwnerId != null) tag.putUUID("CompanionOwner", companionOwnerId);
@@ -1446,6 +1465,18 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     public DroneMode getAutoMode() { return autoMode; }
 
+    /** Called home by a guard station: hold the anchor and stop hunting. */
+    public void setRecalled(boolean value) {
+        recalled = value;
+        if (value) autoTarget = null;
+    }
+
+    public void setGuardAnchor(net.minecraft.core.BlockPos pos) { anchor = pos; }
+
+    public float batteryCharge() { return battery.getPercentRemaining(); }
+
+    public net.minecraft.world.item.ItemStack toItemStack() { return getDropStack(); }
+
     /** Firmware installed in this drone, or null. Only modular drones carry one. */
     public org.restor.fpv.component.FirmwareType firmware() { return null; }
 
@@ -1505,8 +1536,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             return;
         }
 
-        if (autoMode.engagesHostiles() || autoMode == DroneMode.PATROL) refreshAutoTarget(owner);
-        Vec3 station = autoTarget != null && autoMode.engagesHostiles()
+        if (!recalled && (autoMode.engagesHostiles() || autoMode == DroneMode.PATROL)) refreshAutoTarget(owner);
+        Vec3 station = autoTarget != null
             ? engagePoint(autoTarget)
             : autoMode.isAnchored() ? anchorStation(owner) : shoulderStation(owner);
 
@@ -1539,10 +1570,13 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         double yawRad = Math.toRadians(owner.getYRot());
         Vec3 fwd = new Vec3(-Math.sin(yawRad), 0, Math.cos(yawRad));
         Vec3 right = new Vec3(-fwd.z, 0, fwd.x);
-        // Crouching calls it round to the front within arm's reach; parked behind the
-        // shoulder there was no way to right-click it again.
-        if (owner.isShiftKeyDown()) return owner.getEyePosition().add(fwd.scale(1.3)).add(0, -0.3, 0);
-        return owner.position().add(right.scale(1.4)).subtract(fwd.scale(1.2)).add(0, 2.2, 0);
+        if (owner.isShiftKeyDown()) return owner.getEyePosition().add(fwd.scale(1.1)).add(0, -0.2, 0);
+        // Standing still, it closes in beside the owner's chest so it stays in view and
+        // within reach; only while they are actually moving does it trail the shoulder.
+        boolean moving = owner.getDeltaMovement().horizontalDistanceSqr() > 0.006
+            || owner.isFallFlying() || owner.isPassenger();
+        if (!moving) return owner.position().add(right.scale(0.85)).add(fwd.scale(0.55)).add(0, 1.35, 0);
+        return owner.position().add(right.scale(1.4)).subtract(fwd.scale(1.0)).add(0, 1.9, 0);
     }
 
     private Vec3 anchorStation(ServerPlayer owner) {
@@ -1554,13 +1588,25 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             Math.sin(patrolPhase) * PATROL_RADIUS);
     }
 
+    // Holds a standoff ring beside the target at head height rather than parking on top of
+    // it, so the drone keeps a stable attack station instead of oscillating over its head.
     private Vec3 engagePoint(LivingEntity target) {
-        return target.position().add(target.getDeltaMovement().scale(4)).add(0, target.getBbHeight() + 0.6, 0);
+        Vec3 lead = target.position().add(clampLength(target.getDeltaMovement().scale(6), 1.5));
+        Vec3 away = position().subtract(lead);
+        away = new Vec3(away.x, 0, away.z);
+        if (away.lengthSqr() < 1.0e-4) away = new Vec3(1, 0, 0);
+        return lead.add(away.normalize().scale(ENGAGE_STANDOFF)).add(0, target.getBbHeight() * 0.85, 0);
+    }
+
+    private static Vec3 clampLength(Vec3 v, double max) {
+        double len = v.length();
+        return len <= max ? v : v.scale(max / len);
     }
 
     private void refreshAutoTarget(ServerPlayer owner) {
+        Vec3 post = autoMode.isAnchored() && anchor != null ? Vec3.atCenterOf(anchor) : owner.position();
         if (autoTarget != null && (autoTarget.isRemoved() || !autoTarget.isAlive()
-            || autoTarget.distanceToSqr(this) > GUARD_RADIUS * GUARD_RADIUS * 2.25)) {
+            || autoTarget.distanceToSqr(post) > GUARD_RADIUS * GUARD_RADIUS * 2.25)) {
             autoTarget = null;
         }
         if (--targetScanCooldown > 0) return;
@@ -1570,19 +1616,22 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
         Vec3 center = autoMode.isAnchored() && anchor != null ? Vec3.atCenterOf(anchor) : owner.position();
         LivingEntity best = null;
-        double bestSqr = GUARD_RADIUS * GUARD_RADIUS;
+        double bestSqr = Double.MAX_VALUE;
         for (net.minecraft.world.entity.monster.Monster m : level().getEntitiesOfClass(
                 net.minecraft.world.entity.monster.Monster.class,
                 net.minecraft.world.phys.AABB.ofSize(center, GUARD_RADIUS * 2, GUARD_RADIUS, GUARD_RADIUS * 2))) {
             if (!m.isAlive() || isCompanionAlly(owner, m)) continue;
-            double d = m.distanceToSqr(center);
+            if (m.distanceToSqr(center) > GUARD_RADIUS * GUARD_RADIUS) continue;
+            if (fw.marksTargets()) m.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                net.minecraft.world.effect.MobEffects.GLOWING, MARK_DURATION, 0, false, false));
+            // Ranked from the drone, not from the guarded point: the thing about to bite is
+            // what gets hit, even when something further out entered the ring first.
+            double d = m.distanceToSqr(this);
             if (d < bestSqr) {
                 bestSqr = d;
                 best = m;
             }
         }
-        if (best != null && fw.marksTargets()) best.addEffect(
-            new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.GLOWING, 60, 0, false, false));
         autoTarget = fw.canFight() ? best : null;
     }
 
@@ -1592,7 +1641,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             ramCooldown--;
             return;
         }
-        if (distanceToSqr(target) > 2.4 || !consumeCompanionWeaponEnergy(1.5f)) return;
+        double reach = ENGAGE_STANDOFF + target.getBbWidth() + getBbWidth();
+        if (distanceToSqr(target) > reach * reach || !consumeCompanionWeaponEnergy(1.5f)) return;
         target.hurt(damageSources().mobAttack(owner), RAM_DAMAGE);
         target.knockback(0.4, position().x - target.getX(), position().z - target.getZ());
         ramCooldown = 20;
@@ -1601,6 +1651,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     private static final double GUARD_RADIUS = 20.0;
     private static final double PATROL_RADIUS = 6.0;
+    private static final double ENGAGE_STANDOFF = 1.8;
+    private static final int    MARK_DURATION = 45;
     private static final float  RAM_DAMAGE = 3.0f;
     private int ramCooldown;
 
@@ -1638,6 +1690,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // -------------------------------------------------------------------------
 
     public int getPayloadAmmo() { return entityData.get(DATA_PAYLOAD_AMMO); }
+    public int getRocketAmmo()  { return entityData.get(DATA_ROCKET_AMMO); }
     public int getAckSeq()      { return entityData.get(DATA_ACK_SEQ); }
     public float getServerMspt(){ return entityData.get(DATA_SRV_MSPT) / 10f; }
 
@@ -1678,6 +1731,80 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         player.displayClientMessage(
             net.minecraft.network.chat.Component.translatable("msg.fpv.payload_loaded", getPayloadAmmo(), payloadCapacity()), true);
         playSound(org.restor.fpv.sound.ModSounds.PAYLOAD_RELEASE.get(), 0.6f, 1.4f);
+    }
+
+    // -------------------------------------------------------------------------
+    //  Pilot-fired weapons — rocket pod and dart gun
+    // -------------------------------------------------------------------------
+
+    /** How many mini rockets the rails hold; 0 without a rocket-pod module. */
+    public int rocketCapacity() { return 0; }
+
+    /** True when a dart gun module is installed and the pilot may fire it by hand. */
+    public boolean hasDartGun() { return false; }
+
+    private void loadRockets(Player player, net.minecraft.world.item.ItemStack held) {
+        if (rocketCapacity() <= 0) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.rocket_no_pod"), true);
+            return;
+        }
+        int space = rocketCapacity() - getRocketAmmo();
+        if (space <= 0) {
+            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.rocket_full"), true);
+            return;
+        }
+        int take = Math.min(space, held.getCount());
+        entityData.set(DATA_ROCKET_AMMO, getRocketAmmo() + take);
+        if (!player.getAbilities().instabuild) held.shrink(take);
+        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+            "msg.fpv.rocket_loaded", getRocketAmmo(), rocketCapacity()), true);
+        playSound(org.restor.fpv.sound.ModSounds.PAYLOAD_RELEASE.get(), 0.6f, 1.2f);
+    }
+
+    /** Weapon key: launches a rocket off the rails, or fires the dart gun straight ahead. */
+    public void fireWeapon(ServerPlayer pilot) {
+        if (level().isClientSide || !canPlayerAccess(pilot)) return;
+        if (weaponCooldown > 0) return;
+        if (rocketCapacity() > 0) {
+            if (getRocketAmmo() <= 0) {
+                pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.rocket_empty"), true);
+                return;
+            }
+            entityData.set(DATA_ROCKET_AMMO, getRocketAmmo() - 1);
+            weaponCooldown = WEAPON_COOLDOWN;
+            launchProjectile(pilot, new org.restor.fpv.entity.MiniRocketEntity(level(), getX(), getY(), getZ()), 2.6f, 0.6f);
+            playSound(org.restor.fpv.sound.ModSounds.WARHEAD_ARM.get(), 1.0f, 1.5f);
+            return;
+        }
+        if (hasDartGun()) {
+            if (!consumeCompanionWeaponEnergy(DART_SHOT_POWER)) return;
+            weaponCooldown = WEAPON_COOLDOWN;
+            net.minecraft.world.entity.projectile.Arrow dart =
+                new net.minecraft.world.entity.projectile.Arrow(level(), getX(), getY(), getZ());
+            dart.setBaseDamage(2.0);
+            dart.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
+            launchProjectile(pilot, dart, 2.6f, 0.6f);
+            playSound(org.restor.fpv.sound.ModSounds.DART.get(), 0.7f, 1.7f);
+            return;
+        }
+        pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.no_weapon"), true);
+    }
+
+    // Spawns a projectile just ahead of the airframe, aimed down the camera axis and carrying
+    // the drone's own velocity so a fast pass does not outrun its own shot.
+    private void launchProjectile(ServerPlayer pilot,
+                                  net.minecraft.world.entity.projectile.Projectile projectile,
+                                  float speed, float inaccuracy) {
+        Quaternionf aim = attitudeQuat(getYRot(), getXRot(), bodyRoll())
+            .rotateX((float) Math.toRadians(-getCameraAngle()));
+        Vector3f fwd = aim.transform(new Vector3f(0f, 0f, 1f));
+        Vec3 dir = new Vec3(fwd.x, fwd.y, fwd.z).normalize();
+        Vec3 muzzle = position().add(dir.scale(0.6)).add(0, getBbHeight() * 0.3, 0);
+        projectile.setPos(muzzle.x, muzzle.y, muzzle.z);
+        projectile.setOwner(pilot);
+        projectile.shoot(dir.x, dir.y, dir.z, speed, inaccuracy);
+        projectile.setDeltaMovement(projectile.getDeltaMovement().add(getDeltaMovement()));
+        level().addFreshEntity(projectile);
     }
 
     // Drops one charge (a primed TNT) from the belly, inheriting the drone's velocity so it
@@ -1768,6 +1895,31 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         float ceiling = droneData.maxThrottle * getBatteryPowerFactor() * effMotorPower() / mass();
         if (ceiling <= 1.0e-4f) return 0f;
         return (float) Math.pow(clamp(needed / ceiling, 0f, 1f), 1f / THROTTLE_EXP);
+    }
+
+    /**
+     * Minutes of hover a full pack is worth on this airframe. A whoop burns its pack in about
+     * five minutes, a 7" cruiser holds fifteen, everything between scales with size; heavy-lift
+     * rigs carry so much cell that they loiter for over an hour.
+     */
+    protected float enduranceMinutes() {
+        return switch (droneData.type) {
+            case TINY_WHOOP -> 5f;
+            case CINEWHOOP -> 8f;
+            case RACING -> 11f;
+            case CUSTOM -> 10f;
+        };
+    }
+
+    /** Stick that holds altitude: thrust = mass·g solved through the throttle² curve. */
+    protected float hoverStick() {
+        float ceiling = droneData.maxThrottle * droneData.motorPower / Math.max(0.01f, droneData.mass);
+        if (ceiling <= GRAVITY) return 0.95f;
+        return (float) Math.pow(GRAVITY / ceiling, 1f / THROTTLE_EXP);
+    }
+
+    protected void applyEnduranceProfile() {
+        battery.setEnduranceProfile(enduranceMinutes(), hoverStick());
     }
 
     // Belly-camera gimbal of the heavy rigs, in the camera's own frame: yaw pans, pitch is an

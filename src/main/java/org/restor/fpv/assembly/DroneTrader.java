@@ -15,10 +15,12 @@ import net.minecraft.world.item.trading.MerchantOffers;
 /**
  * Trader-firmware brain: the drone answers a right-click with a wandering trader's
  * offers. Offers are rolled once per drone and kept in its NBT, so a courier build
- * keeps the stock it flew in with.
+ * keeps the stock it flew in with. Stock is finite — once every offer is sold out
+ * the courier leaves, the same way a wandering trader packs up.
  */
 public class DroneTrader implements Merchant {
-    private static final int OFFER_COUNT = 5;
+    private static final int OFFER_COUNT = 8;
+    private static final int USES_PER_OFFER = 3;
 
     private final Entity host;
     private MerchantOffers offers;
@@ -40,12 +42,30 @@ public class DroneTrader implements Merchant {
         for (int tier : new int[]{1, 2}) {
             VillagerTrades.ItemListing[] pool = VillagerTrades.WANDERING_TRADER_TRADES.get(tier);
             if (pool == null || pool.length == 0) continue;
-            for (int i = 0; i < OFFER_COUNT && result.size() < OFFER_COUNT; i++) {
+            for (int i = 0; i < OFFER_COUNT * 2 && result.size() < OFFER_COUNT; i++) {
                 MerchantOffer offer = pool[random.nextInt(pool.length)].getOffer(host, random);
-                if (offer != null) result.add(offer);
+                if (offer == null || containsSame(result, offer)) continue;
+                result.add(new MerchantOffer(offer.getBaseCostA(), offer.getCostB(), offer.getResult(),
+                    0, USES_PER_OFFER, offer.getXp(), offer.getPriceMultiplier()));
             }
         }
         return result;
+    }
+
+    private static boolean containsSame(MerchantOffers list, MerchantOffer candidate) {
+        for (MerchantOffer o : list) {
+            if (ItemStack.isSameItemSameTags(o.getResult(), candidate.getResult())) return true;
+        }
+        return false;
+    }
+
+    /** True once every rolled offer is sold out — the courier's cue to leave. */
+    public boolean isSoldOut() {
+        if (offers == null || offers.isEmpty()) return false;
+        for (MerchantOffer o : offers) {
+            if (!o.isOutOfStock()) return false;
+        }
+        return true;
     }
 
     public void save(CompoundTag tag) {

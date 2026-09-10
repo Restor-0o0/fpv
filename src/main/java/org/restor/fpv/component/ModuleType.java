@@ -13,5 +13,7 @@ public enum ModuleType {
     STORAGE,
     // Targeting pod: opens the strike bay on a spotter airframe, letting it call in
     // the drone cards stowed there.
-    TARGETING
+    TARGETING,
+    // Mini-rocket pod: loaded with mini rockets, fired by the pilot with the weapon key.
+    ROCKET_POD
 }

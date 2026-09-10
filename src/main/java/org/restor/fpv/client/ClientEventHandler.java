@@ -232,6 +232,9 @@ public class ClientEventHandler {
             if (ModKeyBindings.FIRE_PAYLOAD.consumeClick()) {
                 PacketDistributor.sendToServer(new org.restor.fpv.network.FirePayloadPacket(drone.getId()));
             }
+            if (ModKeyBindings.FIRE_WEAPON.consumeClick()) {
+                PacketDistributor.sendToServer(new org.restor.fpv.network.FireWeaponPacket(drone.getId()));
+            }
 
             // The keyboard arm switch must remain available when an RC transmitter is
             // connected; otherwise only controller button 0 can ever arm the drone.
@@ -529,9 +532,9 @@ public class ClientEventHandler {
         if (ModKeyBindings.DRONE_YAW_RIGHT.isDown()) yawTarget -= 1f;
         yawTarget = clamp(yawTarget, -1f, 1f);
 
-        filteredPitch += (pitchTarget - filteredPitch) * 0.2f;
-        filteredRoll  += (rollTarget  - filteredRoll)  * 0.2f;
-        filteredYaw   += (yawTarget   - filteredYaw)   * 0.25f;
+        filteredPitch += (pitchTarget - filteredPitch) * 0.35f;
+        filteredRoll  += (rollTarget  - filteredRoll)  * 0.35f;
+        filteredYaw   += (yawTarget   - filteredYaw)   * 0.4f;
 
         float yaw = clamp(filteredYaw * Config.KEYBOARD_YAW_SENSITIVITY.get().floatValue(), -1f, 1f);
         boolean arm = keyboardArmSwitch;
@@ -602,8 +605,8 @@ public class ClientEventHandler {
             pitch = clamp(pitch + filteredPitch, -1f, 1f);
             roll  = clamp(roll  + filteredRoll,  -1f, 1f);
         } else {
-            if (MC.options.keyLeft.isDown()) kbYaw -= 1f;
-            if (MC.options.keyRight.isDown()) kbYaw += 1f;
+            if (MC.options.keyLeft.isDown()) kbYaw += 1f;
+            if (MC.options.keyRight.isDown()) kbYaw -= 1f;
         }
         if (kbYaw != 0f) {
             yaw = clamp(yaw + kbYaw * Config.KEYBOARD_YAW_SENSITIVITY.get().floatValue(), -1f, 1f);
@@ -710,9 +713,9 @@ public class ClientEventHandler {
         filteredPitch = filteredPitch * smoothing + mouseDronePitch * (1f - smoothing);
 
         float yawTarget = 0f;
-        if (MC.options.keyLeft.isDown()) yawTarget -= 1f;
-        if (MC.options.keyRight.isDown()) yawTarget += 1f;
-        filteredYaw += (yawTarget - filteredYaw) * 0.35f;
+        if (MC.options.keyLeft.isDown()) yawTarget += 1f;
+        if (MC.options.keyRight.isDown()) yawTarget -= 1f;
+        filteredYaw += (yawTarget - filteredYaw) * 0.5f;
         float deadband = Config.MOUSE_DEADBAND.get().floatValue();
         float pitch = applyDeadband(filteredPitch, deadband);
         float roll = applyDeadband(filteredRoll, deadband);
@@ -983,7 +986,7 @@ public class ClientEventHandler {
             || ModKeyBindings.DRONE_YAW_LEFT.isDown() || ModKeyBindings.DRONE_YAW_RIGHT.isDown();
     }
 
-    private static final float MOUSE_RATE_SCALE = 2.2f;
+    private static final float MOUSE_RATE_SCALE = 1.1f;
     private static final float HOVER_STICK = 0.5f;
 
     private static float clamp(float value, float min, float max) {
@@ -1030,6 +1033,41 @@ public class ClientEventHandler {
         if (MC.screen != null || !fpvActive()) return;
         fpvZoom = (float) Math.max(1.0, Math.min(8.0, fpvZoom + event.getScrollDelta() * 0.5));
         event.setCanceled(true); // don't also scroll the hotbar
+    }
+
+    // Vanilla mixes the sunrise/sunset tint into the fog by how much the view faces the sun, so a
+    // fast yaw sweep at dusk strobes the horizon between orange and night blue.
+    private static final float FOG_EASE = 0.06f;
+    private static final float FOG_SNAP = 0.35f;
+    private static float fogR, fogG, fogB;
+    private static boolean fogPrimed;
+
+    @SubscribeEvent
+    public static void onFogColor(ViewportEvent.ComputeFogColor event) {
+        if (!fpvActive()) {
+            fogPrimed = false;
+            return;
+        }
+        float r = event.getRed();
+        float g = event.getGreen();
+        float b = event.getBlue();
+        boolean snap = !fogPrimed
+            || Math.abs(r - fogR) > FOG_SNAP
+            || Math.abs(g - fogG) > FOG_SNAP
+            || Math.abs(b - fogB) > FOG_SNAP;
+        if (snap) {
+            fogR = r;
+            fogG = g;
+            fogB = b;
+            fogPrimed = true;
+            return;
+        }
+        fogR += (r - fogR) * FOG_EASE;
+        fogG += (g - fogG) * FOG_EASE;
+        fogB += (b - fogB) * FOG_EASE;
+        event.setRed(fogR);
+        event.setGreen(fogG);
+        event.setBlue(fogB);
     }
 
     @SubscribeEvent

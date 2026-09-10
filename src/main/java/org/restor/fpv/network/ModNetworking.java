@@ -46,9 +46,9 @@ public class ModNetworking {
         add(PlaneStrikePacket.class, PlaneStrikePacket.STREAM_CODEC, PlaneStrikePacket::handle);
         add(ExplosionParticlesPacket.class, ExplosionParticlesPacket.STREAM_CODEC, ExplosionParticlesPacket::handle);
         add(PlaneTargetStreamPacket.class, PlaneTargetStreamPacket.STREAM_CODEC, PlaneTargetStreamPacket::handle);
-        add(DevDroneGivePacket.class, DevDroneGivePacket.STREAM_CODEC, DevDroneGivePacket::handle);
         add(GhostDataPacket.class, GhostDataPacket.STREAM_CODEC, GhostDataPacket::handle);
         add(FirePayloadPacket.class, FirePayloadPacket.STREAM_CODEC, FirePayloadPacket::handle);
+        add(FireWeaponPacket.class, FireWeaponPacket.STREAM_CODEC, FireWeaponPacket::handle);
         add(DronePosePacket.class, DronePosePacket.STREAM_CODEC, DronePosePacket::handle);
         add(DroneDismountPacket.class, DroneDismountPacket.STREAM_CODEC, DroneDismountPacket::handle);
         add(LineOfSightPacket.class, LineOfSightPacket.STREAM_CODEC, LineOfSightPacket::handle);

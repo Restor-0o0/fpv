@@ -10,4 +10,6 @@ public interface RadioInterferenceReceiver {
     default ServerPlayer radioOperator() { return null; }
 
     default UUID radioOwnerId() { return null; }
+
+    default int radioChannel() { return org.restor.fpv.component.RadioChannel.DEFAULT; }
 }

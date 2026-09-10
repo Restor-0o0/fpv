@@ -18,7 +18,7 @@ import java.util.List;
  *  protection and needs no armour model. */
 public class FpvGogglesItem extends Item implements Equipable {
     public FpvGogglesItem() {
-        super(new Item.Properties().stacksTo(1));
+        super(new Item.Properties().stacksTo(16));
     }
 
     @Override

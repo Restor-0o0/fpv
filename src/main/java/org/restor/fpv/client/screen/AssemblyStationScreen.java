@@ -12,6 +12,7 @@ import org.restor.fpv.assembly.AssemblyStationMenu;
 import org.restor.fpv.assembly.DroneAssembly;
 import org.restor.fpv.component.ComponentType;
 import org.restor.fpv.component.ModComponents;
+import org.restor.fpv.component.RadioChannel;
 import org.restor.fpv.item.ModItems;
 
 import java.util.List;
@@ -21,6 +22,7 @@ import java.util.Locale;
 // from the frame slot to its satellites.
 public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStationMenu> {
     private Button repairButton;
+    private Button channelButton;
 
     public AssemblyStationScreen(AssemblyStationMenu menu, Inventory inv, Component title) {
         super(menu, inv, title);
@@ -40,12 +42,21 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
                 }
             }).bounds(leftPos + 207, topPos + 181, 61, 20).build());
         repairButton.active = menu.canRepair();
+        channelButton = addRenderableWidget(Button.builder(channelLabel(),
+            button -> {
+                if (minecraft != null && minecraft.gameMode != null) {
+                    minecraft.gameMode.handleInventoryButtonClick(menu.containerId, AssemblyStationMenu.BUTTON_CHANNEL);
+                }
+            }).bounds(leftPos + 182, topPos + 161, 86, 18).build());
+        channelButton.active = menu.hasRadio();
     }
 
     @Override
     protected void containerTick() {
         super.containerTick();
         repairButton.active = menu.canRepair();
+        channelButton.active = menu.hasRadio();
+        channelButton.setMessage(channelLabel());
     }
 
     @Override
@@ -69,6 +80,8 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
             int accent = switch (i) {
                 case AssemblyStationMenu.SLOT_MODULE -> 0xFFFFB733;
                 case AssemblyStationMenu.SLOT_FIRMWARE -> 0xFF7BE08A;
+                case AssemblyStationMenu.SLOT_VTX -> 0xFF9AC8FF;
+                case AssemblyStationMenu.SLOT_FC -> 0xFFC7A0FF;
                 case AssemblyStationMenu.SLOT_REPAIR_MATERIAL -> 0xFF5FA8D3;
                 case AssemblyStationMenu.SLOT_RESULT -> 0xFF66CC66;
                 case AssemblyStationMenu.SLOT_CARD_IN -> 0xFFD9A05B;
@@ -127,8 +140,9 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
             repairStatus = Component.translatable("screen.fpv.assembly.repair_cost", target,
                 menu.repairMaterial().getDescription());
         }
-        int repairY = 140;
+        int repairY = 138;
         for (var line : font.split(repairStatus, 84)) {
+            if (repairY > 148) break;
             g.drawString(font, line, 182, repairY, 0xFFAFC8D8, false);
             repairY += 10;
         }
@@ -141,6 +155,12 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
             default -> Component.translatable(
                 "screen.fpv.assembly.part." + type.name().toLowerCase(Locale.ROOT));
         };
+    }
+
+    private Component channelLabel() {
+        return menu.hasRadio()
+            ? Component.translatable("screen.fpv.assembly.channel", RadioChannel.name(menu.channel()))
+            : Component.translatable("screen.fpv.assembly.channel_none");
     }
 
     private Component metric(String key, float value, String unit, int decimals) {
@@ -186,6 +206,8 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
             case AssemblyStationMenu.SLOT_CAMERA -> new ItemStack(ModComponents.CAMERA_STANDARD.get());
             case AssemblyStationMenu.SLOT_MODULE -> new ItemStack(ModComponents.MODULE_PAYLOAD_BAY.get());
             case AssemblyStationMenu.SLOT_FIRMWARE -> new ItemStack(ModComponents.FIRMWARE_COMPANION.get());
+            case AssemblyStationMenu.SLOT_VTX -> new ItemStack(ModComponents.VTX_200MW.get());
+            case AssemblyStationMenu.SLOT_FC -> new ItemStack(ModComponents.FC_F411.get());
             case AssemblyStationMenu.SLOT_REPAIR_MATERIAL -> {
                 Item material = menu.repairMaterial();
                 yield new ItemStack(material != null ? material : Items.IRON_INGOT);
@@ -226,6 +248,8 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
             case AssemblyStationMenu.SLOT_CAMERA -> Component.translatable("screen.fpv.assembly.part.camera");
             case AssemblyStationMenu.SLOT_MODULE -> Component.translatable("screen.fpv.payload_slot");
             case AssemblyStationMenu.SLOT_FIRMWARE -> Component.translatable("screen.fpv.firmware_slot");
+            case AssemblyStationMenu.SLOT_VTX -> Component.translatable("screen.fpv.vtx_slot");
+            case AssemblyStationMenu.SLOT_FC -> Component.translatable("screen.fpv.fc_slot");
             case AssemblyStationMenu.SLOT_REPAIR_MATERIAL ->
                 Component.translatable("screen.fpv.assembly.repair_slot");
             case AssemblyStationMenu.SLOT_CARD_IN -> Component.translatable("screen.fpv.assembly.part.card_in");

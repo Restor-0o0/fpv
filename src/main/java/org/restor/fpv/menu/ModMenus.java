@@ -19,6 +19,9 @@ public class ModMenus {
     public static final RegistryObject<MenuType<ChargingStationMenu>> CHARGING_STATION = MENUS.register("charging_station",
         () -> IForgeMenuType.create(ChargingStationMenu::new));
 
+    public static final RegistryObject<MenuType<GuardStationMenu>> GUARD_STATION = MENUS.register("guard_station",
+        () -> IForgeMenuType.create(GuardStationMenu::new));
+
     public static final RegistryObject<MenuType<org.restor.fpv.assembly.AssemblyStationMenu>> ASSEMBLY_STATION = MENUS.register("assembly_station",
         () -> IForgeMenuType.create(org.restor.fpv.assembly.AssemblyStationMenu::new));
 }

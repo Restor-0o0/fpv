@@ -49,6 +49,7 @@ public class Config {
     public static final ForgeConfigSpec.IntValue DEV_CHUNK_RADIUS = CommonConfig.DEV_CHUNK_RADIUS;
     public static final ForgeConfigSpec.DoubleValue DEV_HITBOX_SCALE = CommonConfig.DEV_HITBOX_SCALE;
     public static final ForgeConfigSpec.DoubleValue DEV_HITBOX_Y_OFFSET = CommonConfig.DEV_HITBOX_Y_OFFSET;
+    public static final ForgeConfigSpec.BooleanValue DEV_NO_DAMAGE = CommonConfig.DEV_NO_DAMAGE;
     public static final ForgeConfigSpec.BooleanValue DEV_VERBOSE_LOG = CommonConfig.DEV_VERBOSE_LOG;
 
     public static final ForgeConfigSpec.DoubleValue FPV_CAMERA_HEIGHT = CommonConfig.FPV_CAMERA_HEIGHT;
@@ -75,11 +76,11 @@ public class Config {
         KEYBOARD_YAW_SENSITIVITY = BUILDER.comment("Yaw rate for A/D keys. 1.0 = full drone yaw rate.")
             .defineInRange("keyboardYawSensitivity", 0.45, 0.05, 1.0);
         MOUSE_PITCH_SENSITIVITY = BUILDER.comment("Mouse vertical sensitivity for pitch.")
-            .defineInRange("mousePitchSensitivity", 0.045, 0.005, 0.2);
+            .defineInRange("mousePitchSensitivity", 0.035, 0.005, 0.2);
         MOUSE_ROLL_SENSITIVITY = BUILDER.comment("Mouse horizontal sensitivity for roll.")
-            .defineInRange("mouseRollSensitivity", 0.045, 0.005, 0.2);
+            .defineInRange("mouseRollSensitivity", 0.035, 0.005, 0.2);
         MOUSE_SMOOTHING = BUILDER.comment("Mouse input smoothing. 0 = raw, 0.85 = very smooth.")
-            .defineInRange("mouseSmoothing", 0.55, 0.0, 0.85);
+            .defineInRange("mouseSmoothing", 0.35, 0.0, 0.85);
         MOUSE_RETURN = BUILDER.comment("How fast the mouse sticks spring back to center. 0 = they hold their position (old behaviour).")
             .defineInRange("mouseReturn", 0.25, 0.0, 1.0);
         MOUSE_DEADBAND = BUILDER.comment("Ignore tiny mouse input to prevent camera/attitude jitter.")

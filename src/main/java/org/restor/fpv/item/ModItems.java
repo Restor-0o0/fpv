@@ -34,6 +34,10 @@ public class ModItems {
     public static final RegistryObject<Item> DROP_CHARGE = ITEMS.register("drop_charge",
         () -> new Item(new Item.Properties()));
 
+    // Ammunition for the rocket pod module: sneak-right-click a drone to load its rails.
+    public static final RegistryObject<Item> MINI_ROCKET = ITEMS.register("mini_rocket",
+        () -> new Item(new Item.Properties()));
+
     public static final RegistryObject<Item> MODULAR_PLANE = ITEMS.register("modular_plane",
         () -> new org.restor.fpv.assembly.ModularPlaneItem());
 
@@ -103,4 +107,19 @@ public class ModItems {
     public static final RegistryObject<Item> INTERCEPTOR_DRONE_SPAWN_EGG = ITEMS.register("interceptor_drone_spawn_egg",
         () -> new ForgeSpawnEggItem(ModEntities.INTERCEPTOR_DRONE,
             0x2A2A30, 0x2673FF, new Item.Properties()));
+    public static final RegistryObject<Item> BOMBER_DRONE_SPAWN_EGG = ITEMS.register("bomber_drone_spawn_egg",
+        () -> new ForgeSpawnEggItem(ModEntities.BOMBER_DRONE,
+            0x2A2A30, 0x8C5A1E, new Item.Properties()));
+    public static final RegistryObject<Item> ROCKET_DRONE_SPAWN_EGG = ITEMS.register("rocket_drone_spawn_egg",
+        () -> new ForgeSpawnEggItem(ModEntities.ROCKET_DRONE,
+            0x2A2A30, 0xE0561A, new Item.Properties()));
+    public static final RegistryObject<Item> SCOUT_DRONE_SPAWN_EGG = ITEMS.register("scout_drone_spawn_egg",
+        () -> new ForgeSpawnEggItem(ModEntities.SCOUT_DRONE,
+            0x2A2A30, 0x7BE05A, new Item.Properties()));
+    public static final RegistryObject<Item> JAMMER_DRONE_SPAWN_EGG = ITEMS.register("jammer_drone_spawn_egg",
+        () -> new ForgeSpawnEggItem(ModEntities.JAMMER_DRONE,
+            0x2A2A30, 0xB05AE0, new Item.Properties()));
+    public static final RegistryObject<Item> VILLAGE_DRONE_SPAWN_EGG = ITEMS.register("village_drone_spawn_egg",
+        () -> new ForgeSpawnEggItem(ModEntities.VILLAGE_DRONE,
+            0x3A4A5A, 0x5AE0D0, new Item.Properties()));
 }

@@ -76,9 +76,9 @@ public class FlightController {
     }
 
     private void computeAcro(float rcRoll, float rcPitch, float rcYaw, float dt) {
-        rollOutput  = rcExpo(rcRoll,  0.45f);
-        pitchOutput = rcExpo(rcPitch, 0.45f);
-        yawOutput   = rcExpo(rcYaw,   0.55f);
+        rollOutput  = rcExpo(rcRoll,  0.30f);
+        pitchOutput = rcExpo(rcPitch, 0.30f);
+        yawOutput   = rcExpo(rcYaw,   0.40f);
     }
 
     private void computeAngle(float rcRoll, float rcPitch, float rcYaw, float dt) {

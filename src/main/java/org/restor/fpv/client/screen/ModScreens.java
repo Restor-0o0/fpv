@@ -15,6 +15,7 @@ public class ModScreens {
         event.enqueueWork(() -> {
             MenuScreens.register(ModMenus.ASSEMBLY_STATION.get(), AssemblyStationScreen::new);
             MenuScreens.register(ModMenus.CHARGING_STATION.get(), ChargingStationScreen::new);
+            MenuScreens.register(ModMenus.GUARD_STATION.get(), GuardStationScreen::new);
             MenuScreens.register(ModMenus.CARRIER.get(), CarrierScreen::new);
             MenuScreens.register(ModMenus.CARGO_BAY.get(), CargoBayScreen::new);
         });

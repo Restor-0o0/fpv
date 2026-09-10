@@ -110,6 +110,14 @@ public class ModKeyBindings {
         "key.categories.fpv"
     );
 
+    // Drone-only: fire the installed weapon module (rocket pod rails or dart gun).
+    public static final KeyMapping FIRE_WEAPON = new KeyMapping(
+        "key.fpv.fire_weapon",
+        InputConstants.Type.KEYSYM,
+        GLFW.GLFW_KEY_F,
+        "key.categories.fpv"
+    );
+
     public static final KeyMapping SAVE_REPLAY = new KeyMapping(
         "key.fpv.save_replay", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F6, "key.categories.fpv");
     public static final KeyMapping PLAY_REPLAY = new KeyMapping(
@@ -138,6 +146,7 @@ public class ModKeyBindings {
         event.register(DRONE_YAW_LEFT);
         event.register(DRONE_YAW_RIGHT);
         event.register(FIRE_PAYLOAD);
+        event.register(FIRE_WEAPON);
         event.register(SAVE_REPLAY);
         event.register(PLAY_REPLAY);
         event.register(REPLAY_PAUSE);

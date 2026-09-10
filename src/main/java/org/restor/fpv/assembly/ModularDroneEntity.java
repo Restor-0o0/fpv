@@ -44,6 +44,7 @@ public class ModularDroneEntity extends DroneEntity {
     private int dartCooldown;
     // Trader firmware: rolled lazily, saved with the drone.
     private final DroneTrader trader = new DroneTrader(this);
+    private int traderDepartureTimer = -1;
     private static final float DART_SHOT_POWER_FACTOR = 8.0f;
     // Cargo box contents (storage module). Kept even when the module is swapped out —
     // the items drop when the drone breaks.
@@ -61,6 +62,16 @@ public class ModularDroneEntity extends DroneEntity {
 
     public DroneAssembly getAssembly() {
         return assembly;
+    }
+
+    @Override
+    protected float radioRangeMultiplier() {
+        return super.radioRangeMultiplier() * assembly.vtxRangeMultiplier();
+    }
+
+    @Override
+    public int radioChannel() {
+        return assembly.channel;
     }
 
     public void setAssembly(DroneAssembly a) {
@@ -97,6 +108,7 @@ public class ModularDroneEntity extends DroneEntity {
         updateWearEffects();
         this.flightController = controllerFor();
         this.battery = new Battery(droneData.batteryCapacity, 4.2f);
+        applyEnduranceProfile();
         adjustCameraAngle(droneData.cameraAngle - getCameraAngle());
     }
 
@@ -115,6 +127,16 @@ public class ModularDroneEntity extends DroneEntity {
     public boolean isTailsitter() {
         FrameSpec spec = assembly == null ? null : assembly.frameSpec();
         return spec != null && spec.isTailsitter();
+    }
+
+    @Override
+    protected float enduranceMinutes() {
+        FrameSpec spec = assembly == null ? null : assembly.frameSpec();
+        if (spec == null) return 10f;
+        if (spec.isFixedWing()) return 120f;
+        if (spec.isHeavyLift()) return spec.motorCount() >= 8 ? 110f : 75f;
+        float size = assembly.frameSizeInches();
+        return Math.max(4f, Math.min(20f, 5f + (size - 1.5f) * (10f / 5.5f)));
     }
 
     private FlightController controllerFor() {
@@ -145,6 +167,7 @@ public class ModularDroneEntity extends DroneEntity {
             if (!clientAssemblyInitialized) {
                 flightController = controllerFor();
                 battery = new Battery(droneData.batteryCapacity, 4.2f);
+                applyEnduranceProfile();
                 clientAssemblyInitialized = true;
             }
         }
@@ -268,6 +291,16 @@ public class ModularDroneEntity extends DroneEntity {
     }
 
     @Override
+    public int rocketCapacity() {
+        return assembly.moduleType() == org.restor.fpv.component.ModuleType.ROCKET_POD ? MAX_ROCKETS : 0;
+    }
+
+    @Override
+    public boolean hasDartGun() {
+        return assembly.moduleType() == org.restor.fpv.component.ModuleType.DART_GUN;
+    }
+
+    @Override
     public org.restor.fpv.component.FirmwareType firmware() {
         return assembly.firmwareType();
     }
@@ -357,6 +390,7 @@ net.minecraftforge.network.NetworkHooks.openScreen(sp, new net.minecraft.world.S
             entityData.set(DATA_ASSEMBLY, assembly.save());
         }
         tickStressWear();
+        tickTraderDeparture();
         if (!hasWarhead()) return;
 
         boolean powered = flightController.isArmed();
@@ -367,6 +401,27 @@ net.minecraftforge.network.NetworkHooks.openScreen(sp, new net.minecraft.world.S
             return;
         }
         if (fuze.tick(this, powered)) explodeWarhead();
+    }
+
+    // Sold out, the courier packs up and leaves the way a wandering trader does: it climbs
+    // clear for a few seconds, drops the card it was built from, then vanishes.
+    private void tickTraderDeparture() {
+        if (traderDepartureTimer < 0) {
+            org.restor.fpv.component.FirmwareType fw = firmware();
+            if (fw == null || !fw.trades() || !trader.isSoldOut()
+                || trader.getTradingPlayer() != null || isVehicle()) return;
+            traderDepartureTimer = 60;
+            playSound(net.minecraft.sounds.SoundEvents.WANDERING_TRADER_DISAPPEARED, 1.0f, 1.0f);
+            return;
+        }
+        setDeltaMovement(getDeltaMovement().add(0, 0.03, 0));
+        if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
+            sl.sendParticles(net.minecraft.core.particles.ParticleTypes.PORTAL,
+                getX(), getY() + 0.3, getZ(), 4, 0.3, 0.3, 0.3, 0.05);
+        }
+        if (--traderDepartureTimer > 0) return;
+        spawnAtLocation(getDropStack());
+        discard();
     }
 
     // What an airburst head is allowed to go off next to: hostiles and other aircraft, never

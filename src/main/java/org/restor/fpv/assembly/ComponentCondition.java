@@ -35,6 +35,7 @@ public final class ComponentCondition {
     }
 
     public static int damage(ItemStack stack, int amount) {
+        if (org.restor.fpv.CommonConfig.DEV_NO_DAMAGE.get()) return get(stack);
         int condition = Math.max(0, get(stack) - Math.max(0, amount));
         set(stack, condition);
         return condition;

@@ -17,7 +17,7 @@ import java.util.List;
 // Item form of a bench-built airframe; the whole assembly lives in its NBT.
 public class ModularPlaneItem extends Item {
     public ModularPlaneItem() {
-        super(new Item.Properties().stacksTo(1));
+        super(new Item.Properties().stacksTo(16));
     }
 
     @Override

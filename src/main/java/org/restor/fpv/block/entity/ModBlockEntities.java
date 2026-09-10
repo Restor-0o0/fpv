@@ -37,6 +37,9 @@ public class ModBlockEntities {
     public static final RegistryObject<BlockEntityType<PartsPileBlockEntity>> PARTS_PILE = TYPES.register("parts_pile",
         () -> BlockEntityType.Builder.of(PartsPileBlockEntity::new, ModBlocks.PARTS_PILE.get()).build(null));
 
+    public static final RegistryObject<BlockEntityType<GuardStationBlockEntity>> GUARD_STATION = TYPES.register("guard_station",
+        () -> BlockEntityType.Builder.of(GuardStationBlockEntity::new, ModBlocks.GUARD_STATION.get()).build(null));
+
     public static final RegistryObject<BlockEntityType<DroneJammerBlockEntity>> DRONE_JAMMER = TYPES.register("drone_jammer",
         () -> BlockEntityType.Builder.of(DroneJammerBlockEntity::new, ModBlocks.DRONE_JAMMER.get()).build(null));
 }

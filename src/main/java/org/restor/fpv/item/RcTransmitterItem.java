@@ -20,7 +20,7 @@ public class RcTransmitterItem extends Item {
     private final boolean longRange;
 
     public RcTransmitterItem(boolean longRange) {
-        super(new Item.Properties().stacksTo(1));
+        super(new Item.Properties().stacksTo(16));
         this.longRange = longRange;
     }
 

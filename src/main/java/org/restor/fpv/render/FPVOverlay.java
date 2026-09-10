@@ -244,6 +244,7 @@ public class FPVOverlay {
                 org.restor.fpv.client.ModKeyBindings.CAMERA_UP,
                 org.restor.fpv.client.ModKeyBindings.CAMERA_DOWN,
                 org.restor.fpv.client.ModKeyBindings.FIRE_PAYLOAD,
+                org.restor.fpv.client.ModKeyBindings.FIRE_WEAPON,
                 org.restor.fpv.client.ModKeyBindings.OPEN_SETTINGS,
                 org.restor.fpv.client.ModKeyBindings.TOGGLE_HUD));
             if (heavy) {
@@ -302,6 +303,12 @@ public class FPVOverlay {
             int payload = drone.getPayloadAmmo();
             if (payload > 0) {
                 graphics.drawString(font, "PAYLOAD: " + payload, margin, y, 0xFFFFC040);
+                y += lineHeight;
+            }
+
+            if (drone.rocketCapacity() > 0) {
+                graphics.drawString(font, "ROCKETS: " + drone.getRocketAmmo() + "/" + drone.rocketCapacity(),
+                    margin, y, drone.getRocketAmmo() > 0 ? 0xFFFF8040 : 0xFF808080);
                 y += lineHeight;
             }
 
@@ -398,114 +405,90 @@ public class FPVOverlay {
     //  Component damage badges (bottom right)
     // ------------------------------------------------------------------
 
-    private static final int DAMAGE_OK = 0xFFB0B060;
+    private static final int DAMAGE_OK = 0xFF60D060;
     private static final int DAMAGE_WARN = 0xFFFFAA20;
     private static final int DAMAGE_CRIT = 0xFFFF3030;
+    private static final int DAMAGE_FRAME = 0x90FFFFFF;
 
-    private static final int ICON_PROP = 0;
-    private static final int ICON_MOTOR = 1;
-    private static final int ICON_FRAME = 2;
-    private static final int ICON_CAMERA = 3;
-    private static final int ICON_BATTERY = 4;
+    private static final int PANEL_SIZE = 46;
+    private static final int ARM_RADIUS = 16;
+    private static final int MOTOR_RADIUS = 5;
 
-    // Worn parts show up as icon + remaining condition, stacked upward from the bottom
-    // right so they never collide with the telemetry column or the throttle bar.
+    // Airframe schematic in the bottom right: one ring per motor arm placed at the real
+    // mount position, plus body dots for frame, battery and camera. Colour is condition.
     private static void renderDamageBadges(GuiGraphics graphics, int width, int height, DroneEntity drone) {
         if (!(drone instanceof org.restor.fpv.assembly.ModularDroneEntity modular)) return;
         org.restor.fpv.assembly.DroneAssembly assembly = modular.getAssembly();
         if (assembly == null) return;
         org.restor.fpv.assembly.FrameSpec spec = assembly.frameSpec();
         int motorCount = spec != null ? spec.motorCount() : 0;
+        if (motorCount == 0) return;
 
-        float propWorst = 1f, motorWorst = 1f;
-        int propCount = 0, motorCount2 = 0;
-        for (int i = 0; i < motorCount; i++) {
-            if (!assembly.props[i].isEmpty()) {
-                float r = org.restor.fpv.assembly.ComponentCondition.ratio(assembly.props[i]);
-                propWorst = Math.min(propWorst, r);
-                if (r < 0.95f) propCount++;
-            }
-            if (!assembly.motors[i].isEmpty()) {
-                float r = org.restor.fpv.assembly.ComponentCondition.ratio(assembly.motors[i]);
-                motorWorst = Math.min(motorWorst, r);
-                if (r < 0.95f) motorCount2++;
-            }
-        }
-
-        int margin = 10;
-        int icon = 12;
-        int gap = 4;
-        int x = width - margin - icon;
-        int y = height - margin - icon;
+        int cx = width - 10 - PANEL_SIZE / 2;
+        int cy = height - 10 - PANEL_SIZE / 2;
         boolean blink = MC.level == null || (MC.level.getGameTime() % 12) < 7;
 
-        y = damageBadge(graphics, x, y, icon, gap, blink, ICON_BATTERY, "BATT",
-            ratioOf(assembly.battery), 0);
-        y = damageBadge(graphics, x, y, icon, gap, blink, ICON_CAMERA, "CAM",
-            ratioOf(assembly.camera), 0);
-        y = damageBadge(graphics, x, y, icon, gap, blink, ICON_FRAME, "FRAME",
-            ratioOf(assembly.frame), 0);
-        y = damageBadge(graphics, x, y, icon, gap, blink, ICON_MOTOR, "MOTOR",
-            motorWorst, motorCount2);
-        damageBadge(graphics, x, y, icon, gap, blink, ICON_PROP, "PROP",
-            propWorst, propCount);
+        float spread = 0f;
+        for (int i = 0; i < motorCount; i++) {
+            org.restor.fpv.assembly.MountPoint m = spec.motorMounts().get(i);
+            spread = Math.max(spread, Math.max(Math.abs(m.x()), Math.abs(m.z())));
+        }
+        if (spread <= 0.0001f) spread = 1f;
+        float scale = ARM_RADIUS / spread;
+
+        for (int i = 0; i < motorCount; i++) {
+            org.restor.fpv.assembly.MountPoint m = spec.motorMounts().get(i);
+            int mx = cx + Math.round(m.x() * scale);
+            int my = cy + Math.round(m.z() * scale);
+            drawLine(graphics, cx, cy, mx, my, DAMAGE_FRAME);
+            float motor = ratioOf(assembly.motors[i]);
+            float prop = ratioOf(assembly.props[i]);
+            drawRing(graphics, mx, my, MOTOR_RADIUS, conditionColor(prop, blink));
+            drawDisc(graphics, mx, my, MOTOR_RADIUS - 2, conditionColor(motor, blink));
+        }
+
+        drawDisc(graphics, cx, cy, 5, conditionColor(ratioOf(assembly.frame), blink));
+        drawDisc(graphics, cx - 12, cy + ARM_RADIUS + 6, 3, conditionColor(ratioOf(assembly.battery), blink));
+        drawDisc(graphics, cx, cy + ARM_RADIUS + 6, 3, conditionColor(ratioOf(assembly.camera), blink));
+    }
+
+    private static int conditionColor(float ratio, boolean blink) {
+        if (ratio >= 0.95f) return 0x70FFFFFF;
+        if (ratio < 0.30f) return blink ? DAMAGE_CRIT : 0x60FF3030;
+        return ratio < 0.60f ? DAMAGE_WARN : DAMAGE_OK;
     }
 
     private static float ratioOf(net.minecraft.world.item.ItemStack stack) {
         return stack.isEmpty() ? 1f : org.restor.fpv.assembly.ComponentCondition.ratio(stack);
     }
 
-    // Returns the Y for the next badge above this one (unchanged when nothing is drawn).
-    private static int damageBadge(GuiGraphics graphics, int x, int y, int size, int gap,
-                                   boolean blink, int iconId, String label, float ratio, int count) {
-        if (ratio >= 0.95f) return y;
-        int color = ratio < 0.30f ? DAMAGE_CRIT : ratio < 0.60f ? DAMAGE_WARN : DAMAGE_OK;
-        if (ratio < 0.30f && !blink) color = 0x60FF3030;
-
-        drawDamageIcon(graphics, x, y, iconId, color);
-
-        Font font = MC.font;
-        String text = count > 1
-            ? String.format("%s x%d %d%%", label, count, Math.round(ratio * 100f))
-            : String.format("%s %d%%", label, Math.round(ratio * 100f));
-        graphics.drawString(font, text, x - 4 - font.width(text),
-            y + (size - font.lineHeight) / 2, color);
-        return y - size - gap;
+    private static void drawDisc(GuiGraphics graphics, int cx, int cy, int r, int color) {
+        for (int dy = -r; dy <= r; dy++) {
+            int dx = (int) Math.round(Math.sqrt(Math.max(0, r * r - dy * dy)));
+            graphics.fill(cx - dx, cy + dy, cx + dx + 1, cy + dy + 1, color);
+        }
     }
 
-    private static void drawDamageIcon(GuiGraphics graphics, int x, int y, int iconId, int color) {
-        switch (iconId) {
-            case ICON_PROP -> {
-                fillRect(graphics, x, y + 5, 12, 2, color);
-                fillRect(graphics, x + 1, y + 4, 3, 1, color);
-                fillRect(graphics, x + 8, y + 7, 3, 1, color);
-                fillRect(graphics, x + 5, y + 4, 2, 4, color);
+    private static void drawRing(GuiGraphics graphics, int cx, int cy, int r, int color) {
+        for (int dy = -r; dy <= r; dy++) {
+            int outer = (int) Math.round(Math.sqrt(Math.max(0, r * r - dy * dy)));
+            int innerSq = (r - 1) * (r - 1) - dy * dy;
+            int inner = innerSq > 0 ? (int) Math.round(Math.sqrt(innerSq)) : -1;
+            if (inner < 0) {
+                graphics.fill(cx - outer, cy + dy, cx + outer + 1, cy + dy + 1, color);
+            } else {
+                graphics.fill(cx - outer, cy + dy, cx - inner, cy + dy + 1, color);
+                graphics.fill(cx + inner + 1, cy + dy, cx + outer + 1, cy + dy + 1, color);
             }
-            case ICON_MOTOR -> {
-                fillRect(graphics, x + 5, y, 2, 3, color);
-                fillRect(graphics, x + 3, y + 3, 6, 8, color);
-                fillRect(graphics, x + 1, y + 9, 10, 2, color);
-            }
-            case ICON_FRAME -> {
-                fillRect(graphics, x + 3, y + 3, 6, 6, color);
-                fillRect(graphics, x, y, 3, 2, color);
-                fillRect(graphics, x + 9, y, 3, 2, color);
-                fillRect(graphics, x, y + 10, 3, 2, color);
-                fillRect(graphics, x + 9, y + 10, 3, 2, color);
-            }
-            case ICON_CAMERA -> {
-                fillRect(graphics, x, y + 3, 9, 7, color);
-                fillRect(graphics, x + 9, y + 5, 3, 3, color);
-                fillRect(graphics, x + 2, y + 1, 4, 2, color);
-            }
-            case ICON_BATTERY -> {
-                fillRect(graphics, x, y + 3, 10, 2, color);
-                fillRect(graphics, x, y + 9, 10, 2, color);
-                fillRect(graphics, x, y + 3, 2, 8, color);
-                fillRect(graphics, x + 8, y + 3, 2, 8, color);
-                fillRect(graphics, x + 10, y + 5, 2, 4, color);
-            }
-            default -> fillRect(graphics, x, y, 12, 12, color);
+        }
+    }
+
+    private static void drawLine(GuiGraphics graphics, int x0, int y0, int x1, int y1, int color) {
+        int steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+        for (int i = 0; i <= steps; i++) {
+            int x = x0 + (x1 - x0) * i / Math.max(1, steps);
+            int y = y0 + (y1 - y0) * i / Math.max(1, steps);
+            graphics.fill(x, y, x + 2, y + 2, color);
         }
     }
 
