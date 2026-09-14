@@ -178,13 +178,5 @@ public class Fpv {
             LOGGER.info("FPV Drones client setup!");
             event.enqueueWork(org.restor.fpv.client.ModItemProperties::register);
         }
-
-        @SubscribeEvent
-        public static void onRegisterOverlays(net.neoforged.neoforge.client.event.RegisterGuiLayersEvent event) {
-            event.registerAbove(net.neoforged.neoforge.client.gui.VanillaGuiLayers.CROSSHAIR,
-                net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MODID, "fpv_overlay"),
-                (graphics, deltaTracker) -> org.restor.fpv.client.ui.hud.FpvHud.render(
-                    graphics, deltaTracker.getGameTimeDeltaPartialTick(true)));
-        }
     }
 }
