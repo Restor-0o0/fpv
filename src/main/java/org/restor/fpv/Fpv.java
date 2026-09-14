@@ -179,13 +179,5 @@ public class Fpv {
             LOGGER.info("FPV Drones client setup!");
             event.enqueueWork(org.restor.fpv.client.ModItemProperties::register);
         }
-
-        @SubscribeEvent
-        public static void onRegisterOverlays(net.minecraftforge.client.event.RegisterGuiOverlaysEvent event) {
-            event.registerAbove(net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CROSSHAIR.id(),
-                "fpv_overlay",
-                (gui, graphics, partialTick, width, height) ->
-                    org.restor.fpv.client.ui.hud.FpvHud.render(graphics, partialTick));
-        }
     }
 }
