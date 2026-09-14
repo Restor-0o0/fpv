@@ -31,7 +31,7 @@ public record RaceTimerPacket(int lap, int laps, long startTime, int gatesHit, i
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static void handle(RaceTimerPacket pkt, IPayloadContext context) {
-        context.enqueueWork(() -> org.restor.fpv.render.FPVOverlay.setRaceState(
+        context.enqueueWork(() -> org.restor.fpv.client.ClientRaceState.set(
             pkt.lap(), pkt.laps(), pkt.startTime(), pkt.gatesHit(), pkt.gatesTotal(), pkt.finishTicks()));
     }
 }

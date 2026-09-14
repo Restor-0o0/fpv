@@ -79,11 +79,11 @@ public final class ReplayManager {
         renderHud(event.getGuiGraphics(), event.getPartialTick().getGameTimeDeltaPartialTick(true));
     }
 
-    static ReplayRecording playback() {
+    public static ReplayRecording playback() {
         return playback;
     }
 
-    static double renderFrame(float partialTick) {
+    public static double renderFrame(float partialTick) {
         return timeline == null ? 0.0 : timeline.renderFrame(partialTick);
     }
 

@@ -2,7 +2,7 @@ package org.restor.fpv.client;
 
 import net.minecraft.core.BlockPos;
 import net.neoforged.neoforge.network.PacketDistributor;
-import org.restor.fpv.client.screen.ClientScreens;
+import org.restor.fpv.client.ui.screen.ClientScreens;
 import org.restor.fpv.network.RaceMarkPacket;
 
 // Client-side race-course marking session. While active, right-clicking gate blocks adds

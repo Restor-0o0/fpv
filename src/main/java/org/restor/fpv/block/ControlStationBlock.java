@@ -43,7 +43,7 @@ public class ControlStationBlock extends BaseEntityBlock {
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
                                  BlockHitResult hit) {
         if (level.isClientSide) {
-            org.restor.fpv.client.screen.ClientScreens.openStation(pos);
+            org.restor.fpv.client.ui.screen.ClientScreens.openStation(pos);
         }
         return InteractionResult.SUCCESS;
     }

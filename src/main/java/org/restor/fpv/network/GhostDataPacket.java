@@ -36,7 +36,7 @@ public record GhostDataPacket(long startTime, boolean personalIsOverall, GhostRe
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static void handle(GhostDataPacket pkt, IPayloadContext context) {
-        context.enqueueWork(() -> org.restor.fpv.client.GhostRenderer.setGhosts(
+        context.enqueueWork(() -> org.restor.fpv.client.render.GhostRenderer.setGhosts(
             pkt.startTime(), pkt.personalIsOverall(), pkt.personal(), pkt.overall()));
     }
 }

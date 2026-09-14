@@ -12,7 +12,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.Config;
 import org.restor.fpv.Fpv;
-import org.restor.fpv.client.screen.FPVSettingsScreen;
+import org.restor.fpv.client.ui.screen.FPVSettingsScreen;
 import org.restor.fpv.controller.RCController;
 import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.entity.PlaneEntity;
@@ -20,7 +20,8 @@ import org.restor.fpv.network.CameraAnglePacket;
 import org.restor.fpv.network.ControllerPacket;
 import org.restor.fpv.network.CycleModePacket;
 import org.restor.fpv.network.PlaneControllerPacket;
-import org.restor.fpv.render.FPVOverlay;
+import org.restor.fpv.client.render.FpvCamera;
+import org.restor.fpv.client.ui.hud.FpvHud;
 import org.slf4j.Logger;
 
 @EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
@@ -214,7 +215,7 @@ public class ClientEventHandler {
             }
 
             if (ModKeyBindings.TOGGLE_HUD.consumeClick()) {
-                FPVOverlay.toggleHud();
+                FpvHud.toggle();
             }
 
             boolean heavy = drone.isHeavyLift();
@@ -303,7 +304,7 @@ public class ClientEventHandler {
             return;
         }
         if (ModKeyBindings.TOGGLE_HUD.consumeClick()) {
-            FPVOverlay.toggleHud();
+            FpvHud.toggle();
         }
 
         boolean rcConnected = RCController.isConnected();
@@ -1011,7 +1012,7 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public static void onCameraSetup(ViewportEvent.ComputeCameraAngles event) {
-        FPVOverlay.onCameraSetup(event);
+        FpvCamera.onCameraSetup(event);
     }
 
     // Whether the local player is currently in an FPV feed (riding a plane/drone or
@@ -1097,7 +1098,7 @@ public class ClientEventHandler {
     }
 
     // Gimbal yaw/pitch (degrees) that aims the belly camera at a world point, given the
-    // plane's current attitude. Matches FPVOverlay's Ry(-yaw)Rx(-pitch) gimbal composition.
+    // plane's current attitude. Matches FpvCamera's Ry(-yaw)Rx(-pitch) gimbal composition.
     private static float[] gimbalForTarget(PlaneEntity plane, net.minecraft.world.phys.Vec3 target) {
         net.minecraft.world.phys.Vec3 camPos = plane.position().add(0, plane.getBbHeight() / 2.0, 0);
         net.minecraft.world.phys.Vec3 d = target.subtract(camPos);
@@ -1154,7 +1155,7 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public static void onRenderOverlay(RenderGuiLayerEvent.Pre event) {
-        FPVOverlay.onRenderGuiOverlay(event);
+        FpvHud.hideVanillaOverlays(event);
     }
 
     @SubscribeEvent
@@ -1163,6 +1164,6 @@ public class ClientEventHandler {
         // unconditionally — hanging the OSD on RenderGuiOverlayEvent.Post(HOTBAR) never
         // fired because our own Pre handler cancels the hotbar overlay (canceled Pre
         // suppresses Post), so the OSD was invisible.
-        FPVOverlay.renderOverlay(event.getGuiGraphics(), event.getPartialTick().getGameTimeDeltaPartialTick(true));
+        FpvHud.render(event.getGuiGraphics(), event.getPartialTick().getGameTimeDeltaPartialTick(true));
     }
 }

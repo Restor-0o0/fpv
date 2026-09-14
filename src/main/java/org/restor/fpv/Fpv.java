@@ -183,7 +183,7 @@ public class Fpv {
         public static void onRegisterOverlays(net.neoforged.neoforge.client.event.RegisterGuiLayersEvent event) {
             event.registerAbove(net.neoforged.neoforge.client.gui.VanillaGuiLayers.CROSSHAIR,
                 net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MODID, "fpv_overlay"),
-                (graphics, deltaTracker) -> org.restor.fpv.render.FPVOverlay.renderOverlay(
+                (graphics, deltaTracker) -> org.restor.fpv.client.ui.hud.FpvHud.render(
                     graphics, deltaTracker.getGameTimeDeltaPartialTick(true)));
         }
     }
