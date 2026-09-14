@@ -267,7 +267,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     @Override
     public void tick() {
         // Mirror the xRotO/yRotO pattern: save displayRoll as rollO BEFORE super.tick()
-        // so partialTick interpolation in FPVOverlay sees prev vs current each frame.
+        // so partialTick interpolation in FpvCamera sees prev vs current each frame.
         rollO = displayRoll;
         super.tick();
         if (isNoGravity()) setNoGravity(false);
@@ -543,7 +543,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             }
         } else {
             // Not piloting locally (spectating someone else's drone): follow server values.
-            // yRotO/xRotO are already saved by super.tick(), so Mth.rotLerp in FPVOverlay
+            // yRotO/xRotO are already saved by super.tick(), so Mth.rotLerp in FpvCamera
             // interpolates smoothly at 60+ fps; rollO/displayRoll mirror that split.
             setYRot(entityData.get(DATA_YAW_SYNC));
             setXRot(entityData.get(DATA_PITCH_SYNC));
@@ -1173,7 +1173,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     protected void positionRider(Entity passenger, Entity.MoveFunction moveFunction) {
         if (hasPassenger(passenger)) {
             // Camera position: forward from center along the drone's heading (yaw only).
-            // Pitch/roll orientation is applied by FPVOverlay — don't rotate position here.
+            // Pitch/roll orientation is applied by FpvCamera — don't rotate position here.
             double yaw = Math.toRadians(getYRot());
             boolean showProps = this instanceof RacingDroneEntity
                 || this instanceof RemoteRacingDroneEntity

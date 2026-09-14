@@ -25,7 +25,7 @@ public record ExplosionParticlesPacket(double x, double y, double z, float sprea
     public Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public static void handle(ExplosionParticlesPacket pkt, IPayloadContext context) {
-        context.enqueueWork(() -> org.restor.fpv.client.ClientExplosionParticles.spawn(
+        context.enqueueWork(() -> org.restor.fpv.client.render.ClientExplosionParticles.spawn(
             pkt.x(), pkt.y(), pkt.z(), pkt.spread()));
     }
 }

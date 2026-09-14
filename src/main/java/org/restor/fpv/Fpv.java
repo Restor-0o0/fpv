@@ -185,7 +185,7 @@ public class Fpv {
             event.registerAbove(net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CROSSHAIR.id(),
                 "fpv_overlay",
                 (gui, graphics, partialTick, width, height) ->
-                    org.restor.fpv.render.FPVOverlay.renderOverlay(graphics, partialTick));
+                    org.restor.fpv.client.ui.hud.FpvHud.render(graphics, partialTick));
         }
     }
 }

@@ -18,8 +18,12 @@ Minecraft Forge 1.20.1, Java 17. Сборка: `.\gradlew.bat build`, депло
 | `.menu` | Контейнерные меню (верстак — легаси, станция сборки в `.assembly`) |
 | `.item` | `DroneItem` (спавн дрона из предмета), `ModItems` |
 | `.network` | `ModNetworking` + пакеты: ввод с пульта, коды, rates, станции |
-| `.render` | `FPVOverlay` (камера + HUD), `DroneRenderer`, `ModularDroneRenderer`, `OperatorDummyRenderer` |
-| `.client`, `.client.screen` | Тик-обработчик ввода, клавиши, все экраны настроек/кодов/станций |
+| `.client` | Тик-обработчик ввода, клавиши, `PilotView`, `ClientRaceState` |
+| `.client.ui.hud` | HUD в полёте: `FpvHud`, `DroneOsd`, `PlaneOsd`, `RaceHud`, `DamageHud` (схема повреждений модулей), `HudWidgets` |
+| `.client.ui.screen` | Все экраны настроек/кодов/станций |
+| `.client.render` | `FpvCamera`, рендереры сущностей/блоков, призраки, частицы |
+
+Команды сборки — в `BUILD.md`.
 
 ## Ключевые механики
 
