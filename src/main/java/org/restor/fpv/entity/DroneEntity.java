@@ -91,11 +91,28 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // blocks/tick, so accelerations (m/s²) convert as Δv_bt = a * dt / 20.
     private static final float GRAVITY = 9.81f;       // m/s²
     private static final float AIR_DENSITY = 1.225f;  // kg/m³
-    private static final float MS2_TO_BT = 0.05f / 20f; // (a m/s²) * this = Δblocks/tick per tick
+    // Velocity is stored in blocks/tick, so an acceleration a (m/s²) held for dt seconds adds
+    // a·dt m/s = a·dt/20 blocks/tick. Every step multiplies by its own dt, so the result is the
+    // same whether the tick is integrated in one step or in eight.
+    private static final float MS_TO_BT = 1f / 20f;   // (v m/s) * this = blocks/tick
     // Throttle→thrust curve exponent. 2.0 = real prop physics (thrust ∝ RPM², RPM ∝ throttle):
     // hover stick = √(1/(maxThrottle·TWR)), so the presets' TWR alone sets hover height and there
     // is strong climb headroom above it. Full stick is unaffected, so top speed doesn't suffer.
     private static final float THROTTLE_EXP = 2.0f;
+    // Motor/prop spool. RPM cannot follow the stick instantly — the rotating mass has inertia —
+    // and thrust tracks the spooled RPM, not the stick. A punch-out builds over a couple of
+    // ticks and a chopped throttle keeps lifting for a moment, which is the weight a real quad
+    // has and the reason a hard throttle chop does not drop it like a stone.
+    private static final float SPOOL_TAU_BASE = 0.015f;   // s — ESC/motor electrical lag
+    private static final float SPOOL_TAU_PER_M = 0.045f;  // s per metre of arm: bigger prop, more inertia
+    private static final float SPOOL_DOWN_FACTOR = 1.6f;  // spin-down is slower: only prop drag brakes it
+    // Pack internal resistance: current draw pulls the voltage down and thrust ∝ V². This is the
+    // thrust lost at full stick on a fresh pack; an empty one sags roughly twice as hard. Near
+    // hover the loss is under a percent, so it costs punch without moving the hover point.
+    private static final float VOLTAGE_SAG_FULL_STICK = 0.07f;
+    // Ground friction written as a decay rate (1/s) rather than a per-tick factor, so it is
+    // identical at any substep count. 7.1/s reproduces the previous 0.7 per 20 Hz tick.
+    private static final float GROUND_FRICTION_RATE = 7.1f;
     // Heavy-lift rigs fly on a vertical-speed stick instead of a collective: centred = hold.
     private static final float MAX_CLIMB_RATE = 4.0f;   // m/s at full stick
     private static final float CLIMB_TAU = 0.6f;        // s to settle on the commanded rate
@@ -120,6 +137,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private float angVelRoll;
     private float angVelPitch;
     private float angVelYaw;
+    // Normalised prop RPM (0..1), lagging the throttle stick. Thrust is driven by this.
+    private float motorSpool;
 
     // Controller input (server-side)
     private boolean useController;
@@ -241,9 +260,13 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     public static final int   MAX_PAYLOAD  = 4;      // charges a drone can carry
     private static final float MIN_PAYLOAD_TWR = 1.6f;  // thrust/weight kept in hand when fully loaded
     private static final float CHARGE_MASS = 0.10f;  // kg each — extra mass hurts the flight
+    // Frontal area (m²) a slung charge adds. A warhead is a brick in the airstream, not just
+    // ballast: it costs top speed and glide as well as punch.
+    private static final float CHARGE_CDA = 0.006f;
     private static final int   FIRE_COOLDOWN = 12;   // ticks between drops
     public  static final int   MAX_ROCKETS = 6;
     private static final float ROCKET_MASS = 0.07f;
+    private static final float ROCKET_CDA = 0.004f;
     private static final int   WEAPON_COOLDOWN = 10;
     private static final float DART_SHOT_POWER = 2.0f;
     private int payloadCooldown;
@@ -331,6 +354,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             clearChunkStreaming();
         }
 
+        boolean simulatedFlight = false;
         if (hasPilot) {
             if (!pilotWasMounted) {
                 angVelRoll  = 0;
@@ -369,11 +393,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             dbgThrustAccel = 0;
             dbgThrustVert = 0;
             if (clientPoseTicks <= 0) {
-                if (flightController.isArmed()) {
-                    applyFlightPhysics(dt);
-                }
-                applyDrag(dt);
-                applyGravity(dt);
+                integrateFlight(dt, flightController.isArmed());
+                simulatedFlight = true;
             }
 
             if (ServerRule.BATTERY.on() && battery.isEmpty()) {
@@ -387,10 +408,11 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             if (CommonConfig.DEV_VERBOSE_LOG.get() && ++physLogTick >= PHYS_LOG_INTERVAL) {
                 physLogTick = 0;
                 Vec3 pv = getDeltaMovement();
-                LOGGER.info("[FPV-PHYS] pitch={} roll={} thr={}% vThrust={} net={} vSpd={} hSpd={} alt={}",
+                LOGGER.info("[FPV-PHYS] pitch={} roll={} thr={}% spool={}% vThrust={} net={} vSpd={} hSpd={} alt={}",
                     String.format("%.1f", getXRot()),
                     String.format("%.1f", entityData.get(DATA_ROLL)),
                     String.format("%.0f", flightController.throttle * 100f),
+                    String.format("%.0f", motorSpool * 100f),
                     String.format("%.1f", dbgThrustVert),
                     String.format("%.1f", dbgThrustVert - GRAVITY),
                     String.format("%.2f", pv.y * 20.0),
@@ -476,13 +498,13 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (clientPoseTicks > 0) {
             clientPoseTicks--;
             collideWithEntities(getDeltaMovement());
-        } else {
-            applyMovement();
+        } else if (!simulatedFlight) {
+            applyMovement(0.05f);
         }
 
         // Sync state to clients
         Vec3 vel = getDeltaMovement();
-        entityData.set(DATA_VISUAL_THR,  throttleInput);
+        entityData.set(DATA_VISUAL_THR,  motorSpool);
         entityData.set(DATA_ARMED,       flightController.armed);
         entityData.set(DATA_FLIGHT_MODE, flightController.getMode().ordinal());
         entityData.set(DATA_BATTERY, ServerRule.BATTERY.on() ? battery.getPercentRemaining() : 1.0f);
@@ -524,11 +546,13 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             flightController.targetRoll  = applyDeadband(predRoll,  0.05f);
             flightController.targetYaw   = applyDeadband(predYaw,   0.05f);
             flightController.update(dt, angVelRoll, angVelPitch, angVelYaw, displayRoll, getXRot());
-            if (flightController.isArmed()) {
+            if (!flightController.isArmed()) {
+                angVelRoll = 0; angVelPitch = 0; angVelYaw = 0;
+            } else if (!clientSim) {
+                // Without local physics this is the only place attitude advances; with it,
+                // integrateFlight() turns the drone once per substep, together with its thrust.
                 displayRoll = integrateRotation(dt, flightController.rollOutput,
                     flightController.pitchOutput, flightController.yawOutput, displayRoll);
-            } else {
-                angVelRoll = 0; angVelPitch = 0; angVelYaw = 0;
             }
             // Soft correction toward the authoritative server attitude, spread over
             // ~12 ticks. Done as a quaternion slerp: correcting yaw/pitch/roll each
@@ -561,25 +585,15 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (clientSim) {
             // Full local simulation: a slow server tick (heavy physics mods) would otherwise
             // arrive as seconds-old velocity, which is what made the drone feel disconnected.
-            if (flightController.isArmed()) applyFlightPhysics(dt);
-            applyDrag(dt);
-            applyGravity(dt);
+            integrateFlight(dt, flightController.isArmed());
         } else {
             setDeltaMovement(new Vec3(
                 entityData.get(DATA_VEL_X),
                 entityData.get(DATA_VEL_Y),
                 entityData.get(DATA_VEL_Z)
             ));
+            applyMovement(dt);
         }
-
-        // Ground
-        Vec3 vel = getDeltaMovement();
-        if (onGround() && vel.y < 0) {
-            vel = new Vec3(vel.x * 0.7, 0, vel.z * 0.7);
-            setDeltaMovement(vel);
-        }
-
-        moveWithBlockCollisionDamping(getDeltaMovement());
 
         // Blend toward the authoritative server position captured in lerpTo() —
         // gentle so it never reads as a snap; hard snap only if truly far off.
@@ -770,6 +784,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         angVelRoll  = 0;
         angVelPitch = 0;
         angVelYaw   = 0;
+        spoolMotors(0f, 0.05f);
         applyDrag(0.05f);
         applyGravity(0.05f);
         if (onGround()) {
@@ -777,22 +792,43 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         }
     }
 
-    private void applyMovement() {
-        Vec3 vel = getDeltaMovement();
-        if (onGround() && vel.y < 0) {
-            vel = new Vec3(vel.x * 0.7, 0, vel.z * 0.7);
-            setDeltaMovement(vel);
+    // One game tick of flight, integrated in several smaller steps: at 60 m/s a single 20 Hz
+    // step covers three blocks, which integrates quadratic drag badly, makes rotation step
+    // visibly and can carry the drone through a thin wall before any collision is tested.
+    private void integrateFlight(float tickSeconds, boolean powered) {
+        int steps = Math.max(1, physicsSubsteps());
+        float h = tickSeconds / steps;
+        for (int i = 0; i < steps; i++) {
+            if (powered) applyFlightPhysics(h);
+            else spoolMotors(0f, h);
+            applyDrag(h);
+            applyGravity(h);
+            applyMovement(h);
         }
-        moveWithBlockCollisionDamping(vel);
-        collideWithEntities(vel);
     }
 
-    private void moveWithBlockCollisionDamping(Vec3 vel) {
+    private static int physicsSubsteps() {
+        return CommonConfig.SPEC.isLoaded() ? CommonConfig.PHYSICS_SUBSTEPS.get() : 4;
+    }
+
+    private void applyMovement(float dt) {
+        Vec3 vel = getDeltaMovement();
+        if (onGround() && vel.y < 0) {
+            double keep = Math.exp(-GROUND_FRICTION_RATE * dt);
+            vel = new Vec3(vel.x * keep, 0, vel.z * keep);
+            setDeltaMovement(vel);
+        }
+        moveWithBlockCollisionDamping(vel, dt);
+        if (!level().isClientSide) collideWithEntities(vel);
+    }
+
+    private void moveWithBlockCollisionDamping(Vec3 vel, float dt) {
         if (vel.lengthSqr() > 0.01) travelDir = vel.normalize();
+        double stepTicks = dt * 20.0;
         Vec3 before = position();
-        move(MoverType.SELF, vel);
-        Vec3 moved = position().subtract(before);
-        Vec3 damped = dampBlockedVelocity(vel, moved);
+        move(MoverType.SELF, vel.scale(stepTicks));
+        Vec3 moved = position().subtract(before).scale(1.0 / stepTicks);
+        Vec3 damped = dampBlockedVelocity(vel, moved, dt);
         setDeltaMovement(damped);
         Vec3 velocityDelta = vel.subtract(damped);
         if (velocityDelta.lengthSqr() > 1.0e-8) {
@@ -801,14 +837,18 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         }
     }
 
-    private static Vec3 dampBlockedVelocity(Vec3 intended, Vec3 moved) {
+    // Scraping along a wall bleeds speed at this rate (1/s); 5.0 reproduces the old 0.78
+    // per 20 Hz tick and now costs the same whether the tick is one step or eight.
+    private static final double SLIDE_DECAY_RATE = 5.0;
+
+    private static Vec3 dampBlockedVelocity(Vec3 intended, Vec3 moved, float dt) {
         double eps = 1.0e-5;
         boolean blockedX = Math.abs(intended.x) > eps && Math.abs(moved.x) < Math.abs(intended.x) * 0.75;
         boolean blockedY = Math.abs(intended.y) > eps && Math.abs(moved.y) < Math.abs(intended.y) * 0.75;
         boolean blockedZ = Math.abs(intended.z) > eps && Math.abs(moved.z) < Math.abs(intended.z) * 0.75;
         if (!blockedX && !blockedY && !blockedZ) return intended;
 
-        double slide = 0.78;
+        double slide = Math.exp(-SLIDE_DECAY_RATE * dt);
         double normal = 0.08;
         return new Vec3(
             blockedX ? moved.x * normal : intended.x * slide,
@@ -830,18 +870,23 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         long gameTime = level().getGameTime();
         propStrikeCooldowns.entrySet().removeIf(entry ->
             gameTime - entry.getValue() >= PROP_STRIKE_COOLDOWN_TICKS);
+        boolean struck = false;
         for (Entity e : hits) {
             Long lastHit = propStrikeCooldowns.get(e.getId());
-            if (lastHit == null || gameTime - lastHit >= PROP_STRIKE_COOLDOWN_TICKS) {
-                double relativeSpeedMs = velBefore.subtract(e.getDeltaMovement()).length() * 20.0;
-                double kineticEnergy = 0.5 * mass() * relativeSpeedMs * relativeSpeedMs;
-                float damage = Math.min((float) (kineticEnergy / PROP_STRIKE_JOULES_PER_DAMAGE),
-                    PROP_STRIKE_MAX_DAMAGE);
-                propStrikeCooldowns.put(e.getId(), gameTime);
-                e.hurt(level().damageSources().thrown(this, activePilot), damage);
-            }
+            // The cooldown gates the whole strike, not just the damage: with several physics
+            // substeps per tick the same touch is reported repeatedly, and shoving or braking
+            // on each of them stopped the drone dead against a mob it had merely brushed.
+            if (lastHit != null && gameTime - lastHit < PROP_STRIKE_COOLDOWN_TICKS) continue;
+            double relativeSpeedMs = velBefore.subtract(e.getDeltaMovement()).length() * 20.0;
+            double kineticEnergy = 0.5 * mass() * relativeSpeedMs * relativeSpeedMs;
+            float damage = Math.min((float) (kineticEnergy / PROP_STRIKE_JOULES_PER_DAMAGE),
+                PROP_STRIKE_MAX_DAMAGE);
+            propStrikeCooldowns.put(e.getId(), gameTime);
+            e.hurt(level().damageSources().thrown(this, activePilot), damage);
             e.push(velBefore.x * 0.8, Math.abs(velBefore.y) * 0.4 + 0.1, velBefore.z * 0.8);
+            struck = true;
         }
+        if (!struck) return;
         Vec3 beforeImpact = getDeltaMovement();
         setDeltaMovement(beforeImpact.scale(0.35));
         onMovementImpact(beforeImpact.subtract(getDeltaMovement()));
@@ -862,7 +907,9 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         float po = flightController.pitchOutput;
         float yo = flightController.yawOutput;
 
-        if (!level().isClientSide) {
+        if (level().isClientSide) {
+            displayRoll = integrateRotation(dt, ro, po, yo, displayRoll);
+        } else {
             entityData.set(DATA_ROLL, integrateRotation(dt, ro, po, yo, entityData.get(DATA_ROLL)));
         }
 
@@ -872,7 +919,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         // altitude like a real quad. throttle clamped to [0,1] (ACRO never reverses); maxThrottle
         // caps this drone's usable top end.
         float throttle = Math.max(0f, Math.min(1f, flightController.throttle));
-        float totalFrac = droneData.maxThrottle * (float) Math.pow(throttle, THROTTLE_EXP);
+        spoolMotors(throttle, dt);
+        float totalFrac = droneData.maxThrottle * (float) Math.pow(motorSpool, THROTTLE_EXP);
 
         // Ground effect: extra lift close to terrain surface
         double height = getHeightAboveGround();
@@ -884,16 +932,17 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         // module-built assembly (DroneAssembly.totalThrustN) — divided by its own mass. Both are
         // per-drone; no global override. Heavier build = higher hover throttle and less punch,
         // as in reality. DEV_POWER_MULT stays as a global fine multiplier for quick testing.
-        float thrustAccel = totalFrac * groundEffect * getBatteryPowerFactor()
-            * effMotorPower() / mass();
-
         // Rotate body-up axis by current orientation to get world-space thrust direction.
         // In Minecraft's left-handed coordinate system, rotateZ(+roll) correctly tilts the
         // up-vector toward the right side (−X when facing south = west = the player's right).
         Quaternionf rot = attitudeQuat(getYRot(), getXRot(), bodyRoll());
         Vector3f up = new Vector3f(0, 1, 0);
         rot.transform(up);
-        float dv = thrustAccel * MS2_TO_BT;
+
+        float thrustAccel = totalFrac * groundEffect * getBatteryPowerFactor()
+            * inflowThrustFactor(up) * effMotorPower() / mass();
+
+        float dv = thrustAccel * dt * MS_TO_BT;
         setDeltaMovement(getDeltaMovement().add(up.x * dv, up.y * dv, up.z * dv));
         dbgThrustAccel = thrustAccel;
         dbgThrustVert = thrustAccel * up.y;   // vertical lift the thrust provides right now
@@ -901,6 +950,25 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         // limitVelocity() NOT called here — it runs in applyGravity() after gravity is subtracted.
         // Calling it here caused: thrust cap (1.245) → gravity subtracts 1.177 → net ≈ 0.07 (hover!)
         // regardless of throttle. Fix: cap only after the full physics step is complete.
+    }
+
+    // Air already moving through the disc unloads the blades: at the prop pitch speed they stop
+    // biting entirely. This is what actually caps a quad speed and climb — without it a high-TWR
+    // build accelerates until it hits the dev speed ceiling, and a warhead costs it nothing.
+    private float inflowThrustFactor(Vector3f up) {
+        float pitchSpeed = droneData.propPitchSpeed * motorSpool;
+        if (pitchSpeed < 0.01f) return 1f;
+        Vec3 v = getDeltaMovement();
+        double inflow = (v.x * up.x + v.y * up.y + v.z * up.z) * 20.0;
+        return Mth.clamp(1f - (float) (inflow / pitchSpeed), 0f, 1f);
+    }
+
+    // First-order RPM lag toward the commanded throttle. The factor is 1 − e^(−dt/τ), so four
+    // substeps land on exactly the same RPM as one full step would.
+    private void spoolMotors(float throttle, float dt) {
+        float tau = SPOOL_TAU_BASE + SPOOL_TAU_PER_M * droneData.armLength;
+        if (throttle < motorSpool) tau *= SPOOL_DOWN_FACTOR;
+        motorSpool += (throttle - motorSpool) * (1f - (float) Math.exp(-dt / tau));
     }
 
     // Shared by server physics and client prediction: lerps angular velocity toward the
@@ -922,7 +990,9 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         // sluggishly — this is where mass is "felt" in the sticks. Referenced to a 0.5 kg
         // nominal quad; a 1 kg rig turns ~1.3× lazier, a whoop snappier.
         float massInertia = Mth.clamp((float) Math.pow(mass() / 0.5f, 0.45f), 0.5f, 2.0f);
-        float resp = Math.min(droneData.rotationResponsiveness / massInertia * dt, 1.0f);
+        // 1 − e^(−dt/τ) rather than a raw dt lerp: the time constant is then exactly
+        // massInertia/rotationResponsiveness seconds whatever the substep count or tick rate.
+        float resp = 1f - (float) Math.exp(-droneData.rotationResponsiveness / massInertia * dt);
         angVelRoll  += (targetRollRate  - angVelRoll)  * resp;
         angVelPitch += (targetPitchRate - angVelPitch) * resp;
         angVelYaw   += (targetYawRate   - angVelYaw)   * resp;
@@ -990,7 +1060,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // does not jitter at low speed the way a single normalized-velocity CdA did.
     private static final double AXIAL_DRAG_MULT = 0.95;
 
-    // Disc drag while DESCENDING is scaled between these two by throttle. Off the throttle the
+    // Disc drag while DESCENDING is scaled between these two by prop RPM. Off the throttle the
     // rotor is unloaded and barely brakes, so the drone drops fast (FALL ≈ ¼ of the powered disc
     // drag → terminal fall ≈ 2× faster); powered up it loads the disc for the full parachute/brake
     // (AXIAL_DRAG_MULT). Keeps mass mattering (terminal ∝ √mass) while killing the airy float.
@@ -1017,15 +1087,15 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         double axialSpeed = vel.dot(upV);        // signed: <0 = moving into the disc (brake/descend)
         Vec3 axial = upV.scale(axialSpeed);      // component along body-up
         Vec3 planar = vel.subtract(axial);       // in-plane (translational) component
-        // Descending: interpolate the disc drag by throttle — idle = light (fast fall),
+        // Descending: interpolate the disc drag by the spooled RPM — idle = light (fast fall),
         // full = loaded disc (heavy brake). Climbing/edge-on uses the low planar drag.
-        float thr = Math.max(0f, Math.min(1f, flightController.throttle));
-        double descentMult = Mth.lerp(thr, FALL_DRAG_MULT, AXIAL_DRAG_MULT);
+        double descentMult = Mth.lerp(motorSpool, FALL_DRAG_MULT, AXIAL_DRAG_MULT);
+        double cdA = dragArea();
         double axialCdA = axialSpeed < 0
-            ? droneData.dragCoefficient * descentMult        // disc-on: throttle-scaled brake/parachute
-            : droneData.dragCoefficient;                     // moving along thrust: edge-on, low drag
-        setDeltaMovement(dragComponent(axial, axialCdA)
-            .add(dragComponent(planar, droneData.dragCoefficient * planarDragMult())));
+            ? cdA * descentMult                              // disc-on: RPM-scaled brake/parachute
+            : cdA;                                           // moving along thrust: edge-on, low drag
+        setDeltaMovement(dragComponent(axial, axialCdA, dt)
+            .add(dragComponent(planar, cdA * planarDragMult(), dt)));
 
         // Horizontal-only linear momentum bleed on top of the quadratic aero drag (see LINEAR_DAMP).
         double k = LINEAR_DAMP * org.restor.fpv.Config.DEV_DRAG_MULT.get();
@@ -1034,13 +1104,13 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         setDeltaMovement(dm.x * hFactor, dm.y, dm.z * hFactor);
     }
 
-    private Vec3 dragComponent(Vec3 v, double cdA) {
+    private Vec3 dragComponent(Vec3 v, double cdA, float dt) {
         double speed = v.length();  // blocks/tick
         if (speed < 1e-4) return v;
         double vMs = speed * 20.0;
         cdA *= org.restor.fpv.Config.DEV_DRAG_MULT.get(); // dev braking/reversal-authority knob
         double dragAccel = 0.5 * AIR_DENSITY * cdA * vMs * vMs / mass(); // m/s²
-        double drag = Math.min(dragAccel * MS2_TO_BT, speed * 0.5); // never reverse in one step
+        double drag = Math.min(dragAccel * dt * MS_TO_BT, speed * 0.5); // never reverse in one step
         return v.subtract(v.normalize().scale(drag));
     }
 
@@ -1048,6 +1118,10 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // DroneAssembly.totalMassKg), NOT a global slider. Mass touches every place weight matters:
     // thrust & drag accel, terminal fall speed, rotation inertia (via rotationResponsiveness),
     // impact damage and (via hover throttle) battery drain.
+    private float dragArea() {
+        return droneData.dragCoefficient + getPayloadAmmo() * CHARGE_CDA + getRocketAmmo() * ROCKET_CDA;
+    }
+
     private float mass() {
         return Math.max(0.01f, droneData.mass + getPayloadAmmo() * CHARGE_MASS + getRocketAmmo() * ROCKET_MASS);
     }
@@ -1061,7 +1135,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         // Constant g: every mass falls at the same acceleration. Heavier drones fall FASTER in
         // practice because thrust (÷mass) can't hold them and drag (÷mass) brakes them less —
         // that emerges from the thrust/drag terms, not from scaling g.
-        setDeltaMovement(getDeltaMovement().add(0, -GRAVITY * MS2_TO_BT, 0));
+        setDeltaMovement(getDeltaMovement().add(0, -GRAVITY * dt * MS_TO_BT, 0));
         limitVelocity();
     }
 
@@ -1445,7 +1519,12 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private float getBatteryPowerFactor() {
         if (!ServerRule.BATTERY.on()) return 1.0f;
         float charge = level().isClientSide ? entityData.get(DATA_BATTERY) : battery.getPercentRemaining();
-        return 0.35f + charge * 0.65f;
+        // Resting voltage falls as the pack drains, and drawing current sags it further on the
+        // pack's internal resistance — so the same stick buys less thrust in a punch than in a
+        // hover, and less again on a tired pack.
+        float rest = 0.35f + charge * 0.65f;
+        float sag = VOLTAGE_SAG_FULL_STICK * motorSpool * motorSpool * (1.6f - 0.6f * charge);
+        return rest * Math.max(0.3f, 1f - sag);
     }
     private float normalizeYaw(float yaw) {
         while (yaw >  180) yaw -= 360;
@@ -1541,6 +1620,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private void autonomousTick(ServerPlayer owner) {
         flightController.armed = true;   // props spin via DATA_VISUAL_THR
         throttleInput = 0.55f;
+        spoolMotors(throttleInput, 0.05f);
         if (ServerRule.BATTERY.on()) battery.tick(throttleInput, 1.0f);
         if (ServerRule.BATTERY.on() && battery.isEmpty()) {
             idleFallback();

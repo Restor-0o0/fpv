@@ -53,7 +53,7 @@ public class ModComponents {
     public static final RegistryObject<Item> MOTOR_2306_1700 = COMPONENTS.register("motor_2306_1700kv",
         () -> new MotorItem(ComponentStats.motor("2306 1700KV", 1700, 0.8f, 28, 34)));
     public static final RegistryObject<Item> MOTOR_1103_8000 = COMPONENTS.register("motor_1103_8000kv",
-        () -> new MotorItem(ComponentStats.motor("1103 8000KV", 8000, 0.3f, 11, 5)));
+        () -> new MotorItem(ComponentStats.motor("1103 8000KV", 8000, 0.3f, 11, 3.5f)));
     public static final RegistryObject<Item> MOTOR_1404_4500 = COMPONENTS.register("motor_1404_4500kv",
         () -> new MotorItem(ComponentStats.motor("1404 4500KV", 4500, 0.5f, 14, 10)));
     public static final RegistryObject<Item> MOTOR_2806_1300 = COMPONENTS.register("motor_2806_1300kv",

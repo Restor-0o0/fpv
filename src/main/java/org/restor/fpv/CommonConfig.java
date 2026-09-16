@@ -50,6 +50,7 @@ public final class CommonConfig {
     public static final ForgeConfigSpec.BooleanValue DEV_VERBOSE_LOG;
     public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> QUIET_LOGGERS;
     public static final ForgeConfigSpec.BooleanValue CLIENT_PHYSICS;
+    public static final ForgeConfigSpec.IntValue PHYSICS_SUBSTEPS;
     public static final ForgeConfigSpec SPEC;
 
     static {
@@ -132,6 +133,11 @@ public final class CommonConfig {
             .comment("Simulate the drone you pilot on your own client and send the resulting pose to the server.",
                      "Keeps the drone responsive when the server tick is slow, at the cost of server authority.")
             .define("clientSidePhysics", true);
+        PHYSICS_SUBSTEPS = BUILDER
+            .comment("Physics integration steps per game tick for quadcopters. 4 = 80 Hz.",
+                     "One 20 Hz step moves a fast drone three blocks at a time, which integrates",
+                     "drag badly and can step straight through a wall. Higher costs more CPU.")
+            .defineInRange("physicsSubsteps", 4, 1, 8);
         BUILDER.pop();
 
         SPEC = BUILDER.build();
