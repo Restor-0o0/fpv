@@ -1,5 +1,8 @@
 package org.restor.fpv.warhead;
 
+import org.restor.fpv.rules.Explosive;
+import org.restor.fpv.rules.ExplosiveParam;
+
 // Warhead families a strike drone or a carrier plane can be loaded with. Power drives the
 // blast effects and mob damage; blockPower is the vanilla explosion power that actually
 // eats terrain and is deliberately much smaller. Mass is what the airframe has to haul (kg).
@@ -39,13 +42,24 @@ public enum WarheadType {
     }
 
     public String id() { return id; }
-    public float power() { return power; }
-    public float blockPower() { return blockPower; }
     public float mass() { return mass; }
-    public float mobDamageMul() { return mobDamageMul; }
-    public boolean incendiary() { return incendiary; }
-    public int submunitions() { return submunitions; }
     public float penetration() { return penetration; }
+
+    public float basePower() { return power; }
+    public float baseBlockPower() { return blockPower; }
+    public float baseMobDamageMul() { return mobDamageMul; }
+    public boolean baseIncendiary() { return incendiary; }
+    public int baseSubmunitions() { return submunitions; }
+
+    public float power() { return tuned(Explosive.Stat.POWER).f(); }
+    public float blockPower() { return tuned(Explosive.Stat.BLOCK_POWER).f(); }
+    public float mobDamageMul() { return tuned(Explosive.Stat.MOB_DAMAGE).f(); }
+    public boolean incendiary() { return tuned(Explosive.Stat.FIRE).on(); }
+    public int submunitions() { return tuned(Explosive.Stat.SUBMUNITIONS).i(); }
+
+    private ExplosiveParam tuned(Explosive.Stat stat) {
+        return Explosive.of(this).param(stat);
+    }
 
     // DROP is the charge the drone kicks out of its payload bay, not a loadable warhead item.
     public boolean loadable() { return this != DROP; }

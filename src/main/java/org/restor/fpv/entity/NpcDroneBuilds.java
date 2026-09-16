@@ -56,6 +56,7 @@ public final class NpcDroneBuilds {
         a.battery = stack(c.battery());
         a.camera = stack(rnd.nextBoolean() ? ModComponents.CAMERA_STANDARD : ModComponents.CAMERA_WIDE);
         a.module = stack(module);
+        a.fitStockAvionics();
 
         FrameSpec spec = a.frameSpec();
         int motors = spec != null ? spec.motorCount() : 4;

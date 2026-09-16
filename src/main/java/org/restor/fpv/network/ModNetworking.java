@@ -52,6 +52,8 @@ public class ModNetworking {
         add(DronePosePacket.class, DronePosePacket.STREAM_CODEC, DronePosePacket::handle);
         add(DroneDismountPacket.class, DroneDismountPacket.STREAM_CODEC, DroneDismountPacket::handle);
         add(LineOfSightPacket.class, LineOfSightPacket.STREAM_CODEC, LineOfSightPacket::handle);
+        add(ServerRulesPacket.class, ServerRulesPacket.STREAM_CODEC, ServerRulesPacket::handle);
+        add(SetServerRulesPacket.class, SetServerRulesPacket.STREAM_CODEC, SetServerRulesPacket::handle);
     }
 
     private static <T extends CustomPacketPayload> void add(Class<T> type,

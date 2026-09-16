@@ -11,7 +11,7 @@ import org.restor.fpv.assembly.MountPoint;
 import org.restor.fpv.entity.DroneEntity;
 
 // Airframe schematic in the bottom right: one ring per motor arm placed at the real
-// mount position, plus body dots for frame, battery and camera. Colour is condition.
+// mount position, plus a body dot for the frame. Colour is condition.
 final class DamageHud {
     private static final Minecraft MC = Minecraft.getInstance();
 
@@ -56,8 +56,6 @@ final class DamageHud {
         }
 
         drawDisc(graphics, cx, cy, 5, conditionColor(ratioOf(assembly.frame), blink));
-        drawDisc(graphics, cx - 12, cy + ARM_RADIUS + 6, 3, conditionColor(ratioOf(assembly.battery), blink));
-        drawDisc(graphics, cx, cy + ARM_RADIUS + 6, 3, conditionColor(ratioOf(assembly.camera), blink));
     }
 
     private static int conditionColor(float ratio, boolean blink) {

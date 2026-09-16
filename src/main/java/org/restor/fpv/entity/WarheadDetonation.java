@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.restor.fpv.warhead.WarheadType;
+import org.restor.fpv.rules.ServerRule;
 
 // Runs one warhead's blast: the shared crater/particle pass from KamikazeExplosionEffects,
 // plus whatever the warhead family adds on top (fire, submunitions, extra mob damage).
@@ -18,7 +19,7 @@ public final class WarheadDetonation {
 
     // The dev slider is a plain multiplier around its 4.0 default.
     private static float scale() {
-        return (float) (org.restor.fpv.Config.DEV_EXPLOSION_POWER.get() / 4.0);
+        return (float) (ServerRule.EXPLOSION_POWER.value() / 4.0);
     }
 
     public static void detonate(Level level, Entity source, Vec3 at, WarheadType type) {
@@ -28,8 +29,9 @@ public final class WarheadDetonation {
         blast(level, source, at, power, blockPower, type.mobDamageMul());
         if (!(level instanceof ServerLevel sl)) return;
 
-        if (type.incendiary()) scorch(sl, at, power);
-        for (int i = 0; i < type.submunitions(); i++) {
+        if (type.incendiary()) scorch(sl, at, Math.max(power, 1.0f));
+        int submunitions = type.submunitions();
+        for (int i = 0; i < submunitions; i++) {
             double a = sl.random.nextDouble() * Math.PI * 2;
             double r = 2.5 + sl.random.nextDouble() * power * 1.6;
             Vec3 sub = at.add(Math.cos(a) * r, sl.random.nextDouble() * 1.5, Math.sin(a) * r);
@@ -40,19 +42,21 @@ public final class WarheadDetonation {
     public static void blast(Level level, Entity source, Vec3 at, float power,
                              float blockPower, float mobMul) {
         double x = at.x, y = at.y, z = at.z;
-        KamikazeExplosionEffects.flingBlocks(level, x, y, z, blockPower);
-        var before = KamikazeExplosionEffects.captureBreakableBlocks(level, x, y, z, blockPower);
-        level.explode(source, x, y, z, blockPower, Level.ExplosionInteraction.TNT);
-        KamikazeExplosionEffects.restoreUnbrokenBlocks(level, before, x, y, z);
-        KamikazeExplosionEffects.removeFloatingBlocks(level, x, y, z, blockPower);
+        if (blockPower > 0.0f) {
+            KamikazeExplosionEffects.flingBlocks(level, x, y, z, blockPower);
+            var before = KamikazeExplosionEffects.captureBreakableBlocks(level, x, y, z, blockPower);
+            level.explode(source, x, y, z, blockPower, Level.ExplosionInteraction.TNT);
+            KamikazeExplosionEffects.restoreUnbrokenBlocks(level, before, x, y, z);
+            KamikazeExplosionEffects.removeFloatingBlocks(level, x, y, z, blockPower);
+        }
         damageMobs(level, source, at, power, mobMul);
         KamikazeExplosionEffects.spawn(level, x, y, z, power);
     }
 
     private static void damageMobs(Level level, Entity source, Vec3 center, float power, float mul) {
         if (!(level instanceof ServerLevel sl)) return;
-        double cfg = org.restor.fpv.Config.DEV_EXPLOSION_MOB_DAMAGE_MULT.get();
-        if (cfg <= 0.0 || mul <= 0.0f) return;
+        double cfg = ServerRule.MOB_DAMAGE.value();
+        if (cfg <= 0.0 || mul <= 0.0f || power <= 0.0f) return;
         double radius = Math.max(4.0, power * 1.6);
         float maxDamage = (float) ((6.0f + power * 7.0f) * cfg * mul);
         AABB box = new AABB(center.x - radius, center.y - radius, center.z - radius,

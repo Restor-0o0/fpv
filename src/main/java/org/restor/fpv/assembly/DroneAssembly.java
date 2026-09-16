@@ -76,6 +76,19 @@ public class DroneAssembly {
         return tag;
     }
 
+    public void fitStockAvionics() {
+        float size = frame.getItem() instanceof ComponentItem ci ? ci.getStats().frameSize() : 5f;
+        if (fc.isEmpty()) {
+            fc = new ItemStack((size >= 6f ? org.restor.fpv.component.ModComponents.FC_H7
+                : org.restor.fpv.component.ModComponents.FC_F411).get());
+        }
+        if (vtx.isEmpty()) {
+            vtx = new ItemStack((size >= 6f ? org.restor.fpv.component.ModComponents.VTX_800MW
+                : size >= 3f ? org.restor.fpv.component.ModComponents.VTX_200MW
+                : org.restor.fpv.component.ModComponents.VTX_25MW).get());
+        }
+    }
+
     private static void putStack(CompoundTag tag, String key, ItemStack stack) {
         CompoundTag component = new CompoundTag();
         component.putString("Id", BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());
@@ -92,6 +105,8 @@ public class DroneAssembly {
         if (tag.contains("Firmware")) a.firmware = readStack(tag, "Firmware");
         if (tag.contains("Vtx")) a.vtx = readStack(tag, "Vtx");
         if (tag.contains("Fc")) a.fc = readStack(tag, "Fc");
+        // Builds saved before avionics were required carry no channel either; give them stock parts.
+        if (!tag.contains("Channel") && !a.frame.isEmpty() && !a.isBareFrame()) a.fitStockAvionics();
         a.channel = org.restor.fpv.component.RadioChannel.clamp(tag.getInt("Channel"));
         for (int i = 0; i < MAX_MOTORS; i++) {
             if (tag.contains("Motor" + i)) a.motors[i] = readStack(tag, "Motor" + i);

@@ -46,6 +46,7 @@ public final class CommonConfig {
     public static final ForgeConfigSpec.DoubleValue DEV_HITBOX_Y_OFFSET;
     public static final ForgeConfigSpec.DoubleValue FPV_CAMERA_HEIGHT;
     public static final ForgeConfigSpec.BooleanValue DEV_NO_DAMAGE;
+    public static final ForgeConfigSpec.BooleanValue INFINITE_AMMO;
     public static final ForgeConfigSpec.BooleanValue DEV_VERBOSE_LOG;
     public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> QUIET_LOGGERS;
     public static final ForgeConfigSpec.BooleanValue CLIENT_PHYSICS;
@@ -95,7 +96,8 @@ public final class CommonConfig {
         BUILDER.push("dev");
         DEV_POWER_MULT = BUILDER.defineInRange("powerMultiplier", 1.0, 0.2, 5.0);
         DEV_DRAG_MULT = BUILDER.defineInRange("dragMultiplier", 1.0, 0.1, 6.0);
-        DEV_MAX_SPEED = BUILDER.defineInRange("maxSpeed", 60.0, 10.0, 150.0);
+        DEV_MAX_SPEED = BUILDER.comment("Quadcopter speed ceiling in m/s. Only cuts speed; thrust and drag decide how fast a drone really goes. Planes use their frame limit.")
+            .defineInRange("maxSpeed", 60.0, 10.0, 150.0);
         DEV_EXPLOSION_POWER = BUILDER
             .comment("Global warhead scale. 4.0 is 1x; every family keeps its own blast/crater ratio.")
             .defineInRange("explosionPower", 4.0, 0.4, 40.0);
@@ -112,6 +114,8 @@ public final class CommonConfig {
         FPV_CAMERA_HEIGHT = BUILDER.defineInRange("fpvCameraHeight", 0.5, 0.0, 1.5);
         DEV_NO_DAMAGE = BUILDER.comment("Drones and their components take no wear or crash damage.")
             .define("noDamage", false);
+        INFINITE_AMMO = BUILDER.comment("Rocket pods and payload bays fire without using up loaded ammo.")
+            .define("infiniteAmmo", false);
         DEV_VERBOSE_LOG = BUILDER.comment("Write per-tick flight/controller/chunk traces to the log. Costly: only for debugging.")
             .define("verboseLog", false);
         BUILDER.pop();

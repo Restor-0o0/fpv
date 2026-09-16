@@ -21,6 +21,7 @@ import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.entity.PlaneEntity;
 
 import java.util.UUID;
+import org.restor.fpv.rules.ServerRule;
 
 /** Pairing between an RC transmitter stack and the aircraft it flies. */
 public final class RcLink {
@@ -39,12 +40,12 @@ public final class RcLink {
     }
 
     public static boolean hasTransmitter(Player player) {
-        if (!CommonConfig.REQUIRE_TRANSMITTER.get()) return true;
+        if (!ServerRule.REQUIRE_TRANSMITTER.on()) return true;
         return !heldTransmitter(player).isEmpty();
     }
 
     public static boolean hasGoggles(Player player) {
-        if (!CommonConfig.REQUIRE_GOGGLES_FOR_FPV.get()) return true;
+        if (!ServerRule.REQUIRE_GOGGLES.on()) return true;
         return player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.HEAD)
             .getItem() instanceof FpvGogglesItem;
     }
@@ -97,8 +98,19 @@ public final class RcLink {
         Vec3 end = eye.add(ray);
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(player, eye, end,
             player.getBoundingBox().expandTowards(ray).inflate(2.0),
-            e -> isBindable(e) && !e.isSpectator() && e.isPickable(), reach * reach);
+            e -> isAircraft(e) && !e.isSpectator() && e.isPickable(), reach * reach);
         return hit == null ? null : hit.getEntity();
+    }
+
+    public static void sayNotReady(ServerPlayer player, Entity target) {
+        org.restor.fpv.assembly.DroneAssembly assembly =
+            target instanceof org.restor.fpv.assembly.ModularDroneEntity drone ? drone.getAssembly()
+            : target instanceof org.restor.fpv.assembly.ModularPlaneEntity plane ? plane.getAssembly() : null;
+        var errors = assembly == null ? java.util.List.<org.restor.fpv.assembly.DroneAssemblyValidator.IssueCode>of()
+            : assembly.validate().errors();
+        Component reason = errors.isEmpty() ? Component.translatable("msg.fpv.tx_bind_incomplete")
+            : Component.translatable(errors.get(0).localizationKey());
+        player.displayClientMessage(Component.translatable("msg.fpv.tx_bind_not_ready", reason), true);
     }
 
     /** Binds when the target is new, clears the binding when it is the one already bound. */

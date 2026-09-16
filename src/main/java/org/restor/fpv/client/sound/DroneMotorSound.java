@@ -19,9 +19,9 @@ public class DroneMotorSound extends AbstractTickableSoundInstance {
      * window on throttle. Frequencies below are what the sample reaches at that pitch.
      */
     public enum Tier {
-        SMALL(2.5f, 0.62f, 1.50f, 0.72f),   // 1104 Hz sample:  685 Hz idle -> 1660 Hz flat out
-        MEDIUM(5.0f, 0.58f, 1.42f, 1.00f),  //  620 Hz sample:  360 Hz idle ->  880 Hz flat out
-        LARGE(7.0f, 0.56f, 1.34f, 1.22f);   //  420 Hz sample:  235 Hz idle ->  565 Hz flat out
+        SMALL(2.5f, 0.62f, 2.00f, 0.72f),   // 800 Hz sample: 496 Hz idle -> 1600 Hz flat out
+        MEDIUM(5.0f, 0.58f, 1.95f, 1.00f),  // 450 Hz sample: 261 Hz idle ->  878 Hz flat out
+        LARGE(7.0f, 0.56f, 1.86f, 1.22f);   // 302 Hz sample: 169 Hz idle ->  562 Hz flat out
 
         final float inches;
         final float idlePitch;
@@ -57,7 +57,7 @@ public class DroneMotorSound extends AbstractTickableSoundInstance {
         this.loudness = initialLoudness;
         this.looping = true;
         this.delay = 0;
-        this.volume = Math.max(0.01f, initialLoudness);
+        this.volume = Math.max(0.01f, initialLoudness * ModSoundVolume.motor());
         this.pitch = tier.idlePitch;
         if (firstPerson) {
             // Pinned to the listener instead of the craft: from inside the goggles the motors
@@ -111,8 +111,8 @@ public class DroneMotorSound extends AbstractTickableSoundInstance {
     }
 
     private float throttle() {
-        if (craft instanceof DroneEntity drone) return drone.getVisualThrottle();
-        if (craft instanceof PlaneEntity plane) return plane.getVisualThrottle();
+        if (craft instanceof DroneEntity drone) return drone.getSoundThrottle();
+        if (craft instanceof PlaneEntity plane) return plane.getSoundThrottle();
         if (craft instanceof org.restor.fpv.entity.NpcDroneEntity) {
             // No throttle model on the AI craft, so hover plus whatever it is asking of itself.
             return 0.45f + (float) Math.min(0.45, craft.getDeltaMovement().length() * 1.1);
@@ -146,7 +146,7 @@ public class DroneMotorSound extends AbstractTickableSoundInstance {
         float target = running() ? (0.26f + rpm * 0.62f) * tier.gain : 0.0f;
         if (firstPerson) target *= 0.55f;
         loudness += (target - loudness) * 0.12f;
-        volume = Math.min(1.0f, loudness);
+        volume = Math.min(1.0f, loudness) * ModSoundVolume.motor();
 
         float wanted = tier.idlePitch + (tier.fullPitch - tier.idlePitch) * rpm;
         pitch += (wanted - pitch) * 0.35f;

@@ -12,7 +12,7 @@ import net.minecraftforge.fml.common.Mod;
 import org.restor.fpv.compat.PacketDistributor;
 import org.restor.fpv.Config;
 import org.restor.fpv.Fpv;
-import org.restor.fpv.client.ui.screen.FPVSettingsScreen;
+import org.restor.fpv.client.ui.screen.settings.FpvSettingsScreen;
 import org.restor.fpv.controller.RCController;
 import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.entity.PlaneEntity;
@@ -213,7 +213,7 @@ public class ClientEventHandler {
             prevSneakKey = sneakDown;
 
             if (ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
-                MC.setScreen(new FPVSettingsScreen(null));
+                MC.setScreen(new FpvSettingsScreen(null));
                 return;
             }
 
@@ -291,6 +291,9 @@ public class ClientEventHandler {
         // Planes are riding-only (no remote control station).
         PlaneEntity plane = MC.player.getVehicle() instanceof PlaneEntity p ? p : null;
         if (plane == null) {
+            if (MC.screen == null && ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
+                MC.setScreen(new FpvSettingsScreen(null));
+            }
             planeInitialized = false;
             planeTargetStreamActive = false;
             planeTargetStreamTicks = 0;
@@ -303,7 +306,7 @@ public class ClientEventHandler {
         }
 
         if (ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
-            MC.setScreen(new FPVSettingsScreen(null));
+            MC.setScreen(new FpvSettingsScreen(null));
             return;
         }
         if (ModKeyBindings.TOGGLE_HUD.consumeClick()) {

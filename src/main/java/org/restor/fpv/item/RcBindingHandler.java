@@ -18,10 +18,11 @@ public final class RcBindingHandler {
         ItemStack stack = RcLink.heldTransmitter(event.getEntity());
         if (stack.isEmpty()) return;
         Entity target = event.getTarget();
-        if (!RcLink.isBindable(target)) return;
+        if (!RcLink.isAircraft(target)) return;
 
         event.setCanceled(true);
         if (!(event.getEntity() instanceof ServerPlayer sp)) return;
-        RcLink.toggleBinding(sp, stack, target);
+        if (RcLink.isBindable(target)) RcLink.toggleBinding(sp, stack, target);
+        else RcLink.sayNotReady(sp, target);
     }
 }

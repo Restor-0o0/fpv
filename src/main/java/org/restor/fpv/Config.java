@@ -69,6 +69,9 @@ public class Config {
     public static final ForgeConfigSpec.BooleanValue HUD_DAMAGE;
     public static final ForgeConfigSpec.BooleanValue HUD_NETSTATS;
 
+    public static final ForgeConfigSpec.DoubleValue SOUND_MOTOR_VOLUME;
+    public static final ForgeConfigSpec.DoubleValue SOUND_EFFECTS_VOLUME;
+
     public static final ForgeConfigSpec SPEC;
 
     static {
@@ -152,10 +155,17 @@ public class Config {
             .define("showCrosshair", true);
         HUD_HEADING = BUILDER.comment("Show the compass heading.")
             .define("showHeading", true);
-        HUD_DAMAGE = BUILDER.comment("Show bottom-right damage badges for worn props, motors, frame, camera and battery.")
+        HUD_DAMAGE = BUILDER.comment("Show bottom-right damage badges for worn props, motors and frame.")
             .define("showDamage", true);
         HUD_NETSTATS = BUILDER.comment("Show LINK (control round-trip) and SRV (server tick time) on the telemetry column.")
             .define("showNetStats", true);
+        BUILDER.pop();
+
+        BUILDER.push("sound");
+        SOUND_MOTOR_VOLUME = BUILDER.comment("Loudness of drone and plane motors, on top of the vanilla sound sliders.")
+            .defineInRange("motorVolume", 0.5, 0.0, 1.0);
+        SOUND_EFFECTS_VOLUME = BUILDER.comment("Loudness of every other FPV sound: arming, explosions, jammers, stations.")
+            .defineInRange("effectsVolume", 1.0, 0.0, 1.0);
         BUILDER.pop();
 
         SPEC = BUILDER.build();

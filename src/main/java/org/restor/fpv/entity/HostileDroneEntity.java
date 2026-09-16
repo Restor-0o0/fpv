@@ -17,7 +17,6 @@ import java.util.EnumSet;
  * the blast (it just pops and drops scrap).
  */
 public class HostileDroneEntity extends NpcDroneEntity {
-    private static final float EXPLOSION_POWER = 1.8f;
     private static final double RAM_TRIGGER_DIST_SQR = 2.4;
 
     private boolean exploded;
@@ -51,8 +50,11 @@ public class HostileDroneEntity extends NpcDroneEntity {
     private void explode() {
         if (exploded || level().isClientSide) return;
         exploded = true;
+        float power = org.restor.fpv.rules.Explosive.HOSTILE_DRONE.param(org.restor.fpv.rules.Explosive.Stat.POWER).f();
+        boolean breakBlocks = org.restor.fpv.rules.Explosive.HOSTILE_DRONE.param(org.restor.fpv.rules.Explosive.Stat.BREAK_BLOCKS).on();
         // MOB interaction: block damage respects the mobGriefing gamerule (creeper rules).
-        level().explode(this, getX(), getY(), getZ(), EXPLOSION_POWER, Level.ExplosionInteraction.MOB);
+        if (power > 0.0f) level().explode(this, getX(), getY(), getZ(), power,
+            breakBlocks ? Level.ExplosionInteraction.MOB : Level.ExplosionInteraction.NONE);
         discard();
     }
 

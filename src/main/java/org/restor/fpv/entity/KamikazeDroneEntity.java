@@ -3,6 +3,7 @@ package org.restor.fpv.entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import org.restor.fpv.data.DroneData;
+import org.restor.fpv.rules.ServerRule;
 
 // Station-controlled drone that detonates like TNT on any block contact once airborne.
 public class KamikazeDroneEntity extends RemoteDroneEntity {
@@ -178,7 +179,7 @@ public class KamikazeDroneEntity extends RemoteDroneEntity {
         WarheadDetonation.detonate(level(), this, impact, warhead);
         if (cinematic) {
             explosionLookTarget = impact;
-            explosionViewTicks = Math.max(0, (int) Math.round(org.restor.fpv.Config.DEV_EXPLOSION_CAMERA_SECONDS.get() * 20.0));
+            explosionViewTicks = Math.max(0, (int) Math.round(ServerRule.BLAST_CAMERA.value() * 20.0));
             if (explosionViewTicks <= 0) {
                 endRemoteControl();
                 discard();

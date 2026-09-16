@@ -34,6 +34,7 @@ import org.restor.fpv.flight.RadioFailsafe;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.slf4j.Logger;
+import org.restor.fpv.rules.ServerRule;
 
 public class DroneEntity extends Entity implements Pilotable, RadioInterferenceReceiver {
 
@@ -363,7 +364,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             flightController.update(dt, currentRollRate, currentPitchRate, currentYawRate,
                 entityData.get(DATA_ROLL), getXRot());
 
-            if (CommonConfig.REALISTIC_BATTERY.get()) battery.tick(throttleInput, 1.0f);
+            if (ServerRule.BATTERY.on()) battery.tick(throttleInput, 1.0f);
 
             dbgThrustAccel = 0;
             dbgThrustVert = 0;
@@ -375,7 +376,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
                 applyGravity(dt);
             }
 
-            if (CommonConfig.REALISTIC_BATTERY.get() && battery.isEmpty()) {
+            if (ServerRule.BATTERY.on() && battery.isEmpty()) {
                 radioFailsafe.forceDisarm();
                 flightController.armed = false;
             }
@@ -456,7 +457,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             baseRssi = 0.0f;
             rssi = 0.0f;
             ServerPlayer owner = autoMode.isAutonomous()
-                && (!CommonConfig.REALISTIC_BATTERY.get() || !battery.isEmpty()) ? resolveCompanionOwner() : null;
+                && (!ServerRule.BATTERY.on() || !battery.isEmpty()) ? resolveCompanionOwner() : null;
             if (owner != null) {
                 autonomousTick(owner);  // fly-to-point autonomy; no gravity/drag
             } else {
@@ -484,7 +485,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         entityData.set(DATA_VISUAL_THR,  throttleInput);
         entityData.set(DATA_ARMED,       flightController.armed);
         entityData.set(DATA_FLIGHT_MODE, flightController.getMode().ordinal());
-        entityData.set(DATA_BATTERY, CommonConfig.REALISTIC_BATTERY.get() ? battery.getPercentRemaining() : 1.0f);
+        entityData.set(DATA_BATTERY, ServerRule.BATTERY.on() ? battery.getPercentRemaining() : 1.0f);
         entityData.set(DATA_RSSI,        rssi);
         entityData.set(DATA_RADIO_STATE, radioFailsafe.state().ordinal());
         entityData.set(DATA_VEL_X,       (float) vel.x);
@@ -1053,7 +1054,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     // Max thrust in Newtons from this drone's build, times a global fine-test multiplier.
     private float effMotorPower() {
-        return droneData.motorPower * (float) org.restor.fpv.Config.DEV_POWER_MULT.get().doubleValue();
+        return droneData.motorPower * (float) ServerRule.MOTOR_POWER.value();
     }
 
     private void applyGravity(float dt) {
@@ -1231,7 +1232,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     @Override
     public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
         if (isInvulnerableTo(source)) return false;
-        if (org.restor.fpv.CommonConfig.DEV_NO_DAMAGE.get() && !(source.getEntity() instanceof Player)) return false;
+        if (ServerRule.NO_DAMAGE.on() && !(source.getEntity() instanceof Player)) return false;
         if (source.getEntity() instanceof Player && hasPassenger(source.getEntity())) return false;
         if (level().isClientSide) return true;
         if (!isAuthorizedPlayerDamage(source)) return false;
@@ -1367,7 +1368,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     private void updateRssi(ServerPlayer pilot) {
-        if (!CommonConfig.REALISTIC_RADIO.get()) {
+        if (!ServerRule.RADIO.on()) {
             baseRssi = 1.0f;
             rssi = 1.0f;
             radioInterference.clear();
@@ -1392,7 +1393,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     @Override
     public void applyRadioInterference(long sourceId, float strength, int durationTicks) {
-        if (!CommonConfig.REALISTIC_RADIO.get() || level().isClientSide
+        if (!ServerRule.RADIO.on() || level().isClientSide
             || !Float.isFinite(strength) || strength <= 0.0f || durationTicks <= 0
             || isRadioInterferenceBypassed()) return;
         float boundedStrength = clamp01(strength);
@@ -1412,7 +1413,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     private boolean isRadioReceptionBlocked() {
-        if (!CommonConfig.REALISTIC_RADIO.get()) return false;
+        if (!ServerRule.RADIO.on()) return false;
         refreshRadioInterference();
         return !radioInterference.isEmpty() && !isRadioInterferenceBypassed()
             && rssi <= CommonConfig.JAMMER_PACKET_LOSS_RSSI.get().floatValue();
@@ -1436,13 +1437,13 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         // Hard top-speed clamp, dev-tunable (m/s → blocks/tick). Real terminal velocities
         // still emerge from quadratic drag in applyDrag(); this is the upper safety cap.
         Vec3 vel = getDeltaMovement();
-        double max = org.restor.fpv.Config.DEV_MAX_SPEED.get() / 20.0;
+        double max = ServerRule.MAX_SPEED.value() / 20.0;
         if (vel.lengthSqr() > max * max) {
             setDeltaMovement(vel.scale(max / vel.length()));
         }
     }
     private float getBatteryPowerFactor() {
-        if (!CommonConfig.REALISTIC_BATTERY.get()) return 1.0f;
+        if (!ServerRule.BATTERY.on()) return 1.0f;
         float charge = level().isClientSide ? entityData.get(DATA_BATTERY) : battery.getPercentRemaining();
         return 0.35f + charge * 0.65f;
     }
@@ -1540,8 +1541,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private void autonomousTick(ServerPlayer owner) {
         flightController.armed = true;   // props spin via DATA_VISUAL_THR
         throttleInput = 0.55f;
-        if (CommonConfig.REALISTIC_BATTERY.get()) battery.tick(throttleInput, 1.0f);
-        if (CommonConfig.REALISTIC_BATTERY.get() && battery.isEmpty()) {
+        if (ServerRule.BATTERY.on()) battery.tick(throttleInput, 1.0f);
+        if (ServerRule.BATTERY.on() && battery.isEmpty()) {
             idleFallback();
             return;
         }
@@ -1573,7 +1574,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
         companionAttackTick(owner);
         if (autoTarget != null) autoEngageTick(owner, autoTarget);
-        if (CommonConfig.REALISTIC_BATTERY.get() && battery.isEmpty()) idleFallback();
+        if (ServerRule.BATTERY.on() && battery.isEmpty()) idleFallback();
     }
 
     private Vec3 shoulderStation(ServerPlayer owner) {
@@ -1683,7 +1684,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     protected boolean consumeCompanionWeaponEnergy(float powerFactor) {
-        if (!CommonConfig.REALISTIC_BATTERY.get()) return true;
+        if (!ServerRule.BATTERY.on()) return true;
         if (battery.isEmpty()) return false;
         battery.tick(1.0f, powerFactor);
         return true;
@@ -1802,11 +1803,12 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (level().isClientSide || !canPlayerAccess(pilot)) return;
         if (weaponCooldown > 0) return;
         if (rocketCapacity() > 0) {
-            if (getRocketAmmo() <= 0) {
+            boolean infinite = ServerRule.INFINITE_AMMO.on();
+            if (!infinite && getRocketAmmo() <= 0) {
                 pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.rocket_empty"), true);
                 return;
             }
-            entityData.set(DATA_ROCKET_AMMO, getRocketAmmo() - 1);
+            if (!infinite) entityData.set(DATA_ROCKET_AMMO, getRocketAmmo() - 1);
             weaponCooldown = WEAPON_COOLDOWN;
             launchProjectile(pilot, new org.restor.fpv.entity.MiniRocketEntity(level(), getX(), getY(), getZ()), 2.6f, 0.6f);
             playSound(org.restor.fpv.sound.ModSounds.WARHEAD_ARM.get(), 1.0f, 1.5f);
@@ -1848,13 +1850,14 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     public void firePayload(ServerPlayer pilot) {
         if (level().isClientSide) return;
         if (!canPlayerAccess(pilot)) return;
-        if (getPayloadAmmo() <= 0) {
+        boolean infinite = ServerRule.INFINITE_AMMO.on() && payloadCapacity() > 0;
+        if (!infinite && getPayloadAmmo() <= 0) {
             pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.payload_empty"), true);
             return;
         }
         if (payloadCooldown > 0) return;
         payloadCooldown = FIRE_COOLDOWN;
-        entityData.set(DATA_PAYLOAD_AMMO, getPayloadAmmo() - 1);
+        if (!infinite) entityData.set(DATA_PAYLOAD_AMMO, getPayloadAmmo() - 1);
 
         double bx = getX(), by = getY() - getBbHeight() * 0.5 - 0.1, bz = getZ();
         DropChargeEntity charge = new DropChargeEntity(level(), bx, by, bz);
@@ -1868,6 +1871,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // Last stick values the local client sent (works for both RC and keyboard paths) —
     // used by the OSD stick-position boxes and throttle readout.
     public float getPredThrottle() { return predThrottle; }
+    public float getSoundThrottle() { return predAge <= 5 ? clamp(predThrottle, 0f, 1f) : getVisualThrottle(); }
     public float getPredPitch()    { return predPitch; }
     public float getPredRoll()     { return predRoll; }
     public float getPredYaw()      { return predYaw; }
