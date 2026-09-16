@@ -31,5 +31,7 @@ public class ModNetworking {
         registrar.playToServer(DronePosePacket.TYPE, DronePosePacket.STREAM_CODEC, DronePosePacket::handle);
         registrar.playToServer(DroneDismountPacket.TYPE, DroneDismountPacket.STREAM_CODEC, DroneDismountPacket::handle);
         registrar.playToClient(LineOfSightPacket.TYPE, LineOfSightPacket.STREAM_CODEC, LineOfSightPacket::handle);
+        registrar.playToClient(ServerRulesPacket.TYPE, ServerRulesPacket.STREAM_CODEC, ServerRulesPacket::handle);
+        registrar.playToServer(SetServerRulesPacket.TYPE, SetServerRulesPacket.STREAM_CODEC, SetServerRulesPacket::handle);
     }
 }

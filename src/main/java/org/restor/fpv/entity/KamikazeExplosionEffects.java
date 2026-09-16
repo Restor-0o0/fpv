@@ -13,6 +13,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.restor.fpv.rules.ServerRule;
 
 public final class KamikazeExplosionEffects {
     private KamikazeExplosionEffects() {}
@@ -30,7 +31,7 @@ public final class KamikazeExplosionEffects {
 
     public static void damageMobs(Level level, Entity source, double x, double y, double z, float power) {
         if (!(level instanceof ServerLevel sl)) return;
-        double mult = org.restor.fpv.Config.DEV_EXPLOSION_MOB_DAMAGE_MULT.get();
+        double mult = ServerRule.MOB_DAMAGE.value();
         if (mult <= 0.0) return;
         Vec3 center = new Vec3(x, y, z);
         double radius = Math.max(4.0, power * 1.6);
@@ -49,7 +50,7 @@ public final class KamikazeExplosionEffects {
 
     public static void flingBlocks(Level level, double x, double y, double z, float power) {
         if (!(level instanceof ServerLevel sl)) return;
-        double percent = org.restor.fpv.Config.DEV_EXPLOSION_BLOCK_FLING_PERCENT.get();
+        double percent = ServerRule.DEBRIS.value();
         if (percent <= 0.0) return;
         Vec3 center = new Vec3(x, y, z);
         int radius = (int) Math.max(2, Math.min(6, Math.ceil(power * 1.6)));
@@ -89,7 +90,7 @@ public final class KamikazeExplosionEffects {
     public static java.util.Map<BlockPos, BlockState> captureBreakableBlocks(Level level, double x, double y, double z, float power) {
         java.util.Map<BlockPos, BlockState> blocks = new java.util.HashMap<>();
         if (!(level instanceof ServerLevel sl)) return blocks;
-        double percent = org.restor.fpv.Config.DEV_EXPLOSION_BLOCK_BREAK_PERCENT.get();
+        double percent = ServerRule.BLOCK_BREAK.value();
         if (percent >= 100.0) return blocks;
 
         int radius = (int) Math.max(3, Math.min(10, Math.ceil(power * 2.0)));
@@ -106,7 +107,7 @@ public final class KamikazeExplosionEffects {
 
     public static void restoreUnbrokenBlocks(Level level, java.util.Map<BlockPos, BlockState> before, double x, double y, double z) {
         if (!(level instanceof ServerLevel sl) || before.isEmpty()) return;
-        double breakPercent = org.restor.fpv.Config.DEV_EXPLOSION_BLOCK_BREAK_PERCENT.get();
+        double breakPercent = ServerRule.BLOCK_BREAK.value();
         if (breakPercent <= 0.0) breakPercent = 0.0;
         java.util.ArrayList<BlockPos> positions = new java.util.ArrayList<>(before.keySet());
         java.util.Collections.shuffle(positions, new java.util.Random(sl.random.nextLong()));

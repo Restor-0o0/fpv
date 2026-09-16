@@ -3,6 +3,8 @@ package org.restor.fpv.data;
 import net.minecraft.nbt.CompoundTag;
 
 public class Battery {
+    private static final float PEAK_TO_HOVER = 4.5f;
+
     private float capacity;        // mAh
     private float currentCapacity; // mAh remaining
     private float voltage;         // Volts
@@ -34,10 +36,11 @@ public class Battery {
         float capacityAh = Math.max(0.001f, capacity / 1000.0f);
         float load = Math.max(0.0f, Math.min(1.0f, throttle));
         float loadScale = Math.max(0.1f, Math.min(2.0f, loadMultiplier));
-        // Motor power goes as the square of the stick, so draw is quoted as a multiple of the
-        // hover draw; the small constant covers the FC, VTX and camera, which run regardless.
-        float ref = hoverThrottle * hoverThrottle;
-        float relative = 0.12f + 0.88f * (load * load) / ref;
+        // Draw is a multiple of hover draw, bent so full stick costs at most PEAK_TO_HOVER times
+        // hover however overpowered the airframe; the constant covers FC, VTX and camera.
+        float peak = Math.min(PEAK_TO_HOVER, 1.0f / (hoverThrottle * hoverThrottle));
+        float exponent = (float) (Math.log(Math.max(1.01f, peak)) / -Math.log(hoverThrottle));
+        float relative = 0.12f + 0.88f * (float) Math.pow(load / hoverThrottle, exponent);
         currentDraw = capacityAh * (60.0f / enduranceMinutes) * relative * loadScale;
         currentCapacity -= currentDraw * 1000.0f / 3600.0f / 20.0f;
         if (currentCapacity < 0) currentCapacity = 0;

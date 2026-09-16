@@ -22,6 +22,7 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.slf4j.Logger;
+import org.restor.fpv.rules.ServerRule;
 
 // Simple fixed-wing FPV plane: thrust + airspeed-driven lift/drag, banked-turn yaw
 // coordination. Riding-only (no remote-control station like the drones have).
@@ -1028,7 +1029,7 @@ public class PlaneEntity extends Entity
 
     @Override
     public void applyRadioInterference(long sourceId, float strength, int durationTicks) {
-        if (level().isClientSide || !org.restor.fpv.CommonConfig.REALISTIC_RADIO.get()) return;
+        if (level().isClientSide || !ServerRule.RADIO.on()) return;
         ServerPlayer pilot = getControllingPassenger() instanceof ServerPlayer sp ? sp : null;
         if (pilot != null && (pilot.isCreative() || pilot.hasPermissions(2))) return;
         jamState.apply(sourceId, strength, durationTicks, level().getGameTime());
@@ -1056,6 +1057,7 @@ public class PlaneEntity extends Entity
     public float getVisualThrottle() { return entityData.get(DATA_THROTTLE); }
     public boolean isArmed() { return entityData.get(DATA_ARMED); }
     public float getPredThrottle() { return predThrottle; }
+    public float getSoundThrottle() { return predAge <= 5 ? Math.max(0f, Math.min(1f, predThrottle)) : getVisualThrottle(); }
     public float getPredPitch()    { return predPitch; }
     public float getPredRoll()     { return predRoll; }
     public float getPredYaw()      { return predYaw; }

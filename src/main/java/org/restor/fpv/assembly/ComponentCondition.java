@@ -5,6 +5,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
+import org.restor.fpv.rules.ServerRule;
 
 public final class ComponentCondition {
     public static final String NBT_KEY = "FpvCondition";
@@ -36,7 +37,7 @@ public final class ComponentCondition {
     }
 
     public static int damage(ItemStack stack, int amount) {
-        if (org.restor.fpv.CommonConfig.DEV_NO_DAMAGE.get()) return get(stack);
+        if (ServerRule.NO_DAMAGE.on()) return get(stack);
         int condition = Math.max(0, get(stack) - Math.max(0, amount));
         set(stack, condition);
         return condition;

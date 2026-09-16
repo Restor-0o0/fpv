@@ -5,6 +5,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import org.restor.fpv.warhead.WarheadType;
+import org.restor.fpv.rules.ServerRule;
 
 // A fast (~50 m/s) FPV wing that detonates like TNT on the first block/entity contact once
 // airborne — a fixed-wing kamikaze. The pilot is returned to the launch point on impact.
@@ -233,7 +234,7 @@ public class KamikazeWingEntity extends PlaneEntity {
         WarheadDetonation.detonate(level(), this, impact, warhead);
         if (cinematic) {
             explosionLookTarget = impact;
-            explosionViewTicks = Math.max(0, (int) Math.round(org.restor.fpv.Config.DEV_EXPLOSION_CAMERA_SECONDS.get() * 20.0));
+            explosionViewTicks = Math.max(0, (int) Math.round(ServerRule.BLAST_CAMERA.value() * 20.0));
             if (explosionViewTicks <= 0) {
                 ejectPassengers();
                 discard();

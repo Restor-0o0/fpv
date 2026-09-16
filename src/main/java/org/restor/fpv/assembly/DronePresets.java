@@ -131,11 +131,7 @@ public final class DronePresets {
         a.battery = new ItemStack(battery.get());
         a.camera = new ItemStack(camera.get());
         if (module != null) a.module = new ItemStack(module.get());
-        float size = frame.get() instanceof org.restor.fpv.component.ComponentItem ci
-            ? ci.getStats().frameSize() : 5f;
-        a.fc = new ItemStack((size >= 6f ? ModComponents.FC_H7 : ModComponents.FC_F411).get());
-        a.vtx = new ItemStack((size >= 6f ? ModComponents.VTX_800MW
-            : size >= 3f ? ModComponents.VTX_200MW : ModComponents.VTX_25MW).get());
+        a.fitStockAvionics();
         FrameSpec spec = FrameSpecs.byItem(frame.get());
         int motors = spec != null ? spec.motorCount() : 4;
         for (int i = 0; i < motors; i++) {

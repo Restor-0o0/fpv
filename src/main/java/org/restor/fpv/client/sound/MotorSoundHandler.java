@@ -78,7 +78,7 @@ public final class MotorSoundHandler {
             DroneMotorSound sound = loop.sound();
             Entity craft = sound.craft();
             if (craft.isRemoved() || craft.level() != mc.level) continue;
-            boolean firstPerson = mc.getCameraEntity() == craft;
+            boolean firstPerson = isPilotView(mc, craft);
             if (firstPerson == sound.isFirstPerson() && DroneMotorSound.tierOf(craft) == sound.tier()) continue;
             if (stale == null) stale = new ArrayList<>();
             stale.add(craft);
@@ -92,9 +92,14 @@ public final class MotorSoundHandler {
     }
 
     private static void start(Minecraft mc, Entity craft, float loudness) {
-        DroneMotorSound loop = new DroneMotorSound(craft, mc.getCameraEntity() == craft, loudness);
+        DroneMotorSound loop = new DroneMotorSound(craft, isPilotView(mc, craft), loudness);
         LOOPS.put(craft.getId(), new Loop(loop, tickCount));
         mc.getSoundManager().play(loop);
+    }
+
+    private static boolean isPilotView(Minecraft mc, Entity craft) {
+        Entity camera = mc.getCameraEntity();
+        return camera != null && (camera == craft || camera.getVehicle() == craft);
     }
 
     private static void clearAll() {

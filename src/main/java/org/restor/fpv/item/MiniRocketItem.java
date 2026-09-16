@@ -26,10 +26,11 @@ public class MiniRocketItem extends Item {
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.fpv.mini_rocket.impact",
-            DropChargeItem.fmt(MiniRocketEntity.IMPACT_DAMAGE)).withStyle(ChatFormatting.GRAY));
+            DropChargeItem.fmt(MiniRocketEntity.impactDamage())).withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.mini_rocket.blast",
-            DropChargeItem.fmt(MiniRocketEntity.BLAST_RADIUS)).withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.fpv.mini_rocket.terrain").withStyle(ChatFormatting.GRAY));
+            DropChargeItem.fmt(MiniRocketEntity.blastRadius())).withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("tooltip.fpv.mini_rocket.terrain",
+            MiniRocketEntity.blocksPunched()).withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.mini_rocket.load",
             org.restor.fpv.entity.DroneEntity.MAX_ROCKETS).withStyle(ChatFormatting.GOLD));
         tooltip.add(Component.translatable("tooltip.fpv.ordnance.unload").withStyle(ChatFormatting.GOLD));

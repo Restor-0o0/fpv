@@ -36,6 +36,7 @@ public class RcTransmitterItem extends Item {
         if (sp.isShiftKeyDown()) {
             Entity aimed = RcLink.aircraftInSight(sp, RcLink.range(stack));
             if (aimed == null) say(sp, "msg.fpv.tx_bind_no_target");
+            else if (!RcLink.isBindable(aimed)) RcLink.sayNotReady(sp, aimed);
             else RcLink.toggleBinding(sp, stack, aimed);
             return InteractionResultHolder.success(stack);
         }
