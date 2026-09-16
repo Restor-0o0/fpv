@@ -48,7 +48,7 @@ public final class FrameSpecs {
         MountPoint.fromBlockbench(8f, 8.7f, 3.2f),
         MountPoint.fromBlockbench(8f, 7.2f, 8f),
         0.66f,
-        FrameTuning.rotor(0.85f, 0.90f, 1.15f, 1.10f, 4.0f));
+        FrameTuning.rotor(0.85f, 0.90f, 0.75f, 1.10f, 4.0f));
 
     // Tiny whoop: tight square, spins on a coin, falls apart if you look at it wrong.
     public static final FrameSpec FRAME_TINY_WHOOP = quad(
@@ -60,7 +60,7 @@ public final class FrameSpecs {
         MountPoint.fromBlockbench(8f, 8.4f, 5.6f),
         MountPoint.fromBlockbench(8f, 7.3f, 8f),
         0.31f,
-        FrameTuning.rotor(1.35f, 1.30f, 0.85f, 0.50f, 0.2f));
+        FrameTuning.rotor(1.35f, 1.30f, 2.40f, 0.50f, 0.2f));
 
     // Cinewhoop: ducted, draggy and stable — a flying tripod.
     public static final FrameSpec FRAME_CINEWHOOP = quad(
@@ -72,7 +72,7 @@ public final class FrameSpecs {
         MountPoint.fromBlockbench(8f, 8.7f, 5f),
         MountPoint.fromBlockbench(8f, 7.2f, 8f),
         0.40f,
-        FrameTuning.rotor(0.80f, 0.85f, 1.35f, 1.25f, 1.5f));
+        FrameTuning.rotor(0.80f, 0.85f, 2.00f, 1.25f, 1.5f));
 
     // Interceptor: a torpedo that flies nose-first. Four motors ring the tail and their
     // props stand vertical, so thrust runs down the tube axis instead of straight up.

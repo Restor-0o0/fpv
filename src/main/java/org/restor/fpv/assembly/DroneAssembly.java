@@ -25,6 +25,8 @@ public class DroneAssembly {
     // cruise sits at ~40-45° pitch (not 65°, which TWR ~8+ forced), while low drag still gives a
     // high top speed. More cells (6S) or stronger motors push TWR up for a punchier build.
     private static final float THRUST_N_PER_POWER = 6.6f;
+    // Multirotors are calibrated to real static thrust: a 2207 on a 5x4 makes ~11 N per motor.
+    private static final float ROTOR_THRUST_N_PER_POWER = 11f;
 
     public ItemStack frame = ItemStack.EMPTY;
     public ItemStack battery = ItemStack.EMPTY;
@@ -429,6 +431,29 @@ public class DroneAssembly {
 
     // ---------------------------------------------------------------- derived stats
 
+    // An unloading prop spins up toward its no-load RPM, and its airfoil still lifts slightly past
+    // the geometric pitch, so thrust only dies at about 1.25x (no-load RPM x pitch).
+    private static final float ZERO_THRUST_PITCH_RATIO = 1.25f;
+
+    /** Axial airspeed in m/s at which the props stop making thrust. */
+    public float propPitchSpeed() {
+        float pitch = 0f, kv = 0f;
+        int n = 0;
+        for (int i = 0; i < MAX_MOTORS; i++) {
+            ComponentStats prop = stats(props[i], ComponentType.PROPELLER);
+            ComponentStats motor = stats(motors[i], ComponentType.MOTOR);
+            if (prop == null || motor == null) continue;
+            pitch += prop.propPitch();
+            kv += motor.motorKv();
+            n++;
+        }
+        if (n == 0) return 40f;
+        ComponentStats b = stats(battery, ComponentType.BATTERY);
+        float volts = (b != null && b.batteryCells() > 0 ? b.batteryCells() : 4) * 3.7f;
+        float rpm = kv / n * volts * ZERO_THRUST_PITCH_RATIO;
+        return Math.max(5f, rpm / 60f * (pitch / n) * 0.0254f);
+    }
+
     /** Average prop diameter in inches; falls back to the frame size when no props are fitted. */
     public float propDiameterInches() {
         float sum = 0f;
@@ -449,7 +474,7 @@ public class DroneAssembly {
         float frameSize = fs != null ? fs.frameSize() : 5f;
         // Electronics (FC, ESC, RX, wiring, VTX, mounts) scale with frame size — a whoop carries
         // a few grams, a 7" a full stack. A flat baseline made small builds absurdly heavy.
-        float g = 8f + frameSize * 14f;
+        float g = isPlaneFrame(frame) ? 8f + frameSize * 14f : 3.12f * frameSize * frameSize;
         g += weight(frame) + weight(battery) + weight(camera) + weight(module) + weight(firmware);
         g += weight(vtx) + weight(fc);
         for (int i = 0; i < MAX_MOTORS; i++) g += weight(motors[i]) + weight(props[i]);
@@ -470,8 +495,11 @@ public class DroneAssembly {
         // thrust linearly with diameter on top of the already-small motorPower double-counted the
         // size penalty and left whoops and cinewhoops unable to lift themselves. Normalized so a
         // 2207 on a 5x4x3 still reads 1.0.
+        // A multirotor prop is thrust-limited by its disc, not its motor: a 65mm whoop prop makes
+        // about 1/20 of a 5" prop. Planes keep the gentler power-limited curve.
+        double diameterExp = isPlaneFrame(frame) ? 2.0 / 3.0 : 2.0;
         float propFactor = prop.propEfficiency()
-            * (float) Math.pow(prop.propDiameter() / 5f, 2.0 / 3.0)
+            * (float) Math.pow(prop.propDiameter() / 5f, diameterExp)
             * (float) Math.pow(Math.max(0.1f, prop.propPitch()) / 4f, 0.3);
         return (float) Math.pow(motor.motorPower(), 2.0 / 3.0) * propFactor * slotEfficiency(i)
             * ComponentCondition.ratio(motors[i]) * ComponentCondition.ratio(props[i]);
@@ -538,7 +566,8 @@ public class DroneAssembly {
         float sum = 0;
         for (int i = 0; i < spec.motorCount(); i++) sum += motorThrustFactor(i);
         float frameFactor = 0.5f + 0.5f * ComponentCondition.ratio(frame);
-        return Math.max(1f, sum * THRUST_N_PER_POWER * batteryThrustFactor() * frameFactor);
+        float perPower = isPlaneFrame(frame) ? THRUST_N_PER_POWER : ROTOR_THRUST_N_PER_POWER;
+        return Math.max(1f, sum * perPower * batteryThrustFactor() * frameFactor);
     }
 
     // More battery cells = more voltage = more motor RPM = more thrust. Normalized to the frame's
@@ -630,7 +659,7 @@ public class DroneAssembly {
             rate * 0.9f, rate, rate * 0.6f,
             mass, dragCdA, capacity,
             camTilt, thrust, spec != null ? spec.armLength() : 0.5f,
-            resp
+            resp, propPitchSpeed()
         );
     }
 }
