@@ -7,12 +7,12 @@ import org.restor.fpv.block.entity.RaceStartBlockEntity;
 import org.restor.fpv.client.ClientRaceState;
 
 final class RaceHud {
-    private static final Minecraft MC = Minecraft.getInstance();
+    private static Minecraft mc() { return Minecraft.getInstance(); }
 
     private RaceHud() {}
 
     static void render(GuiGraphicsExtractor graphics, int width, int height) {
-        Font font = MC.font;
+        Font font = mc().font;
         int finishTicks = ClientRaceState.finishTicks();
         if (finishTicks >= 0) {
             String s = "FINISH  " + RaceStartBlockEntity.formatTime(finishTicks);
@@ -22,7 +22,7 @@ final class RaceHud {
         if (!ClientRaceState.active()) return;
 
         long start = ClientRaceState.startTime();
-        long now = MC.level != null ? MC.level.getGameTime() : start;
+        long now = mc().level != null ? mc().level.getGameTime() : start;
         int elapsed = (int) Math.max(0, now - start);
         int x = width - 10;
         int y = (int) (height * 0.12f);

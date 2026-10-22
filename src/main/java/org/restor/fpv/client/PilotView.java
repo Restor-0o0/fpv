@@ -6,27 +6,27 @@ import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.entity.PlaneEntity;
 
 public final class PilotView {
-    private static final Minecraft MC = Minecraft.getInstance();
+    private static Minecraft mc() { return Minecraft.getInstance(); }
 
     private PilotView() {}
 
     // The drone this client is flying: as a passenger, or remotely via a control
     // station (server put our camera on the drone).
     public static DroneEntity currentDrone() {
-        if (MC.player == null) return null;
-        if (MC.player.getVehicle() instanceof DroneEntity d) return d;
-        if (MC.getCameraEntity() instanceof DroneEntity d) return d;
+        if (mc().player == null) return null;
+        if (mc().player.getVehicle() instanceof DroneEntity d) return d;
+        if (mc().getCameraEntity() instanceof DroneEntity d) return d;
         return null;
     }
 
     public static PlaneEntity currentPlane() {
-        if (MC.player == null) return null;
-        if (MC.player.getVehicle() instanceof PlaneEntity p) return p;
+        if (mc().player == null) return null;
+        if (mc().player.getVehicle() instanceof PlaneEntity p) return p;
         return null;
     }
 
     public static boolean isFpvActive() {
         return (currentDrone() != null || currentPlane() != null)
-            && MC.options.getCameraType() == CameraType.FIRST_PERSON;
+            && mc().options.getCameraType() == CameraType.FIRST_PERSON;
     }
 }
