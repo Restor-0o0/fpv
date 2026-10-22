@@ -2,7 +2,7 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
   "textures": {
-    "frame": "fpv:item/frame_tiny_whoop",
+    "frame": "fpv:block/item/frame_tiny_whoop",
     "carbon": "minecraft:block/black_concrete",
     "edge": "minecraft:block/deepslate_tiles",
     "metal": "minecraft:block/iron_block",

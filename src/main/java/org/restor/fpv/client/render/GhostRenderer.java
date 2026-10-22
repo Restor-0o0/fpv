@@ -27,7 +27,7 @@ import org.restor.fpv.replay.ReplayRecording;
 // via the run's startTime, so the ghost and the pilot leave the gate together.
 @EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public final class GhostRenderer {
-    private static final Minecraft MC = Minecraft.getInstance();
+    private static Minecraft mc() { return Minecraft.getInstance(); }
     private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(Fpv.MODID, "textures/entity/drone.png");
     private static final float ALPHA = 0.42f;
 
@@ -54,14 +54,14 @@ public final class GhostRenderer {
 
     @SubscribeEvent
     public static void onRenderLevel(SubmitCustomGeometryEvent event) {
-        if (MC.level == null) return;
+        if (mc().level == null) return;
 
         boolean renderRaceGhosts = !GHOSTS.isEmpty() && ClientRaceState.active();
         ReplayRecording replay = ReplayManager.playback();
         if (!renderRaceGhosts && replay == null) return;
 
-        float partial = MC.getDeltaTracker().getGameTimeDeltaPartialTick(false);
-        float elapsed = (MC.level.getGameTime() - startTime) + partial;
+        float partial = mc().getDeltaTracker().getGameTimeDeltaPartialTick(false);
+        float elapsed = (mc().level.getGameTime() - startTime) + partial;
         if (elapsed < 0) elapsed = 0;
 
         Vec3 cam = event.getLevelRenderState().cameraRenderState.pos;

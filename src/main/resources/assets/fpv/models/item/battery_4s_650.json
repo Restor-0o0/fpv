@@ -2,7 +2,7 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
   "textures": {
-    "pack": "fpv:item/battery_4s_650",
+    "pack": "fpv:block/item/battery_4s_650",
     "strap": "minecraft:block/black_concrete",
     "label": "minecraft:block/yellow_concrete",
     "plug": "minecraft:block/yellow_concrete",

@@ -14,7 +14,7 @@ final class PlaneOsd {
     private PlaneOsd() {}
 
     static void render(GuiGraphicsExtractor graphics, int width, int height, PlaneEntity plane, float partialTick) {
-        Font font = MC.font;
+        Font font = mc().font;
         int lh = lineHeight();
         int y = MARGIN;
 
@@ -26,8 +26,8 @@ final class PlaneOsd {
                 ModKeyBindings.PLANE_CALL_STRIKE,
                 ModKeyBindings.OPEN_SETTINGS,
                 ModKeyBindings.TOGGLE_HUD,
-            }, bindHint(MC.options.keyAttack, "hud.fpv.hint_lock"),
-               bindHint(MC.options.keyShift, "hud.fpv.hint_exit"));
+            }, bindHint(mc().options.keyAttack, "hud.fpv.hint_lock"),
+               bindHint(mc().options.keyShift, "hud.fpv.hint_exit"));
         }
 
         if (Config.HUD_TELEMETRY.get()) {

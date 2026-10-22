@@ -2,7 +2,7 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
   "textures": {
-    "pcb": "fpv:item/fc_h7",
+    "pcb": "fpv:block/item/fc_h7",
     "chip": "minecraft:block/black_concrete",
     "metal": "minecraft:block/iron_block",
     "copper": "minecraft:block/copper_block",

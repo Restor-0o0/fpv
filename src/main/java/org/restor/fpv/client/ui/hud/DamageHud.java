@@ -13,7 +13,7 @@ import org.restor.fpv.entity.DroneEntity;
 // Airframe schematic in the bottom right: one ring per motor arm placed at the real
 // mount position, plus a body dot for the frame. Colour is condition.
 final class DamageHud {
-    private static final Minecraft MC = Minecraft.getInstance();
+    private static Minecraft mc() { return Minecraft.getInstance(); }
 
     private static final int OK = 0xFF60D060;
     private static final int WARN = 0xFFFFAA20;
@@ -36,7 +36,7 @@ final class DamageHud {
 
         int cx = width - 10 - PANEL_SIZE / 2;
         int cy = height - 10 - PANEL_SIZE / 2;
-        boolean blink = MC.level == null || (MC.level.getGameTime() % 12) < 7;
+        boolean blink = mc().level == null || (mc().level.getGameTime() % 12) < 7;
 
         float spread = 0f;
         for (int i = 0; i < motorCount; i++) {

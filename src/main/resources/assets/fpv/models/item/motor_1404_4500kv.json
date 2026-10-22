@@ -2,7 +2,7 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
   "textures": {
-    "main": "fpv:item/motor_1404_4500kv",
+    "main": "fpv:block/item/motor_1404_4500kv",
     "dark": "minecraft:block/black_concrete",
     "metal": "minecraft:block/iron_block",
     "copper": "minecraft:block/copper_block"

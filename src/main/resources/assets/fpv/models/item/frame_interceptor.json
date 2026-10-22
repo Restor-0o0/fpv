@@ -2,7 +2,7 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
   "textures": {
-    "carbon": "fpv:item/frame_5inch",
+    "carbon": "fpv:block/item/frame_5inch",
     "plate": "minecraft:block/gray_concrete",
     "edge": "minecraft:block/light_gray_concrete",
     "dark": "minecraft:block/black_concrete",

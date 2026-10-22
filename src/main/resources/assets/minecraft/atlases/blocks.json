@@ -1,0 +1,104 @@
+{
+  "sources": [
+    {
+      "type": "single",
+      "resource": "fpv:item/battery_1s_300",
+      "sprite": "fpv:block/item/battery_1s_300"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/battery_4s_1300",
+      "sprite": "fpv:block/item/battery_4s_1300"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/battery_4s_650",
+      "sprite": "fpv:block/item/battery_4s_650"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/battery_6s_1100",
+      "sprite": "fpv:block/item/battery_6s_1100"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/battery_6s_5000",
+      "sprite": "fpv:block/item/battery_6s_5000"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/camera_standard",
+      "sprite": "fpv:block/item/camera_standard"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/camera_wide",
+      "sprite": "fpv:block/item/camera_wide"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/fc_f411",
+      "sprite": "fpv:block/item/fc_f411"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/fc_h7",
+      "sprite": "fpv:block/item/fc_h7"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/frame_5inch",
+      "sprite": "fpv:block/item/frame_5inch"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/frame_7inch",
+      "sprite": "fpv:block/item/frame_7inch"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/frame_cinewhoop",
+      "sprite": "fpv:block/item/frame_cinewhoop"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/frame_tiny_whoop",
+      "sprite": "fpv:block/item/frame_tiny_whoop"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/motor_1103_8000kv",
+      "sprite": "fpv:block/item/motor_1103_8000kv"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/motor_1404_4500kv",
+      "sprite": "fpv:block/item/motor_1404_4500kv"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/motor_2207_2450kv",
+      "sprite": "fpv:block/item/motor_2207_2450kv"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/motor_2306_1700kv",
+      "sprite": "fpv:block/item/motor_2306_1700kv"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/vtx_200mw",
+      "sprite": "fpv:block/item/vtx_200mw"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/vtx_25mw",
+      "sprite": "fpv:block/item/vtx_25mw"
+    },
+    {
+      "type": "single",
+      "resource": "fpv:item/vtx_800mw",
+      "sprite": "fpv:block/item/vtx_800mw"
+    }
+  ]
+}
