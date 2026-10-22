@@ -1,9 +1,11 @@
 package org.restor.fpv.assembly;
 
 import net.minecraft.world.item.Item;
-import org.restor.fpv.component.ModComponents;
+import org.restor.fpv.component.ComponentCatalog;
+import org.restor.fpv.component.ComponentItem;
+import org.restor.fpv.component.ComponentStats;
 
-import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +26,6 @@ import java.util.Map;
  * грузоподъёмность; для самолётов ещё крыло).
  */
 public final class FrameSpecs {
-    private static final Map<Item, FrameSpec> SPECS = new HashMap<>();
 
     // 5-inch: classic true-X quad, the baseline every other frame is measured against.
     public static final FrameSpec FRAME_5INCH = quad(
@@ -231,28 +232,36 @@ public final class FrameSpecs {
             FrameKind.MULTIROTOR, tuning);
     }
 
+    private static final Map<ComponentStats, FrameSpec> BY_STATS = new IdentityHashMap<>();
+
+    static {
+        BY_STATS.put(ComponentCatalog.FRAME_5INCH, FRAME_5INCH);
+        BY_STATS.put(ComponentCatalog.FRAME_7INCH, FRAME_7INCH);
+        BY_STATS.put(ComponentCatalog.FRAME_TINY_WHOOP, FRAME_TINY_WHOOP);
+        BY_STATS.put(ComponentCatalog.FRAME_CINEWHOOP, FRAME_CINEWHOOP);
+        BY_STATS.put(ComponentCatalog.FRAME_INTERCEPTOR, FRAME_INTERCEPTOR);
+        BY_STATS.put(ComponentCatalog.FRAME_HEXA_6INCH, FRAME_HEXA_6INCH);
+        BY_STATS.put(ComponentCatalog.FRAME_OCTO_8INCH, FRAME_OCTO_8INCH);
+        BY_STATS.put(ComponentCatalog.PLANE_FRAME_TRAINER, PLANE_TRAINER);
+        BY_STATS.put(ComponentCatalog.PLANE_FRAME_DELTA, PLANE_DELTA);
+        BY_STATS.put(ComponentCatalog.PLANE_FRAME_GLIDER, PLANE_GLIDER);
+        BY_STATS.put(ComponentCatalog.PLANE_FRAME_STRIKE, PLANE_STRIKE);
+        BY_STATS.put(ComponentCatalog.PLANE_FRAME_CARGO, PLANE_CARGO);
+        BY_STATS.put(ComponentCatalog.PLANE_FRAME_WING, PLANE_WING);
+        BY_STATS.put(ComponentCatalog.PLANE_FRAME_SCOUT, PLANE_SPOTTER);
+        BY_STATS.put(ComponentCatalog.PLANE_FRAME_KAMIKAZE, PLANE_KAMIKAZE);
+        BY_STATS.put(ComponentCatalog.PLANE_FRAME_CARRIER, PLANE_CARRIER);
+        BY_STATS.put(ComponentCatalog.PLANE_FRAME_LOITER, PLANE_LOITER);
+    }
+
+    /** Frame stats → its layout. Null if these stats are not a known frame. */
+    public static FrameSpec byStats(ComponentStats stats) {
+        return stats == null ? null : BY_STATS.get(stats);
+    }
+
     /** Frame item → its layout. Null if the item is not a known frame. */
     public static FrameSpec byItem(Item item) {
-        if (SPECS.isEmpty()) {
-            SPECS.put(ModComponents.FRAME_5INCH.get(), FRAME_5INCH);
-            SPECS.put(ModComponents.FRAME_7INCH.get(), FRAME_7INCH);
-            SPECS.put(ModComponents.FRAME_TINY_WHOOP.get(), FRAME_TINY_WHOOP);
-            SPECS.put(ModComponents.FRAME_CINEWHOOP.get(), FRAME_CINEWHOOP);
-            SPECS.put(ModComponents.FRAME_INTERCEPTOR.get(), FRAME_INTERCEPTOR);
-            SPECS.put(ModComponents.FRAME_HEXA_6INCH.get(), FRAME_HEXA_6INCH);
-            SPECS.put(ModComponents.FRAME_OCTO_8INCH.get(), FRAME_OCTO_8INCH);
-            SPECS.put(ModComponents.PLANE_FRAME_TRAINER.get(), PLANE_TRAINER);
-            SPECS.put(ModComponents.PLANE_FRAME_DELTA.get(), PLANE_DELTA);
-            SPECS.put(ModComponents.PLANE_FRAME_GLIDER.get(), PLANE_GLIDER);
-            SPECS.put(ModComponents.PLANE_FRAME_STRIKE.get(), PLANE_STRIKE);
-            SPECS.put(ModComponents.PLANE_FRAME_CARGO.get(), PLANE_CARGO);
-            SPECS.put(ModComponents.PLANE_FRAME_WING.get(), PLANE_WING);
-            SPECS.put(ModComponents.PLANE_FRAME_SCOUT.get(), PLANE_SPOTTER);
-            SPECS.put(ModComponents.PLANE_FRAME_KAMIKAZE.get(), PLANE_KAMIKAZE);
-            SPECS.put(ModComponents.PLANE_FRAME_CARRIER.get(), PLANE_CARRIER);
-            SPECS.put(ModComponents.PLANE_FRAME_LOITER.get(), PLANE_LOITER);
-        }
-        return SPECS.get(item);
+        return item instanceof ComponentItem component ? byStats(component.getStats()) : null;
     }
 
     private FrameSpecs() {}

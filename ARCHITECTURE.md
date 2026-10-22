@@ -8,7 +8,7 @@ Minecraft Forge 1.20.1, Java 17. Сборка: `.\gradlew.bat build`, депло
 | Пакет | Что лежит |
 |---|---|
 | `org.restor.fpv` | `Fpv` (входная точка, креатив-таб), `Config` (клиентский конфиг: пульт, HUD, dev-параметры) |
-| `.entity` | `DroneEntity` — БАЗА: физика (SI-единицы), ACRO-контроль, клиентское предсказание, удалённое управление, код связи. Подклассы: Cinewhoop/Racing/TinyWhoop (езда верхом), `RemoteDroneEntity` → RemoteRacing/Kamikaze (по коду), `OperatorDummyEntity`, `ModEntities` |
+| `.entity` | `DroneEntity` — БАЗА: физика (SI-единицы), переключение режимов полёта, клиентское предсказание, удалённое управление, код связи. Подклассы: Cinewhoop/Racing/TinyWhoop (езда верхом), `RemoteDroneEntity` → RemoteRacing/Kamikaze (по коду), `OperatorDummyEntity`, `ModEntities` |
 | `.assembly` | **Модульный конструктор**: `DroneAssembly` (состав + производные характеристики + перекос), `FrameSpec`/`FrameSpecs` (ТОЧКИ КРЕПЛЕНИЯ — сюда вводить координаты из Blockbench), `MountPoint`, `ModularDroneEntity/Item`, `AssemblyStationBlock/BlockEntity/Menu` |
 | `.flight` | `FlightController` (режимы, expo), `PIDController`, `FlightMode` |
 | `.data` | `DroneData` (пресеты характеристик), `Battery` |

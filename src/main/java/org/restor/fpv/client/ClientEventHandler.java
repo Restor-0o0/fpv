@@ -513,14 +513,16 @@ public class ClientEventHandler {
      */
     private static void sendHeavyKeyboardInput(DroneEntity drone) {
         if (!keyboardInitialized) {
-            keyboardThrottle = HOVER_STICK;
+            keyboardThrottle = throttleNeutral(drone);
+            altHoldWasActive = drone.altitudeHold();
             filteredPitch = 0f;
             filteredRoll = 0f;
             filteredYaw = 0f;
             keyboardInitialized = true;
         }
+        reseatThrottleOnModeChange(drone);
 
-        float climbTarget = HOVER_STICK;
+        float climbTarget = throttleNeutral(drone);
         if (MC.options.keyJump.isDown()) climbTarget = 1f;
         else if (MC.options.keySprint.isDown()) climbTarget = 0f;
         keyboardThrottle += (climbTarget - keyboardThrottle) * 0.35f;
@@ -675,7 +677,8 @@ public class ClientEventHandler {
 
     private static void sendKeyboardMouseInput(DroneEntity drone, boolean lineOfSight) {
         if (!keyboardInitialized) {
-            keyboardThrottle = 0f;
+            keyboardThrottle = drone.altitudeHold() ? HOVER_STICK : 0f;
+            altHoldWasActive = drone.altitudeHold();
             lastPlayerYaw = MC.player.getYRot();
             lastPlayerPitch = MC.player.getXRot();
             filteredPitch = 0f;
@@ -697,11 +700,18 @@ public class ClientEventHandler {
             lastPlayerPitch = 0f;
         }
 
-        // 0.15/tick = 3.0/sec → full throttle range in ~7 ticks (0.35s), real FPV feel.
-        // Passive decay is near-zero so releasing W holds the throttle position.
-        if (MC.options.keyUp.isDown() || MC.options.keyJump.isDown()) {
+        reseatThrottleOnModeChange(drone);
+        boolean climbKey = MC.options.keyUp.isDown() || MC.options.keyJump.isDown();
+        boolean sinkKey = MC.options.keyDown.isDown() || MC.options.keySprint.isDown();
+        if (drone.altitudeHold()) {
+            // Vertical-speed stick: it springs back to the centre, where the drone holds height.
+            float climbTarget = climbKey ? 1f : sinkKey ? 0f : HOVER_STICK;
+            keyboardThrottle += (climbTarget - keyboardThrottle) * 0.35f;
+        } else if (climbKey) {
+            // 0.15/tick = 3.0/sec → full throttle range in ~7 ticks (0.35s), real FPV feel.
+            // Passive decay is near-zero so releasing W holds the throttle position.
             keyboardThrottle = Math.min(1.0f, keyboardThrottle + 0.15f);
-        } else if (MC.options.keyDown.isDown() || MC.options.keySprint.isDown()) {
+        } else if (sinkKey) {
             keyboardThrottle = Math.max(0.0f, keyboardThrottle - 0.15f);
         }
 
@@ -992,6 +1002,20 @@ public class ClientEventHandler {
 
     private static final float MOUSE_RATE_SCALE = 1.1f;
     private static final float HOVER_STICK = 0.5f;
+    private static boolean altHoldWasActive;
+
+    private static float throttleNeutral(DroneEntity drone) {
+        return drone.altitudeHold() ? HOVER_STICK : drone.hoverStick();
+    }
+
+    // Switching in or out of altitude hold changes what the throttle stick means, so the
+    // stick is reseated on the new neutral instead of leaving the drone climbing or dropping.
+    private static void reseatThrottleOnModeChange(DroneEntity drone) {
+        boolean altHold = drone.altitudeHold();
+        if (altHold == altHoldWasActive) return;
+        altHoldWasActive = altHold;
+        keyboardThrottle = throttleNeutral(drone);
+    }
 
     private static float clamp(float value, float min, float max) {
         return Math.max(min, Math.min(max, value));

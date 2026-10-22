@@ -126,11 +126,6 @@ public class ModularDroneEntity extends DroneEntity {
     }
 
     @Override
-    public boolean altitudeHold() {
-        return isHeavyLift();
-    }
-
-    @Override
     public boolean isTailsitter() {
         FrameSpec spec = assembly == null ? null : assembly.frameSpec();
         return spec != null && spec.isTailsitter();
@@ -148,10 +143,7 @@ public class ModularDroneEntity extends DroneEntity {
 
     private FlightController controllerFor() {
         FlightController fc = new FlightController(droneData);
-        FrameSpec spec = assembly.frameSpec();
-        fc.setMode(spec != null && spec.isHeavyLift()
-            ? org.restor.fpv.flight.FlightMode.ANGLE
-            : org.restor.fpv.flight.FlightMode.ACRO);
+        fc.setMode(defaultFlightMode());
         return fc;
     }
 

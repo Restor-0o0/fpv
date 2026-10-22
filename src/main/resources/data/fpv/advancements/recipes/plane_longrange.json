@@ -6,7 +6,7 @@
       "conditions": {
         "items": [
           {
-            "items": ["fpv:plane_shahed"]
+            "items": ["fpv:plane_loiter"]
           }
         ]
       }

@@ -25,15 +25,27 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class PilotSessions {
     private static final String FLAG = "fpv_pilot_session";
     private static final String WAS_INVULNERABLE = "fpv_was_invulnerable";
+    private static final String HOME = "fpv_pilot_home";
     private static final Map<UUID, Entity> ACTIVE = new ConcurrentHashMap<>();
 
     private PilotSessions() {}
 
-    public static void open(ServerPlayer player, Entity craft) {
+    public static void open(ServerPlayer player, Entity craft, PilotReturn home) {
         ACTIVE.put(player.getUUID(), craft);
         CompoundTag data = player.getPersistentData();
         data.putBoolean(FLAG, true);
         data.putBoolean(WAS_INVULNERABLE, player.isInvulnerable());
+        if (home != null) {
+            CompoundTag tag = new CompoundTag();
+            home.save(tag, "");
+            data.put(HOME, tag);
+        }
+    }
+
+    /** The craft owns the return point, but it dies with the craft — this copy does not. */
+    public static PilotReturn home(ServerPlayer player) {
+        CompoundTag data = player.getPersistentData();
+        return data.contains(HOME) ? PilotReturn.load(data.getCompound(HOME), "", player.level()) : null;
     }
 
     // A player never tracks itself, so vanilla never sends them their own entity
@@ -75,13 +87,13 @@ public final class PilotSessions {
     public static void onRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             ACTIVE.remove(player.getUUID());
-            repair(player);
+            repair(player, false);
         }
     }
 
     @SubscribeEvent
     public static void onLogin(PlayerEvent.PlayerLoggedInEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) repair(player);
+        if (event.getEntity() instanceof ServerPlayer player) repair(player, true);
     }
 
     @SubscribeEvent
@@ -97,22 +109,27 @@ public final class PilotSessions {
         Entity craft = ACTIVE.remove(player.getUUID());
         if (craft instanceof DroneEntity drone) drone.endRemoteControl();
         if (player.getVehicle() instanceof Pilotable) player.stopRiding();
-        repair(player);
+        repair(player, false);
     }
 
-    private static void repair(ServerPlayer player) {
+    // A world saved mid-session stored the pilot's body at the aircraft, so a login repair
+    // also has to put it back; a respawn already has a bed or spawn point to go to.
+    private static void repair(ServerPlayer player, boolean sendHome) {
         CompoundTag data = player.getPersistentData();
         if (!data.getBoolean(FLAG)) return;
         boolean wasInvulnerable = data.getBoolean(WAS_INVULNERABLE);
+        PilotReturn home = sendHome ? home(player) : null;
         clearFlag(player);
         player.setInvisible(false);
         player.setInvulnerable(wasInvulnerable);
         if (player.getCamera() != player) player.setCamera(player);
+        if (home != null) home.send(player);
     }
 
     private static void clearFlag(ServerPlayer player) {
         CompoundTag data = player.getPersistentData();
         data.remove(FLAG);
         data.remove(WAS_INVULNERABLE);
+        data.remove(HOME);
     }
 }

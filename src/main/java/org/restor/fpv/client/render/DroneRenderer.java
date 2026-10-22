@@ -136,7 +136,7 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
                                       int packedLight, float tick, boolean propsOnly) {
         DefaultBuild build = defaultBuild(entity);
         if (!propsOnly) {
-            renderPart(build.frame, poseStack, buffer, packedLight, 0, 0, 0, 0, build.visual().frameScale());
+            FrameModels.render(build.frame, poseStack, buffer, packedLight, build.visual().frameScale());
             renderPart(build.flightController, poseStack, buffer, packedLight,
                 0, 0.03f, -0.01f, 0, build.visual().electronicsScale());
             renderPart(build.videoTransmitter, poseStack, buffer, packedLight,

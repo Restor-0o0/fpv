@@ -12,7 +12,7 @@
 
 ### Flight
 - **Physics-based flight.** One block is one metre. The model covers thrust, weight, anisotropic drag, battery voltage sag, and motor/prop imbalance that makes the drone drift.
-- **Flight modes:** Acro, Horizon and Angle. Tune rates and expo per axis.
+- **Flight modes:** Acro, Angle, Horizon and Alt Hold, plus Turtle to right a crashed quad. Cycle them in flight; tune rates and expo per axis.
 - **Real RC transmitters** over USB (RadioMaster, Jumper, etc.). Axis mapping and inversion happen in-game with a live stick preview.
 - **Mouse and keyboard** work too, and the keyboard stays live as a throttle trim while a radio is plugged in.
 - **Client-side prediction.** The drone you fly responds instantly even when the server tick is slow.
@@ -235,4 +235,4 @@ The jar is written to `build/libs/`. See [BUILD.md](BUILD.md) and [ARCHITECTURE.
 
 ## License
 
-MIT
+[MIT](LICENSE)

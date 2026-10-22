@@ -44,7 +44,10 @@ final class DroneOsd {
         }
 
         if (Config.HUD_TELEMETRY.get()) {
-            graphics.drawString(font, "MODE: " + drone.getFlightMode().name(), MARGIN, y, GREEN);
+            org.restor.fpv.flight.FlightMode flightMode = drone.getFlightMode();
+            int modeColor = flightMode == org.restor.fpv.flight.FlightMode.TURTLE ? 0xFFFFC040 : GREEN;
+            graphics.drawString(font, Component.translatable("hud.fpv.mode",
+                Component.translatable(flightMode.translationKey())), MARGIN, y, modeColor);
             y += lh;
 
             if (heavy) {

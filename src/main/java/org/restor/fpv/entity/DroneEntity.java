@@ -116,12 +116,15 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // Heavy-lift rigs fly on a vertical-speed stick instead of a collective: centred = hold.
     private static final float MAX_CLIMB_RATE = 4.0f;   // m/s at full stick
     private static final float CLIMB_TAU = 0.6f;        // s to settle on the commanded rate
+    // Props spun backwards are the wrong way round for their aerofoil and bite far less air.
+    private static final float TURTLE_THRUST_FACTOR = 0.6f;
     private static final float PROP_STRIKE_JOULES_PER_DAMAGE = 25.0f;
     private static final float PROP_STRIKE_MAX_DAMAGE = 8.0f;
     private static final int PROP_STRIKE_COOLDOWN_TICKS = 10;
 
     public DroneData droneData;
     public FlightController flightController;
+    private FlightMode turtleReturnMode = FlightMode.ACRO;
     public Battery battery;
     public float rssi = 1.0f;
 
@@ -167,9 +170,9 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     private java.util.UUID remotePilotId;
     private java.util.UUID dummyId;
-    private Vec3 stationReturnPos;
+    private PilotReturn stationReturn;
     private boolean remoteFpv = true;
-    private Vec3 mountReturnPos;
+    private PilotReturn mountReturn;
     private ServerPlayer activePilot;
     private boolean pilotWasInvulnerable;
     // Chunks force-loaded around the drone during a remote session (vanilla forceload,
@@ -200,6 +203,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private Vec3 clientImpact = Vec3.ZERO;
     private final java.util.List<Vec3> poseTrail = new java.util.ArrayList<>();
     private java.util.List<Vec3> lastTickTrail = java.util.List.of();
+    private double poseBudget;
     private boolean predArmed;
     private int predArmTicks;
     private boolean poseHoriz;
@@ -317,6 +321,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // -------------------------------------------------------------------------
 
     private void serverTick() {
+        poseBudget = Math.min(poseBudget + poseStep(), poseStep() * POSE_BUDGET_TICKS);
         if (poseTrail.isEmpty()) {
             lastTickTrail = java.util.List.of();
         } else {
@@ -502,6 +507,10 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             applyMovement(0.05f);
         }
 
+        if (flightController.getMode() == FlightMode.TURTLE && isUpright() && onGround()) {
+            exitTurtle();
+        }
+
         // Sync state to clients
         Vec3 vel = getDeltaMovement();
         entityData.set(DATA_VISUAL_THR,  motorSpool);
@@ -528,6 +537,9 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     private void clientTick() {
         float dt = 0.05f;
+        // Mode lives on the server; prediction has to fly the same control law or the
+        // corrective slerp fights it every tick.
+        flightController.setMode(getFlightMode());
         float target = entityData.get(DATA_VISUAL_THR);
         throttleInput += (target - throttleInput) * 0.4f;
 
@@ -653,6 +665,12 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         return cur.subtract(travelDirection().scale(remaining));
     }
 
+    private static final int POSE_BUDGET_TICKS = 10;
+
+    private static double poseStep() {
+        return ServerRule.MAX_SPEED.value() / 20.0 * 1.5 + 0.5;
+    }
+
     private static boolean clientPhysics() {
         return CommonConfig.SPEC.isLoaded() && CommonConfig.CLIENT_PHYSICS.get();
     }
@@ -707,6 +725,29 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             || !Float.isFinite(avr) || !Float.isFinite(avp) || !Float.isFinite(avy)) return;
         if (distanceToSqr(x, y, z) > 512.0 * 512.0) return;
 
+        // A pilot's client may run ahead of the server, but never faster than the speed cap:
+        // anything beyond the accumulated budget is a modified client, so it only gets the budget.
+        Vec3 from = position();
+        Vec3 to = new Vec3(x, y, z);
+        double dist = to.distanceTo(from);
+        if (dist > poseBudget) {
+            to = from.add(to.subtract(from).scale(poseBudget / dist));
+            dist = poseBudget;
+        }
+        if (!level().noCollision(this, getBoundingBox().move(to.subtract(from)).deflate(0.05))) return;
+        poseBudget -= dist;
+        x = to.x;
+        y = to.y;
+        z = to.z;
+        double maxVel = ServerRule.MAX_SPEED.value() / 20.0;
+        double vel = Math.sqrt((double) vx * vx + (double) vy * vy + (double) vz * vz);
+        if (vel > maxVel) {
+            float k = (float) (maxVel / vel);
+            vx *= k;
+            vy *= k;
+            vz *= k;
+        }
+
         // The velocity that arrives after a hit is already damped along the wall, so the
         // impact vector (the part that was killed) is the only honest approach direction.
         if (impact.lengthSqr() > 1.0e-6) {
@@ -758,7 +799,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         }
 
         if (state == RadioFailsafe.State.ARMED && ctrlModeSwitch && !prevCtrlMode && controlCooldown <= 0) {
-            flightController.cycleMode();
+            cycleFlightMode();
             controlCooldown = 5;
         }
         prevCtrlMode = ctrlModeSwitch;
@@ -939,8 +980,16 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         Vector3f up = new Vector3f(0, 1, 0);
         rot.transform(up);
 
+        boolean turtle = flightController.getMode() == FlightMode.TURTLE;
+        if (turtle) {
+            // Reversed props: thrust leaves through the belly, which is what levers a drone
+            // lying on its back over. Ground effect and prop inflow do not apply upside down.
+            up.mul(-1f);
+            groundEffect = 1.0f;
+        }
+
         float thrustAccel = totalFrac * groundEffect * getBatteryPowerFactor()
-            * inflowThrustFactor(up) * effMotorPower() / mass();
+            * (turtle ? TURTLE_THRUST_FACTOR : inflowThrustFactor(up)) * effMotorPower() / mass();
 
         float dv = thrustAccel * dt * MS_TO_BT;
         setDeltaMovement(getDeltaMovement().add(up.x * dv, up.y * dv, up.z * dv));
@@ -977,9 +1026,14 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private float integrateRotation(float dt, float ro, float po, float yo, float curRoll) {
         // Target angular rates in °/s from stick output, scaled by this drone's multipliers.
         // Yaw negated: Minecraft yRot increases to the right, so positive yaw output = yRot decreasing = left.
-        float rateRoll  = entityData.get(DATA_RATE_ROLL);
-        float ratePitch = entityData.get(DATA_RATE_PITCH);
-        float rateYaw   = entityData.get(DATA_RATE_YAW);
+        FlightMode mode = flightController.getMode();
+        // The levelling law already converted an angle error into a fraction of the airframe's
+        // own maximum rate, so the pilot's rate multipliers must not scale it again — doubling
+        // the loop gain that way makes a self-levelling drone hunt around level.
+        boolean rawRates = mode.selfLevelling() || mode == FlightMode.TURTLE;
+        float rateRoll  = rawRates ? 1f : entityData.get(DATA_RATE_ROLL);
+        float ratePitch = rawRates ? 1f : entityData.get(DATA_RATE_PITCH);
+        float rateYaw   = rawRates ? 1f : entityData.get(DATA_RATE_YAW);
         // Trim hooks (°/s): modular drones add a constant bias here when their motor
         // thrust is imbalanced (e.g. a weaker prop on one corner).
         float targetRollRate  =  clamp(ro, -1f, 1f) * droneData.maxRollRate  * rateRoll  + trimRollRate();
@@ -1177,7 +1231,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
                 if (player instanceof ServerPlayer sp) startPilotSession(sp);
                 return InteractionResult.SUCCESS;
             } else if (flightController.isArmed()) {
-                flightController.cycleMode();
+                cycleFlightMode(player);
                 return InteractionResult.SUCCESS;
             }
         }
@@ -1205,16 +1259,16 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     /** Starts the same mounted FPV session as right-clicking a regular racing drone. */
     public boolean beginRidingControl(ServerPlayer player) {
         if (level().isClientSide || hasAnyPilot() || !canPlayerAccess(player)) return false;
-        Vec3 boardPos = safeReturnPos(player);
+        PilotReturn boardPos = safeReturn(player);
         // Forced mounting lets launch stations use RemoteDroneEntity subclasses while
         // their normal right-click remains reserved for link-code configuration.
         if (!player.startRiding(this, true)) return false;
         claimOwner(player);
-        mountReturnPos = boardPos;
-        PilotSessions.open(player, this);
+        mountReturn = boardPos;
+        PilotSessions.open(player, this, boardPos);
         player.setInvisible(true);
         PilotSessions.syncFlagsToSelf(player);
-        spawnDummy(player, boardPos);
+        spawnDummy(player, boardPos.pos());
         return true;
     }
 
@@ -1222,13 +1276,12 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
         if (!level().isClientSide && passenger instanceof ServerPlayer sp) {
+            PilotReturn home = pilotHome(mountReturn, sp);
             PilotSessions.close(sp);
             sp.setInvisible(false);
             PilotSessions.syncFlagsToSelf(sp);
             discardDummy();
-            if (mountReturnPos != null && sp.level() == level()) {
-                sp.teleportTo(mountReturnPos.x, mountReturnPos.y, mountReturnPos.z);
-            }
+            if (home != null) home.send(sp);
         }
     }
 
@@ -1300,7 +1353,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     @Override
     public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
-        return mountReturnPos != null ? mountReturnPos : position().add(0, 1.5, 0);
+        return mountReturn != null ? mountReturn.pos() : position().add(0, 1.5, 0);
     }
 
     @Override
@@ -1358,7 +1411,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             radioFailsafe.forceDisarm();
             flightController.armed = false;
             entityData.set(DATA_ARMED, false);
-            // Saved FlightMode intentionally ignored: single-mode build (ACRO only).
+            FlightMode saved = FlightMode.byOrdinal(tag.getInt("FlightMode"));
+            flightController.setMode(availableModes().contains(saved) ? saved : defaultFlightMode());
         }
         // CamV2 marks saves made after racing uptilt changed 35°→20°; older saved angles
         // are dropped once so existing drones pick up the new default from droneData.
@@ -1379,10 +1433,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             : tag.getBoolean("Follow") ? DroneMode.FOLLOW : DroneMode.OFF;
         if (tag.contains("Anchor")) anchor = net.minecraft.core.BlockPos.of(tag.getLong("Anchor"));
         if (tag.hasUUID("CompanionOwner")) companionOwnerId = tag.getUUID("CompanionOwner");
-        if (tag.contains("MountReturnX")) mountReturnPos = new Vec3(
-            tag.getDouble("MountReturnX"), tag.getDouble("MountReturnY"), tag.getDouble("MountReturnZ"));
-        if (tag.contains("StationReturnX")) stationReturnPos = new Vec3(
-            tag.getDouble("StationReturnX"), tag.getDouble("StationReturnY"), tag.getDouble("StationReturnZ"));
+        mountReturn = PilotReturn.load(tag, "MountReturn", level());
+        stationReturn = PilotReturn.load(tag, "StationReturn", level());
         entityData.set(DATA_FLIGHT_MODE, flightController.getMode().ordinal());
     }
 
@@ -1406,22 +1458,24 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         tag.putInt("AutoMode", autoMode.ordinal());
         if (anchor != null) tag.putLong("Anchor", anchor.asLong());
         if (companionOwnerId != null) tag.putUUID("CompanionOwner", companionOwnerId);
-        if (mountReturnPos != null) {
-            tag.putDouble("MountReturnX", mountReturnPos.x);
-            tag.putDouble("MountReturnY", mountReturnPos.y);
-            tag.putDouble("MountReturnZ", mountReturnPos.z);
-        }
-        if (stationReturnPos != null) {
-            tag.putDouble("StationReturnX", stationReturnPos.x);
-            tag.putDouble("StationReturnY", stationReturnPos.y);
-            tag.putDouble("StationReturnZ", stationReturnPos.z);
-        }
+        if (mountReturn != null) mountReturn.save(tag, "MountReturn");
+        if (stationReturn != null) stationReturn.save(tag, "StationReturn");
     }
 
     /** Boarding spot to come back to; never the drone itself, which would strand the pilot midair. */
-    protected Vec3 safeReturnPos(ServerPlayer player) {
-        Vec3 pos = player.position();
-        return pos.distanceToSqr(position()) < 1.0E-4 ? pos.add(0, 1.0, 0) : pos;
+    protected PilotReturn safeReturn(ServerPlayer player) {
+        return PilotReturn.capture(player, this);
+    }
+
+    // The craft is usually destroyed at the very moment a session ends, so fall back to the
+    // operator dummy standing at the launch point, then to the copy the session itself kept.
+    private PilotReturn pilotHome(PilotReturn stored, ServerPlayer pilot) {
+        if (stored != null) return stored;
+        if (dummyId != null && level() instanceof net.minecraft.server.level.ServerLevel sl
+            && sl.getEntity(dummyId) instanceof OperatorDummyEntity dummy) {
+            return PilotReturn.at(dummy);
+        }
+        return pilot == null ? null : PilotSessions.home(pilot);
     }
 
     // -------------------------------------------------------------------------
@@ -1451,8 +1505,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (++rssiUpdateTick < CommonConfig.RADIO_RSSI_UPDATE_TICKS.get()) return;
         rssiUpdateTick = 0;
 
-        Vec3 source = remotePilotId != null && stationReturnPos != null
-            ? stationReturnPos.add(0, 1.0, 0) : pilot.getEyePosition();
+        Vec3 source = remotePilotId != null && stationReturn != null
+            ? stationReturn.pos().add(0, 1.0, 0) : pilot.getEyePosition();
         double range = CommonConfig.RADIO_BASE_RANGE.get() * radioRangeMultiplier();
         float sample = clamp01((float) (1.0 - position().distanceTo(source) / Math.max(1.0, range)));
         if (sample > 0.0f && level().clip(new ClipContext(getEyePosition(), source,
@@ -1959,7 +2013,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     public float getSyncAngVelPitch() { return entityData.get(DATA_ANGVEL_PITCH); }
     public float getSyncAngVelYaw()   { return entityData.get(DATA_ANGVEL_YAW); }
     public float getVisualThrottle() { return entityData.get(DATA_VISUAL_THR); }
-    public FlightMode getFlightMode(){ return FlightMode.values()[entityData.get(DATA_FLIGHT_MODE)]; }
+    public FlightMode getFlightMode(){ return FlightMode.byOrdinal(entityData.get(DATA_FLIGHT_MODE)); }
     public float getBatteryPercent() { return entityData.get(DATA_BATTERY); }
     public float getRssi()           { return entityData.get(DATA_RSSI); }
     public java.util.UUID getRadioOwnerId() { return companionOwnerId; }
@@ -1986,14 +2040,83 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     /** Six motors and up: flown like a camera drone — sticks move it, the mouse aims the cam. */
     public boolean isHeavyLift() { return false; }
 
+    // -------------------------------------------------------------------------
+    //  Flight modes
+    // -------------------------------------------------------------------------
+
+    private static final java.util.List<FlightMode> QUAD_MODES =
+        java.util.List.of(FlightMode.ACRO, FlightMode.ANGLE, FlightMode.HORIZON, FlightMode.ALT_HOLD);
+    // A camera rig that size is never flown on rates, and it cannot right itself off its back.
+    private static final java.util.List<FlightMode> HEAVY_MODES =
+        java.util.List.of(FlightMode.ALT_HOLD, FlightMode.ANGLE);
+
+    /** Modes this airframe can be switched between; TURTLE is contextual and not in the list. */
+    public java.util.List<FlightMode> availableModes() {
+        return isHeavyLift() ? HEAVY_MODES : QUAD_MODES;
+    }
+
+    public FlightMode defaultFlightMode() {
+        return availableModes().get(0);
+    }
+
+    private float bodyUpY() {
+        Vector3f up = new Vector3f(0, 1, 0);
+        attitudeQuat(getYRot(), getXRot(), bodyRoll()).transform(up);
+        return up.y;
+    }
+
+    public boolean isUpright() { return bodyUpY() > 0.7f; }
+
+    /** Upside down and resting on the ground — the only state turtle mode is any use in. */
+    public boolean isCrashedInverted() {
+        return (onGround() || verticalCollision) && bodyUpY() < 0.2f;
+    }
+
+    public void setFlightMode(FlightMode mode) {
+        if (flightController.getMode() == mode) return;
+        flightController.setMode(mode);
+        angVelRoll = 0;
+        angVelPitch = 0;
+        angVelYaw = 0;
+        if (!level().isClientSide) entityData.set(DATA_FLIGHT_MODE, mode.ordinal());
+    }
+
+    /** Radio mode switch: steps through the airframe's modes, or in/out of turtle after a crash. */
+    public void cycleFlightMode() {
+        FlightMode current = flightController.getMode();
+        if (current == FlightMode.TURTLE) {
+            exitTurtle();
+            return;
+        }
+        if (isCrashedInverted()) {
+            turtleReturnMode = current;
+            setFlightMode(FlightMode.TURTLE);
+            return;
+        }
+        java.util.List<FlightMode> modes = availableModes();
+        int next = (modes.indexOf(current) + 1) % modes.size();
+        setFlightMode(modes.get(next));
+    }
+
+    private void exitTurtle() {
+        setFlightMode(availableModes().contains(turtleReturnMode) ? turtleReturnMode : defaultFlightMode());
+    }
+
+    public void cycleFlightMode(Player player) {
+        cycleFlightMode();
+        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+            "msg.fpv.flight_mode_set",
+            net.minecraft.network.chat.Component.translatable(flightController.getMode().translationKey())), true);
+    }
+
     /** Tailsitter airframes stand on their tail: thrust leaves through the nose. */
     public boolean isTailsitter() { return false; }
 
     /** A slender fuselage resists sideways travel far more than travel along its own axis. */
     protected float planarDragMult() { return isTailsitter() ? 2.4f : 1f; }
 
-    /** Heavy-lift rigs: the throttle stick commands climb rate, not motor power. */
-    public boolean altitudeHold() { return false; }
+    /** ALT_HOLD: the throttle stick commands climb rate, not motor power. */
+    public boolean altitudeHold() { return flightController.getMode().holdsAltitude(); }
 
     protected float resolveThrottle(float stick) {
         return altitudeHold() ? altitudeHoldThrottle(stick) : clamp(stick, 0f, 1f);
@@ -2032,7 +2155,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     /** Stick that holds altitude: thrust = mass·g solved through the throttle² curve. */
-    protected float hoverStick() {
+    public float hoverStick() {
         float ceiling = droneData.maxThrottle * droneData.motorPower / Math.max(0.01f, droneData.mass);
         if (ceiling <= GRAVITY) return 0.95f;
         return (float) Math.pow(GRAVITY / ceiling, 1f / THROTTLE_EXP);
@@ -2149,7 +2272,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         claimOwner(player);
         remotePilotId = player.getUUID();
         remoteFpv = fpv;
-        stationReturnPos = safeReturnPos(player);
+        stationReturn = safeReturn(player);
         if (!fpv) {
             // Line of sight: the pilot keeps their own body and camera and just watches
             // the drone fly, so none of the projection machinery applies.
@@ -2159,12 +2282,12 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         }
         // The pilot's body follows the drone (that's what streams chunks to the
         // client) — keep it invisible and invulnerable for the duration.
-        PilotSessions.open(player, this);
+        PilotSessions.open(player, this, stationReturn);
         pilotWasInvulnerable = player.isInvulnerable();
         player.setInvulnerable(true);
         player.setInvisible(true);
         PilotSessions.syncFlagsToSelf(player);
-        spawnDummy(player, stationReturnPos);
+        spawnDummy(player, stationReturn.pos());
         // Vanilla camera-follow: teleports the pilot along with the drone and resets
         // the camera on sneak (wantsToStopRiding).
         player.setCamera(this);
@@ -2203,6 +2326,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (remotePilotId == null) return;
         ServerPlayer p = level().getServer() != null
             ? level().getServer().getPlayerList().getPlayer(remotePilotId) : null;
+        PilotReturn home = pilotHome(stationReturn, p);
         PilotSessions.forget(remotePilotId);
         remotePilotId = null;
         clearForcedChunks();
@@ -2211,20 +2335,18 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (p != null) {
             if (remoteFpv) {
                 PilotSessions.close(p);
-                if (stationReturnPos != null && p.level() == level()) {
-                    p.teleportTo(stationReturnPos.x, stationReturnPos.y, stationReturnPos.z);
-                }
-                if (p.getCamera() == this) p.setCamera(p);
                 p.setInvulnerable(pilotWasInvulnerable);
                 p.setInvisible(false);
                 PilotSessions.syncFlagsToSelf(p);
+                if (home != null) home.send(p);
+                else if (p.getCamera() == this) p.setCamera(p);
             } else {
                 org.restor.fpv.compat.PacketDistributor.sendToPlayer(p,
                     new org.restor.fpv.network.LineOfSightPacket(-1));
             }
         }
         remoteFpv = true;
-        stationReturnPos = null;
+        stationReturn = null;
     }
 
     // Visible pilot stand-in (rendered with the pilot's skin) at the given spot.

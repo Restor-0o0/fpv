@@ -34,30 +34,38 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
         float a = ((c >> 24) & 0xFF) / 255f;
         if (a <= 0f) a = 1f;
 
-        VertexConsumer vc = buffer.getBuffer(RaceFrames.type());
         Matrix4f mat = pose.last().pose();
         BlockPos origin = start.getBlockPos();
         float half = start.getSize() / 2.0f;
         Vector3f center = local(origin, start.frameCenter());
         Vector3f n = start.normal().normalize();
+        boolean racing = ClientRaceState.active();
 
+        Vector3f finishCenter = null;
+        Vector3f finishNormal = null;
+        if (racing && start.getFinishPos() != null) {
+            Vec3 fn = start.finishNormal();
+            Vector3f fv = new Vector3f((float) fn.x, (float) fn.y, (float) fn.z);
+            if (fv.lengthSquared() > 1e-6f) {
+                finishNormal = fv;
+                finishCenter = local(origin, start.finishCenter());
+            }
+        }
+
+        // One shared builder backs every batch, and drawInBatch below switches it to the font
+        // format — so all of the quads have to be written before the first plate is drawn.
+        VertexConsumer vc = buffer.getBuffer(RaceFrames.type());
         RaceFrames.hoop(vc, mat, center, n, half, org.restor.fpv.block.RaceGateBlock.FRAME_RADIUS,
             RaceFrames.shade(c, 1f), RaceFrames.WHITE, a);
-        renderPlateText(pose, buffer, center, n, half, "START", 0xFF40FF40);
+        if (finishCenter != null) {
+            RaceFrames.hoop(vc, mat, finishCenter, finishNormal, half, org.restor.fpv.block.RaceGateBlock.FRAME_RADIUS,
+                RaceFrames.WHITE, RaceFrames.DARK, a);
+        }
+        if (racing) renderFirstSegment(start, vc, mat, a);
 
-        if (ClientRaceState.active()) {
-            BlockPos finishPos = start.getFinishPos();
-            if (finishPos != null) {
-                Vec3 fn = start.finishNormal();
-                Vector3f finishNormal = new Vector3f((float) fn.x, (float) fn.y, (float) fn.z);
-                if (finishNormal.lengthSquared() > 1e-6f) {
-                    Vector3f finishCenter = local(origin, start.finishCenter());
-                    RaceFrames.hoop(vc, mat, finishCenter, finishNormal, half, org.restor.fpv.block.RaceGateBlock.FRAME_RADIUS,
-                        RaceFrames.WHITE, RaceFrames.DARK, a);
-                    renderPlateText(pose, buffer, finishCenter, finishNormal, half, "FINISH", 0xFFFFFFFF);
-                }
-            }
-            renderFirstSegment(start, vc, mat, a);
+        renderPlateText(pose, buffer, center, n, half, "START", 0xFF40FF40);
+        if (finishCenter != null) {
+            renderPlateText(pose, buffer, finishCenter, finishNormal, half, "FINISH", 0xFFFFFFFF);
         }
     }
 

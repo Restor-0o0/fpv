@@ -77,7 +77,7 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
                                  PoseStack poseStack, MultiBufferSource buffer, int packedLight, float partialTick,
                                  boolean propsOnly) {
         DroneVisual v = DroneVisual.of(spec);
-        if (!propsOnly) renderPart(assembly.frame, poseStack, buffer, packedLight, 0, 0, 0, 0, v.frameScale());
+        if (!propsOnly) FrameModels.render(assembly.frame, poseStack, buffer, packedLight, v.frameScale());
         if (spec != null) {
             if (!propsOnly) {
                 renderPart(assembly.battery, poseStack, buffer, packedLight,

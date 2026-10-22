@@ -1,4 +1,16 @@
-# Project exclude paths
 /.gradle/
 /build/
-/build/classes/java/main/
+/out/
+/run/
+/run-data/
+/.idea/
+*.iml
+/.vscode/
+/bin/
+/.claude/settings.local.json
+/misc/
+/tools/
+/FPV_IDEAS.md
+/IMPLEMENTATION_CHECKLIST.md
+/rc_transmitter_spec.md
+/FPV_Drone_Physics_Spec*.md

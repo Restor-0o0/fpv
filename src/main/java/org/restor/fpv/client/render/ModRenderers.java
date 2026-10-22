@@ -35,7 +35,7 @@ public class ModRenderers {
         event.registerEntityRenderer(ModEntities.PLANE_GLIDER.get(), PlaneRenderer::new);
         event.registerEntityRenderer(ModEntities.PLANE_CARGO.get(), PlaneRenderer::new);
         event.registerEntityRenderer(ModEntities.PLANE_CARRIER.get(), PlaneRenderer::new);
-        event.registerEntityRenderer(ModEntities.PLANE_SHAHED.get(), PlaneRenderer::new);
+        event.registerEntityRenderer(ModEntities.PLANE_LOITER.get(), PlaneRenderer::new);
         event.registerEntityRenderer(ModEntities.PLANE_LONGRANGE.get(), PlaneRenderer::new);
         event.registerEntityRenderer(ModEntities.PLANE_INTERCEPTOR.get(), PlaneRenderer::new);
         event.registerEntityRenderer(ModEntities.DROP_CHARGE.get(),

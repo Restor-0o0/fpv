@@ -102,12 +102,12 @@ public class ModEntities {
             .clientTrackingRange(96)
             .build("plane_carrier"));
 
-    public static final RegistryObject<EntityType<ShahedPlaneEntity>> PLANE_SHAHED = ENTITIES.register("plane_shahed",
-        () -> EntityType.Builder.<ShahedPlaneEntity>of(ShahedPlaneEntity::new, MobCategory.MISC)
+    public static final RegistryObject<EntityType<LoiterPlaneEntity>> PLANE_LOITER = ENTITIES.register("plane_loiter",
+        () -> EntityType.Builder.<LoiterPlaneEntity>of(LoiterPlaneEntity::new, MobCategory.MISC)
             .sized(1.6f, 0.7f)
             .clientTrackingRange(1024)
             .updateInterval(1)
-            .build("plane_shahed"));
+            .build("plane_loiter"));
 
     public static final RegistryObject<EntityType<LongRangePlaneEntity>> PLANE_LONGRANGE = ENTITIES.register("plane_longrange",
         () -> EntityType.Builder.<LongRangePlaneEntity>of(LongRangePlaneEntity::new, MobCategory.MISC)

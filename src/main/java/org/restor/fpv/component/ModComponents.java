@@ -6,142 +6,161 @@ import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.RegistryObject;
 import org.restor.fpv.Fpv;
 
+import java.util.IdentityHashMap;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
 public class ModComponents {
     public static final DeferredRegister<Item> COMPONENTS = DeferredRegister.create(Registries.ITEM, Fpv.MODID);
 
+    private static final Map<ComponentStats, RegistryObject<Item>> BY_STATS = new IdentityHashMap<>();
+
+    private static RegistryObject<Item> component(String name, ComponentStats stats,
+                                                  Function<ComponentStats, Item> factory) {
+        RegistryObject<Item> registered = COMPONENTS.register(name, () -> factory.apply(stats));
+        BY_STATS.put(stats, registered);
+        return registered;
+    }
+
+    /** The item carrying these catalog stats, or null if nothing ships with them. */
+    public static Supplier<? extends Item> itemFor(ComponentStats stats) {
+        return stats == null ? null : BY_STATS.get(stats);
+    }
+
     // Frames
-    public static final RegistryObject<Item> FRAME_5INCH = COMPONENTS.register("frame_5inch",
-        () -> new FrameItem(ComponentStats.frame("5-inch Frame", 5, 0.8f, 30)));
-    public static final RegistryObject<Item> FRAME_7INCH = COMPONENTS.register("frame_7inch",
-        () -> new FrameItem(ComponentStats.frame("7-inch Frame", 7, 0.7f, 45)));
-    public static final RegistryObject<Item> FRAME_TINY_WHOOP = COMPONENTS.register("frame_tiny_whoop",
-        () -> new FrameItem(ComponentStats.frame("Tiny Whoop Frame", 1.5f, 0.4f, 8)));
-    public static final RegistryObject<Item> FRAME_CINEWHOOP = COMPONENTS.register("frame_cinewhoop",
-        () -> new FrameItem(ComponentStats.frame("Cinewhoop Frame", 3.5f, 0.6f, 40)));
-    public static final RegistryObject<Item> FRAME_INTERCEPTOR = COMPONENTS.register("frame_interceptor",
-        () -> new FrameItem(ComponentStats.frame("Interceptor Frame", 5, 0.65f, 34)));
-    public static final RegistryObject<Item> FRAME_HEXA_6INCH = COMPONENTS.register("frame_hexa_6inch",
-        () -> new FrameItem(ComponentStats.frame("6-inch Hexa Frame", 6, 0.75f, 70)));
-    public static final RegistryObject<Item> FRAME_OCTO_8INCH = COMPONENTS.register("frame_octo_8inch",
-        () -> new FrameItem(ComponentStats.frame("8-inch Octo Frame", 8, 0.85f, 110)));
+    public static final RegistryObject<Item> FRAME_5INCH = component("frame_5inch",
+        ComponentCatalog.FRAME_5INCH, FrameItem::new);
+    public static final RegistryObject<Item> FRAME_7INCH = component("frame_7inch",
+        ComponentCatalog.FRAME_7INCH, FrameItem::new);
+    public static final RegistryObject<Item> FRAME_TINY_WHOOP = component("frame_tiny_whoop",
+        ComponentCatalog.FRAME_TINY_WHOOP, FrameItem::new);
+    public static final RegistryObject<Item> FRAME_CINEWHOOP = component("frame_cinewhoop",
+        ComponentCatalog.FRAME_CINEWHOOP, FrameItem::new);
+    public static final RegistryObject<Item> FRAME_INTERCEPTOR = component("frame_interceptor",
+        ComponentCatalog.FRAME_INTERCEPTOR, FrameItem::new);
+    public static final RegistryObject<Item> FRAME_HEXA_6INCH = component("frame_hexa_6inch",
+        ComponentCatalog.FRAME_HEXA_6INCH, FrameItem::new);
+    public static final RegistryObject<Item> FRAME_OCTO_8INCH = component("frame_octo_8inch",
+        ComponentCatalog.FRAME_OCTO_8INCH, FrameItem::new);
 
     // Fixed-wing airframes: same slots as a quad, but they need plane motors and props.
-    public static final RegistryObject<Item> PLANE_FRAME_TRAINER = COMPONENTS.register("plane_frame_trainer",
-        () -> new PlaneFrameItem(ComponentStats.frame("Trainer Airframe", 6, 0.7f, 900)));
-    public static final RegistryObject<Item> PLANE_FRAME_DELTA = COMPONENTS.register("plane_frame_delta",
-        () -> new PlaneFrameItem(ComponentStats.frame("Delta Airframe", 7, 0.75f, 1100)));
-    public static final RegistryObject<Item> PLANE_FRAME_GLIDER = COMPONENTS.register("plane_frame_glider",
-        () -> new PlaneFrameItem(ComponentStats.frame("Glider Airframe", 8, 0.55f, 750)));
-    public static final RegistryObject<Item> PLANE_FRAME_STRIKE = COMPONENTS.register("plane_frame_strike",
-        () -> new PlaneFrameItem(ComponentStats.frame("Strike Airframe", 9, 0.7f, 1600)));
-    public static final RegistryObject<Item> PLANE_FRAME_CARGO = COMPONENTS.register("plane_frame_cargo",
-        () -> new PlaneFrameItem(ComponentStats.frame("Cargo Airframe", 10, 0.8f, 2400)));
-    public static final RegistryObject<Item> PLANE_FRAME_WING = COMPONENTS.register("plane_frame_wing",
-        () -> new PlaneFrameItem(ComponentStats.frame("Interceptor Wing", 6, 0.6f, 950)));
-    public static final RegistryObject<Item> PLANE_FRAME_SCOUT = COMPONENTS.register("plane_frame_scout",
-        () -> new PlaneFrameItem(ComponentStats.frame("Spotter Airframe", 9, 0.5f, 1400)));
-    public static final RegistryObject<Item> PLANE_FRAME_KAMIKAZE = COMPONENTS.register("plane_frame_kamikaze",
-        () -> new PlaneFrameItem(ComponentStats.frame("Kamikaze Airframe", 7, 0.65f, 1050)));
-    public static final RegistryObject<Item> PLANE_FRAME_CARRIER = COMPONENTS.register("plane_frame_carrier",
-        () -> new PlaneFrameItem(ComponentStats.frame("Carrier Airframe", 12, 0.9f, 3400)));
-    public static final RegistryObject<Item> PLANE_FRAME_LOITER = COMPONENTS.register("plane_frame_loiter",
-        () -> new PlaneFrameItem(ComponentStats.frame("Loitering Airframe", 11, 0.8f, 2600)));
+    public static final RegistryObject<Item> PLANE_FRAME_TRAINER = component("plane_frame_trainer",
+        ComponentCatalog.PLANE_FRAME_TRAINER, PlaneFrameItem::new);
+    public static final RegistryObject<Item> PLANE_FRAME_DELTA = component("plane_frame_delta",
+        ComponentCatalog.PLANE_FRAME_DELTA, PlaneFrameItem::new);
+    public static final RegistryObject<Item> PLANE_FRAME_GLIDER = component("plane_frame_glider",
+        ComponentCatalog.PLANE_FRAME_GLIDER, PlaneFrameItem::new);
+    public static final RegistryObject<Item> PLANE_FRAME_STRIKE = component("plane_frame_strike",
+        ComponentCatalog.PLANE_FRAME_STRIKE, PlaneFrameItem::new);
+    public static final RegistryObject<Item> PLANE_FRAME_CARGO = component("plane_frame_cargo",
+        ComponentCatalog.PLANE_FRAME_CARGO, PlaneFrameItem::new);
+    public static final RegistryObject<Item> PLANE_FRAME_WING = component("plane_frame_wing",
+        ComponentCatalog.PLANE_FRAME_WING, PlaneFrameItem::new);
+    public static final RegistryObject<Item> PLANE_FRAME_SCOUT = component("plane_frame_scout",
+        ComponentCatalog.PLANE_FRAME_SCOUT, PlaneFrameItem::new);
+    public static final RegistryObject<Item> PLANE_FRAME_KAMIKAZE = component("plane_frame_kamikaze",
+        ComponentCatalog.PLANE_FRAME_KAMIKAZE, PlaneFrameItem::new);
+    public static final RegistryObject<Item> PLANE_FRAME_CARRIER = component("plane_frame_carrier",
+        ComponentCatalog.PLANE_FRAME_CARRIER, PlaneFrameItem::new);
+    public static final RegistryObject<Item> PLANE_FRAME_LOITER = component("plane_frame_loiter",
+        ComponentCatalog.PLANE_FRAME_LOITER, PlaneFrameItem::new);
 
     // Motors
-    public static final RegistryObject<Item> MOTOR_2207_2450 = COMPONENTS.register("motor_2207_2450kv",
-        () -> new MotorItem(ComponentStats.motor("2207 2450KV", 2450, 1.0f, 28, 32)));
-    public static final RegistryObject<Item> MOTOR_2306_1700 = COMPONENTS.register("motor_2306_1700kv",
-        () -> new MotorItem(ComponentStats.motor("2306 1700KV", 1700, 0.8f, 28, 34)));
-    public static final RegistryObject<Item> MOTOR_1103_8000 = COMPONENTS.register("motor_1103_8000kv",
-        () -> new MotorItem(ComponentStats.motor("1103 8000KV", 8000, 0.3f, 11, 3.5f)));
-    public static final RegistryObject<Item> MOTOR_1404_4500 = COMPONENTS.register("motor_1404_4500kv",
-        () -> new MotorItem(ComponentStats.motor("1404 4500KV", 4500, 0.5f, 14, 10)));
-    public static final RegistryObject<Item> MOTOR_2806_1300 = COMPONENTS.register("motor_2806_1300kv",
-        () -> new MotorItem(ComponentStats.motor("2806 1300KV", 1300, 1.15f, 28, 42)));
-    public static final RegistryObject<Item> MOTOR_3115_900 = COMPONENTS.register("motor_3115_900kv",
-        () -> new MotorItem(ComponentStats.motor("3115 900KV", 900, 1.35f, 31, 68)));
+    public static final RegistryObject<Item> MOTOR_2207_2450 = component("motor_2207_2450kv",
+        ComponentCatalog.MOTOR_2207_2450, MotorItem::new);
+    public static final RegistryObject<Item> MOTOR_2306_1700 = component("motor_2306_1700kv",
+        ComponentCatalog.MOTOR_2306_1700, MotorItem::new);
+    public static final RegistryObject<Item> MOTOR_1103_8000 = component("motor_1103_8000kv",
+        ComponentCatalog.MOTOR_1103_8000, MotorItem::new);
+    public static final RegistryObject<Item> MOTOR_1404_4500 = component("motor_1404_4500kv",
+        ComponentCatalog.MOTOR_1404_4500, MotorItem::new);
+    public static final RegistryObject<Item> MOTOR_2806_1300 = component("motor_2806_1300kv",
+        ComponentCatalog.MOTOR_2806_1300, MotorItem::new);
+    public static final RegistryObject<Item> MOTOR_3115_900 = component("motor_3115_900kv",
+        ComponentCatalog.MOTOR_3115_900, MotorItem::new);
 
     // Plane motors: slow-turning outrunners, far too heavy for a quad arm.
-    public static final RegistryObject<Item> MOTOR_2814_1100 = COMPONENTS.register("motor_2814_1100kv",
-        () -> new PlaneMotorItem(ComponentStats.motor("2814 1100KV", 1100, 2.1f, 28, 78)));
-    public static final RegistryObject<Item> MOTOR_3548_900 = COMPONENTS.register("motor_3548_900kv",
-        () -> new PlaneMotorItem(ComponentStats.motor("3548 900KV", 900, 3.4f, 35, 165)));
-    public static final RegistryObject<Item> MOTOR_4250_650 = COMPONENTS.register("motor_4250_650kv",
-        () -> new PlaneMotorItem(ComponentStats.motor("4250 650KV", 650, 5.0f, 42, 320)));
+    public static final RegistryObject<Item> MOTOR_2814_1100 = component("motor_2814_1100kv",
+        ComponentCatalog.MOTOR_2814_1100, PlaneMotorItem::new);
+    public static final RegistryObject<Item> MOTOR_3548_900 = component("motor_3548_900kv",
+        ComponentCatalog.MOTOR_3548_900, PlaneMotorItem::new);
+    public static final RegistryObject<Item> MOTOR_4250_650 = component("motor_4250_650kv",
+        ComponentCatalog.MOTOR_4250_650, PlaneMotorItem::new);
 
     // Batteries
-    public static final RegistryObject<Item> BATTERY_1S_300 = COMPONENTS.register("battery_1s_300",
-        () -> new BatteryItem(ComponentStats.battery("1S 300mAh", 1, 300, 25, 10)));
-    public static final RegistryObject<Item> BATTERY_4S_1300 = COMPONENTS.register("battery_4s_1300",
-        () -> new BatteryItem(ComponentStats.battery("4S 1300mAh", 4, 1300, 100, 180)));
-    public static final RegistryObject<Item> BATTERY_6S_1100 = COMPONENTS.register("battery_6s_1100",
-        () -> new BatteryItem(ComponentStats.battery("6S 1100mAh", 6, 1100, 120, 210)));
-    public static final RegistryObject<Item> BATTERY_4S_650 = COMPONENTS.register("battery_4s_650",
-        () -> new BatteryItem(ComponentStats.battery("4S 650mAh", 4, 650, 75, 95)));
-    public static final RegistryObject<Item> BATTERY_6S_5000 = COMPONENTS.register("battery_6s_5000",
-        () -> new BatteryItem(ComponentStats.battery("6S 5000mAh", 6, 5000, 100, 700)));
+    public static final RegistryObject<Item> BATTERY_1S_300 = component("battery_1s_300",
+        ComponentCatalog.BATTERY_1S_300, BatteryItem::new);
+    public static final RegistryObject<Item> BATTERY_4S_1300 = component("battery_4s_1300",
+        ComponentCatalog.BATTERY_4S_1300, BatteryItem::new);
+    public static final RegistryObject<Item> BATTERY_6S_1100 = component("battery_6s_1100",
+        ComponentCatalog.BATTERY_6S_1100, BatteryItem::new);
+    public static final RegistryObject<Item> BATTERY_4S_650 = component("battery_4s_650",
+        ComponentCatalog.BATTERY_4S_650, BatteryItem::new);
+    public static final RegistryObject<Item> BATTERY_6S_5000 = component("battery_6s_5000",
+        ComponentCatalog.BATTERY_6S_5000, BatteryItem::new);
 
     // Propellers
-    public static final RegistryObject<Item> PROP_5X4X3 = COMPONENTS.register("prop_5x4x3",
-        () -> new PropellerItem(ComponentStats.propeller("5x4x3", 5, 4, 3, 1.0f, 5)));
-    public static final RegistryObject<Item> PROP_5X4X2 = COMPONENTS.register("prop_5x4x2",
-        () -> new PropellerItem(ComponentStats.propeller("5x4x2", 5, 4, 2, 0.85f, 4)));
-    public static final RegistryObject<Item> PROP_3X2X3 = COMPONENTS.register("prop_3x2x3",
-        () -> new PropellerItem(ComponentStats.propeller("3x2x3", 3, 2, 3, 0.9f, 2)));
-    public static final RegistryObject<Item> PROP_65MM = COMPONENTS.register("prop_65mm",
-        () -> new PropellerItem(ComponentStats.propeller("65mm", 2.5f, 1.5f, 4, 0.6f, 1)));
+    public static final RegistryObject<Item> PROP_5X4X3 = component("prop_5x4x3",
+        ComponentCatalog.PROP_5X4X3, PropellerItem::new);
+    public static final RegistryObject<Item> PROP_5X4X2 = component("prop_5x4x2",
+        ComponentCatalog.PROP_5X4X2, PropellerItem::new);
+    public static final RegistryObject<Item> PROP_3X2X3 = component("prop_3x2x3",
+        ComponentCatalog.PROP_3X2X3, PropellerItem::new);
+    public static final RegistryObject<Item> PROP_65MM = component("prop_65mm",
+        ComponentCatalog.PROP_65MM, PropellerItem::new);
 
     // Plane propellers: big two-blade folders, high pitch speed.
-    public static final RegistryObject<Item> PROP_8X6 = COMPONENTS.register("prop_8x6",
-        () -> new PlanePropellerItem(ComponentStats.propeller("8x6", 8, 6, 2, 1.0f, 12)));
-    public static final RegistryObject<Item> PROP_10X5 = COMPONENTS.register("prop_10x5",
-        () -> new PlanePropellerItem(ComponentStats.propeller("10x5", 10, 5, 2, 1.05f, 20)));
-    public static final RegistryObject<Item> PROP_12X6 = COMPONENTS.register("prop_12x6",
-        () -> new PlanePropellerItem(ComponentStats.propeller("12x6", 12, 6, 2, 1.1f, 34)));
+    public static final RegistryObject<Item> PROP_8X6 = component("prop_8x6",
+        ComponentCatalog.PROP_8X6, PlanePropellerItem::new);
+    public static final RegistryObject<Item> PROP_10X5 = component("prop_10x5",
+        ComponentCatalog.PROP_10X5, PlanePropellerItem::new);
+    public static final RegistryObject<Item> PROP_12X6 = component("prop_12x6",
+        ComponentCatalog.PROP_12X6, PlanePropellerItem::new);
 
     // VTX
-    public static final RegistryObject<Item> VTX_25MW = COMPONENTS.register("vtx_25mw",
-        () -> new ComponentItem(ComponentStats.vtx("25mW VTX", 25, 0.5f, 3)));
-    public static final RegistryObject<Item> VTX_200MW = COMPONENTS.register("vtx_200mw",
-        () -> new ComponentItem(ComponentStats.vtx("200mW VTX", 200, 1.0f, 5)));
-    public static final RegistryObject<Item> VTX_800MW = COMPONENTS.register("vtx_800mw",
-        () -> new ComponentItem(ComponentStats.vtx("800mW VTX", 800, 1.5f, 7)));
+    public static final RegistryObject<Item> VTX_25MW = component("vtx_25mw",
+        ComponentCatalog.VTX_25MW, ComponentItem::new);
+    public static final RegistryObject<Item> VTX_200MW = component("vtx_200mw",
+        ComponentCatalog.VTX_200MW, ComponentItem::new);
+    public static final RegistryObject<Item> VTX_800MW = component("vtx_800mw",
+        ComponentCatalog.VTX_800MW, ComponentItem::new);
 
     // Cameras
-    public static final RegistryObject<Item> CAMERA_STANDARD = COMPONENTS.register("camera_standard",
-        () -> new CameraItem(ComponentStats.camera("Standard Camera", 120, 30, 8)));
-    public static final RegistryObject<Item> CAMERA_WIDE = COMPONENTS.register("camera_wide",
-        () -> new CameraItem(ComponentStats.camera("Wide FPV Camera", 150, 45, 10)));
+    public static final RegistryObject<Item> CAMERA_STANDARD = component("camera_standard",
+        ComponentCatalog.CAMERA_STANDARD, CameraItem::new);
+    public static final RegistryObject<Item> CAMERA_WIDE = component("camera_wide",
+        ComponentCatalog.CAMERA_WIDE, CameraItem::new);
 
     // Flight Controllers
-    public static final RegistryObject<Item> FC_F411 = COMPONENTS.register("fc_f411",
-        () -> new ComponentItem(ComponentStats.fc("F411 FC", true, false, 6)));
-    public static final RegistryObject<Item> FC_H7 = COMPONENTS.register("fc_h7",
-        () -> new ComponentItem(ComponentStats.fc("H7 FC", true, true, 8)));
+    public static final RegistryObject<Item> FC_F411 = component("fc_f411",
+        ComponentCatalog.FC_F411, ComponentItem::new);
+    public static final RegistryObject<Item> FC_H7 = component("fc_h7",
+        ComponentCatalog.FC_H7, ComponentItem::new);
 
     // Modules (mount in the frame's module slot, FPV_IDEAS §4-5). Frame compatibility
     // rules live in DroneAssembly.compatibleModule.
-    public static final RegistryObject<Item> MODULE_PAYLOAD_BAY = COMPONENTS.register("module_payload_bay",
-        () -> new ModuleItem(ComponentStats.module("Payload Bay", 25), ModuleType.PAYLOAD_BAY));
-    public static final RegistryObject<Item> MODULE_WARHEAD = COMPONENTS.register("module_warhead",
-        () -> new ModuleItem(ComponentStats.module("Warhead", 150), ModuleType.WARHEAD));
-    public static final RegistryObject<Item> MODULE_DART_GUN = COMPONENTS.register("module_dart_gun",
-        () -> new ModuleItem(ComponentStats.module("Dart Gun", 45), ModuleType.DART_GUN));
-    public static final RegistryObject<Item> MODULE_STORAGE = COMPONENTS.register("module_storage",
-        () -> new ModuleItem(ComponentStats.module("Cargo Box", 60), ModuleType.STORAGE));
-    public static final RegistryObject<Item> MODULE_TARGETING = COMPONENTS.register("module_targeting",
-        () -> new ModuleItem(ComponentStats.module("Targeting Pod", 90), ModuleType.TARGETING));
-    public static final RegistryObject<Item> MODULE_ROCKET_POD = COMPONENTS.register("module_rocket_pod",
-        () -> new ModuleItem(ComponentStats.module("Rocket Pod", 110), ModuleType.ROCKET_POD));
+    public static final RegistryObject<Item> MODULE_PAYLOAD_BAY = component("module_payload_bay",
+        ComponentCatalog.MODULE_PAYLOAD_BAY, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
+    public static final RegistryObject<Item> MODULE_WARHEAD = component("module_warhead",
+        ComponentCatalog.MODULE_WARHEAD, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
+    public static final RegistryObject<Item> MODULE_DART_GUN = component("module_dart_gun",
+        ComponentCatalog.MODULE_DART_GUN, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
+    public static final RegistryObject<Item> MODULE_STORAGE = component("module_storage",
+        ComponentCatalog.MODULE_STORAGE, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
+    public static final RegistryObject<Item> MODULE_TARGETING = component("module_targeting",
+        ComponentCatalog.MODULE_TARGETING, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
+    public static final RegistryObject<Item> MODULE_ROCKET_POD = component("module_rocket_pod",
+        ComponentCatalog.MODULE_ROCKET_POD, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
 
     // Firmware chips (separate slot from the modules above). They teach the FC the
     // autonomous modes the owner cycles by right-clicking the drone.
-    public static final RegistryObject<Item> FIRMWARE_COMPANION = COMPONENTS.register("firmware_companion",
-        () -> new FirmwareItem(ComponentStats.firmware("Companion Firmware", 4), FirmwareType.COMPANION));
-    public static final RegistryObject<Item> FIRMWARE_SCOUT = COMPONENTS.register("firmware_scout",
-        () -> new FirmwareItem(ComponentStats.firmware("Scout Firmware", 6), FirmwareType.SCOUT));
-    public static final RegistryObject<Item> FIRMWARE_GUARDIAN = COMPONENTS.register("firmware_guardian",
-        () -> new FirmwareItem(ComponentStats.firmware("Guardian Firmware", 8), FirmwareType.GUARDIAN));
-    public static final RegistryObject<Item> FIRMWARE_TRADER = COMPONENTS.register("firmware_trader",
-        () -> new FirmwareItem(ComponentStats.firmware("Trader Firmware", 10), FirmwareType.TRADER));
+    public static final RegistryObject<Item> FIRMWARE_COMPANION = component("firmware_companion",
+        ComponentCatalog.FIRMWARE_COMPANION, s -> new FirmwareItem(s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
+    public static final RegistryObject<Item> FIRMWARE_SCOUT = component("firmware_scout",
+        ComponentCatalog.FIRMWARE_SCOUT, s -> new FirmwareItem(s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
+    public static final RegistryObject<Item> FIRMWARE_GUARDIAN = component("firmware_guardian",
+        ComponentCatalog.FIRMWARE_GUARDIAN, s -> new FirmwareItem(s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
+    public static final RegistryObject<Item> FIRMWARE_TRADER = component("firmware_trader",
+        ComponentCatalog.FIRMWARE_TRADER, s -> new FirmwareItem(s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
 }

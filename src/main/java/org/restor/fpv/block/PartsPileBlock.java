@@ -86,7 +86,8 @@ public class PartsPileBlock extends BaseEntityBlock {
                                  InteractionHand hand, BlockHitResult hit) {
         if (!(level.getBlockEntity(pos) instanceof PartsPileBlockEntity pile)) return InteractionResult.PASS;
         ItemStack held = player.getItemInHand(hand);
-        if (!held.isEmpty() && pile.accepts(held)) {
+        if (PartsPileBlockEntity.isStorable(held)) {
+            if (!pile.accepts(held)) return InteractionResult.PASS;
             if (level.isClientSide) return InteractionResult.SUCCESS;
             pile.insert(player.getAbilities().instabuild ? held.copy() : held);
             level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 0.7f, 1.4f);
@@ -104,8 +105,7 @@ public class PartsPileBlock extends BaseEntityBlock {
     @Override
     public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
         if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof PartsPileBlockEntity pile) {
-            ItemStack rest = pile.extract(PartsPileBlockEntity.MAX_CAPACITY);
-            if (!rest.isEmpty()) {
+            for (ItemStack rest : pile.takeAll()) {
                 net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), rest);
             }
         }

@@ -54,6 +54,7 @@ public class Config {
 
     public static final ForgeConfigSpec.DoubleValue FPV_CAMERA_HEIGHT = CommonConfig.FPV_CAMERA_HEIGHT;
     public static final ForgeConfigSpec.BooleanValue FPV_PROPS_IN_VIEW;
+    public static final ForgeConfigSpec.BooleanValue SLIM_FRAMES;
     public static final ForgeConfigSpec.DoubleValue FPV_PROPS_FORWARD;
     public static final ForgeConfigSpec.DoubleValue FPV_PROPS_DOWN;
     public static final ForgeConfigSpec.DoubleValue FPV_PROPS_SCALE;
@@ -130,6 +131,8 @@ public class Config {
         BUILDER.push("dev");
         FPV_PROPS_IN_VIEW = BUILDER.comment("Show the front motors and propellers in the FPV view.")
             .define("fpvPropsInView", false);
+        SLIM_FRAMES = BUILDER.comment("Render quadcopter frames with the slim, narrow-body models.")
+            .define("slimFrames", true);
         FPV_PROPS_FORWARD = BUILDER.comment("How far ahead of the camera the drone model sits (blocks). Bigger = further into the screen / smaller on screen.")
             .defineInRange("fpvPropsForward", 0.80, 0.0, 2.5);
         FPV_PROPS_DOWN = BUILDER.comment("Vertical offset of the drone model from the camera line (blocks). Negative = lower into the bottom of the view.")

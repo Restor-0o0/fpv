@@ -29,23 +29,23 @@ Forge 1.20.1 (47.4.20), Java 17. Все команды — из корня пр�
 ## Куда ложится файл
 
 ```
-build\libs\fpv-1.0.jar
+build\libs\fpv-1.0.0+1.20.1-forge.jar
 ```
 
-Имя = `mod_id`-`mod_version` из `gradle.properties`.
+Имя = `mod_id`-`mod_version`+`minecraft_version`-forge из `gradle.properties`.
 
 ## Установить в игру
 
 Профиль лаунчера `fpvtest`:
 
 ```powershell
-Copy-Item build\libs\fpv-1.0.jar "$env:APPDATA\.minecraft\versions\fpvtest\mods\" -Force
+Copy-Item build\libs\fpv-1.0.0+1.20.1-forge.jar "$env:APPDATA\.minecraft\versions\fpvtest\mods\" -Force
 ```
 
 Сборка + установка одной строкой:
 
 ```powershell
-.\gradlew.bat build --offline; if ($?) { Copy-Item build\libs\fpv-1.0.jar "$env:APPDATA\.minecraft\versions\fpvtest\mods\" -Force }
+.\gradlew.bat build --offline; if ($?) { Copy-Item build\libs\fpv-1.0.0+1.20.1-forge.jar "$env:APPDATA\.minecraft\versions\fpvtest\mods\" -Force }
 ```
 
 ## Запуск из IDE/Gradle (dev-клиент)

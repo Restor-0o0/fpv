@@ -61,7 +61,7 @@ public class WarheadItem extends Item {
         {"3.0", "entity.fpv.plane_interceptor"},
         {"4.0", "entity.fpv.plane_kamikaze"},
         {"8.0", "entity.fpv.plane_longrange"},
-        {"16.0", "entity.fpv.plane_shahed"},
+        {"16.0", "entity.fpv.plane_loiter"},
     };
 
     private Component carriers() {

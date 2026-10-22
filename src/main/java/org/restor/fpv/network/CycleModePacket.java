@@ -26,9 +26,8 @@ public record CycleModePacket(int droneId) implements CustomPacketPayload {
         context.enqueueWork(() -> {
             if (context.player() instanceof ServerPlayer player) {
                 Entity entity = player.level().getEntity(pkt.droneId());
-                if (entity instanceof DroneEntity drone && drone.hasPassenger(player)
-                    && drone.flightController.isArmed()) {
-                    drone.flightController.cycleMode();
+                if (entity instanceof DroneEntity drone && drone.getRacePilot() == player) {
+                    drone.cycleFlightMode(player);
                 }
             }
         });

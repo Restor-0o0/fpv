@@ -301,6 +301,7 @@ public class FpvSettingsScreen extends Screen {
         toggle("hud_hints", true, Config.HUD_HINTS);
         toggle("hud_netstats", true, Config.HUD_NETSTATS);
         toggle("fpv_props", true, Config.FPV_PROPS_IN_VIEW);
+        toggle("slim_frames", true, Config.SLIM_FRAMES);
 
         section("sound", true);
         slider("sound_motor", true, Config.SOUND_MOTOR_VOLUME, 0.0, 1.0, 0.05, percent(100));
@@ -309,7 +310,7 @@ public class FpvSettingsScreen extends Screen {
         rows.add(new SettingRow.Action(tr("reset_tab"), null, tr("reset"), true, () -> resetAll(
             Config.HUD_TELEMETRY, Config.HUD_THROTTLE_BAR, Config.HUD_STICKS, Config.HUD_CROSSHAIR,
             Config.HUD_HEADING, Config.HUD_ROLL_LINE, Config.HUD_PITCH_LADDER, Config.HUD_DAMAGE,
-            Config.HUD_HINTS, Config.HUD_NETSTATS, Config.FPV_PROPS_IN_VIEW,
+            Config.HUD_HINTS, Config.HUD_NETSTATS, Config.FPV_PROPS_IN_VIEW, Config.SLIM_FRAMES,
             Config.SOUND_MOTOR_VOLUME, Config.SOUND_EFFECTS_VOLUME)));
     }
 

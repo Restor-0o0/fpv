@@ -65,8 +65,8 @@ public class ModItems {
     public static final RegistryObject<Item> PLANE_CARRIER = ITEMS.register("plane_carrier",
         () -> new PlaneItem(org.restor.fpv.entity.ModEntities.PLANE_CARRIER));
 
-    public static final RegistryObject<Item> PLANE_SHAHED = ITEMS.register("plane_shahed",
-        () -> new PlaneItem(org.restor.fpv.entity.ModEntities.PLANE_SHAHED));
+    public static final RegistryObject<Item> PLANE_LOITER = ITEMS.register("plane_loiter",
+        () -> new PlaneItem(org.restor.fpv.entity.ModEntities.PLANE_LOITER));
 
     public static final RegistryObject<Item> PLANE_LONGRANGE = ITEMS.register("plane_longrange",
         () -> new PlaneItem(org.restor.fpv.entity.ModEntities.PLANE_LONGRANGE));

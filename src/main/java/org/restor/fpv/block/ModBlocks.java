@@ -55,7 +55,7 @@ public class ModBlocks {
 
     // No block item: a pile only exists where a component was set down.
     public static final RegistryObject<PartsPileBlock> PARTS_PILE = BLOCKS.register("parts_pile",
-        () -> new PartsPileBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.2f).sound(SoundType.METAL).noOcclusion().instabreak()));
+        () -> new PartsPileBlock(BlockBehaviour.Properties.of().mapColor(MapColor.METAL).strength(0.2f).sound(SoundType.METAL).noOcclusion().dynamicShape().instabreak()));
 
     private static <T extends Block> RegistryObject<T> register(String name, Supplier<T> block) {
         var obj = BLOCKS.register(name, block);

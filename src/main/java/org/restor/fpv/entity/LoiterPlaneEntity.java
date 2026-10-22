@@ -6,8 +6,8 @@ import org.restor.fpv.warhead.WarheadType;
 
 // Moped-wing loitering munition: slow, patient and hard to turn, but it carries a real
 // warhead and holds a straight line forever.
-public class ShahedPlaneEntity extends KamikazeWingEntity {
-    public ShahedPlaneEntity(EntityType<?> type, Level level) {
+public class LoiterPlaneEntity extends KamikazeWingEntity {
+    public LoiterPlaneEntity(EntityType<?> type, Level level) {
         super(type, level);
         this.maxSpeedBt = 1.7f;
         this.maxThrust = 300f;
@@ -25,6 +25,6 @@ public class ShahedPlaneEntity extends KamikazeWingEntity {
 
     @Override
     protected net.minecraft.world.item.Item getDropItem() {
-        return org.restor.fpv.item.ModItems.PLANE_SHAHED.get();
+        return org.restor.fpv.item.ModItems.PLANE_LOITER.get();
     }
 }

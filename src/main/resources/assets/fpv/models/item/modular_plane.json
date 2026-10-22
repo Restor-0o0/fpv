@@ -53,7 +53,7 @@
       "predicate": {
         "fpv:frame": 9
       },
-      "model": "fpv:item/plane_shahed"
+      "model": "fpv:item/plane_loiter"
     }
   ]
 }

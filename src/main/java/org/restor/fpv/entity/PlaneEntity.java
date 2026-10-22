@@ -96,7 +96,7 @@ public class PlaneEntity extends Entity
     private float gimbalYaw, gimbalPitch;
     private boolean stabilizedGimbalView;
 
-    private Vec3 mountReturnPos;
+    private PilotReturn mountReturn;
     private java.util.UUID dummyId;
 
     private final org.restor.fpv.antidrone.RadioJamState jamState = new org.restor.fpv.antidrone.RadioJamState();
@@ -629,13 +629,13 @@ public class PlaneEntity extends Entity
     public boolean mountPilot(ServerPlayer player) {
         if (level().isClientSide || hasAnyPilot()) return false;
         if (!org.restor.fpv.item.RcLink.hasGoggles(player)) return false;
-        Vec3 boardPos = safeReturnPos(player);
+        PilotReturn boardPos = PilotReturn.capture(player, this);
         if (!player.startRiding(this)) return false;
-        mountReturnPos = boardPos;
-        PilotSessions.open(player, this);
+        mountReturn = boardPos;
+        PilotSessions.open(player, this, boardPos);
         player.setInvisible(true);
         PilotSessions.syncFlagsToSelf(player);
-        spawnDummy(player, boardPos);
+        spawnDummy(player, boardPos.pos());
         return true;
     }
 
@@ -643,20 +643,24 @@ public class PlaneEntity extends Entity
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
         if (!level().isClientSide && passenger instanceof ServerPlayer sp) {
+            PilotReturn home = pilotHome(sp);
             PilotSessions.close(sp);
             sp.setInvisible(false);
             PilotSessions.syncFlagsToSelf(sp);
             discardDummy();
-            if (mountReturnPos != null && sp.level() == level()) {
-                sp.teleportTo(mountReturnPos.x, mountReturnPos.y, mountReturnPos.z);
-            }
+            if (home != null) home.send(sp);
         }
     }
 
-    /** Boarding spot to come back to; never the plane itself, which would strand the pilot midair. */
-    protected Vec3 safeReturnPos(Player player) {
-        Vec3 pos = player.position();
-        return pos.distanceToSqr(position()) < 1.0E-4 ? pos.add(0, 1.0, 0) : pos;
+    // The plane is usually destroyed at the very moment a session ends, so fall back to the
+    // operator dummy standing at the launch point, then to the copy the session itself kept.
+    private PilotReturn pilotHome(ServerPlayer pilot) {
+        if (mountReturn != null) return mountReturn;
+        if (dummyId != null && level() instanceof net.minecraft.server.level.ServerLevel sl
+            && sl.getEntity(dummyId) instanceof OperatorDummyEntity dummy) {
+            return PilotReturn.at(dummy);
+        }
+        return PilotSessions.home(pilot);
     }
 
     private void spawnDummy(ServerPlayer player, Vec3 at) {
@@ -947,7 +951,7 @@ public class PlaneEntity extends Entity
 
     @Override
     public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
-        return mountReturnPos != null ? mountReturnPos : position().add(0, 1.5, 0);
+        return mountReturn != null ? mountReturn.pos() : position().add(0, 1.5, 0);
     }
 
     @Override
@@ -1100,20 +1104,14 @@ public class PlaneEntity extends Entity
         entityData.set(DATA_ARMED, armed);
         // Persist the launch point so a save/reload mid-flight doesn't lose it (which used
         // to leave the pilot dumped at the plane's position on dismount/detonation).
-        if (tag.contains("ReturnX")) {
-            mountReturnPos = new Vec3(tag.getDouble("ReturnX"), tag.getDouble("ReturnY"), tag.getDouble("ReturnZ"));
-        }
+        mountReturn = PilotReturn.load(tag, "Return", level());
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
         tag.putFloat("Roll", entityData.get(DATA_ROLL));
         tag.putBoolean("Armed", armed);
-        if (mountReturnPos != null) {
-            tag.putDouble("ReturnX", mountReturnPos.x);
-            tag.putDouble("ReturnY", mountReturnPos.y);
-            tag.putDouble("ReturnZ", mountReturnPos.z);
-        }
+        if (mountReturn != null) mountReturn.save(tag, "Return");
     }
 
     @Override

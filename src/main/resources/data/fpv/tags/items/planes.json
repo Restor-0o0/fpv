@@ -8,7 +8,7 @@
     "fpv:plane_glider",
     "fpv:plane_cargo",
     "fpv:plane_carrier",
-    "fpv:plane_shahed",
+    "fpv:plane_loiter",
     "fpv:plane_longrange",
     "fpv:plane_interceptor"
   ]
