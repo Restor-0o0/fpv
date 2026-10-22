@@ -1,5 +1,7 @@
 package org.restor.fpv.entity;
 
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
@@ -68,7 +70,7 @@ public class OperatorDummyEntity extends Entity {
     public void tick() {
         super.tick();
         // Self-cleanup: only exists while its vehicle has a pilot (rider or remote).
-        if (!level().isClientSide && ++checkTimer >= 20) {
+        if (!level().isClientSide() && ++checkTimer >= 20) {
             checkTimer = 0;
             if (!(level() instanceof ServerLevel sl) || vehicleUuid == null
                 || !(sl.getEntity(vehicleUuid) instanceof Pilotable p) || !p.hasAnyPilot()
@@ -86,10 +88,10 @@ public class OperatorDummyEntity extends Entity {
     }
 
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {}
+    protected void readAdditionalSaveData(ValueInput input) {}
 
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {}
+    protected void addAdditionalSaveData(ValueOutput output) {}
 
     @Override
     public boolean shouldBeSaved() { return false; }
@@ -98,8 +100,8 @@ public class OperatorDummyEntity extends Entity {
     public boolean isPickable() { return true; }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
-        if (!level().isClientSide) discard();
+    public boolean hurtServer(net.minecraft.server.level.ServerLevel level, DamageSource source, float amount) {
+        discard();
         return true;
     }
 

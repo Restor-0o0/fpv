@@ -1,5 +1,7 @@
 package org.restor.fpv.entity;
 
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -57,7 +59,7 @@ public class CargoPlaneEntity extends PlaneEntity implements MenuProvider {
     }
 
     private void refreshCargo() {
-        if (!level().isClientSide) entityData.set(DATA_CARGO, cargoMass());
+        if (!level().isClientSide()) entityData.set(DATA_CARGO, cargoMass());
     }
 
     @Override
@@ -68,7 +70,7 @@ public class CargoPlaneEntity extends PlaneEntity implements MenuProvider {
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
         if (player.isSecondaryUseActive()) {
-            if (!level().isClientSide && player instanceof ServerPlayer sp) {
+            if (!level().isClientSide() && player instanceof ServerPlayer sp) {
 sp.openMenu(this, buf -> buf.writeInt(getId()));
             }
             return InteractionResult.SUCCESS;
@@ -78,23 +80,23 @@ sp.openMenu(this, buf -> buf.writeInt(getId()));
 
     @Override
     public void remove(RemovalReason reason) {
-        if (!level().isClientSide && reason.shouldDestroy()) {
+        if (!level().isClientSide() && reason.shouldDestroy()) {
             Containers.dropContents(level(), blockPosition(), bay);
         }
         super.remove(reason);
     }
 
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        bay.fromTag(tag.getList("Cargo", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        bay.fromItemList(input.listOrEmpty("Cargo", ItemStack.OPTIONAL_CODEC));
         refreshCargo();
     }
 
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        tag.put("Cargo", bay.createTag(registryAccess()));
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        bay.storeAsItemList(output.list("Cargo", ItemStack.OPTIONAL_CODEC));
     }
 
     @Override

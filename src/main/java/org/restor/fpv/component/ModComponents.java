@@ -1,24 +1,23 @@
 package org.restor.fpv.component;
 
 import net.minecraft.world.item.Item;
-import net.minecraft.core.registries.Registries;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import org.restor.fpv.Fpv;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 public class ModComponents {
-    public static final DeferredRegister<Item> COMPONENTS = DeferredRegister.create(Registries.ITEM, Fpv.MODID);
+    public static final DeferredRegister.Items COMPONENTS = DeferredRegister.createItems(Fpv.MODID);
 
     private static final Map<ComponentStats, DeferredHolder<Item, Item>> BY_STATS = new IdentityHashMap<>();
 
     private static DeferredHolder<Item, Item> component(String name, ComponentStats stats,
-                                                  Function<ComponentStats, Item> factory) {
-        DeferredHolder<Item, Item> registered = COMPONENTS.register(name, () -> factory.apply(stats));
+                                                  BiFunction<Item.Properties, ComponentStats, Item> factory) {
+        DeferredHolder<Item, Item> registered = COMPONENTS.registerItem(name, p -> factory.apply(p, stats));
         BY_STATS.put(stats, registered);
         return registered;
     }
@@ -141,26 +140,26 @@ public class ModComponents {
     // Modules (mount in the frame's module slot, FPV_IDEAS §4-5). Frame compatibility
     // rules live in DroneAssembly.compatibleModule.
     public static final DeferredHolder<Item, Item> MODULE_PAYLOAD_BAY = component("module_payload_bay",
-        ComponentCatalog.MODULE_PAYLOAD_BAY, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
+        ComponentCatalog.MODULE_PAYLOAD_BAY, (p, s) -> new ModuleItem(p, s, ComponentCatalog.MODULE_TYPES.get(s)));
     public static final DeferredHolder<Item, Item> MODULE_WARHEAD = component("module_warhead",
-        ComponentCatalog.MODULE_WARHEAD, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
+        ComponentCatalog.MODULE_WARHEAD, (p, s) -> new ModuleItem(p, s, ComponentCatalog.MODULE_TYPES.get(s)));
     public static final DeferredHolder<Item, Item> MODULE_DART_GUN = component("module_dart_gun",
-        ComponentCatalog.MODULE_DART_GUN, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
+        ComponentCatalog.MODULE_DART_GUN, (p, s) -> new ModuleItem(p, s, ComponentCatalog.MODULE_TYPES.get(s)));
     public static final DeferredHolder<Item, Item> MODULE_STORAGE = component("module_storage",
-        ComponentCatalog.MODULE_STORAGE, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
+        ComponentCatalog.MODULE_STORAGE, (p, s) -> new ModuleItem(p, s, ComponentCatalog.MODULE_TYPES.get(s)));
     public static final DeferredHolder<Item, Item> MODULE_TARGETING = component("module_targeting",
-        ComponentCatalog.MODULE_TARGETING, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
+        ComponentCatalog.MODULE_TARGETING, (p, s) -> new ModuleItem(p, s, ComponentCatalog.MODULE_TYPES.get(s)));
     public static final DeferredHolder<Item, Item> MODULE_ROCKET_POD = component("module_rocket_pod",
-        ComponentCatalog.MODULE_ROCKET_POD, s -> new ModuleItem(s, ComponentCatalog.MODULE_TYPES.get(s)));
+        ComponentCatalog.MODULE_ROCKET_POD, (p, s) -> new ModuleItem(p, s, ComponentCatalog.MODULE_TYPES.get(s)));
 
     // Firmware chips (separate slot from the modules above). They teach the FC the
     // autonomous modes the owner cycles by right-clicking the drone.
     public static final DeferredHolder<Item, Item> FIRMWARE_COMPANION = component("firmware_companion",
-        ComponentCatalog.FIRMWARE_COMPANION, s -> new FirmwareItem(s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
+        ComponentCatalog.FIRMWARE_COMPANION, (p, s) -> new FirmwareItem(p, s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
     public static final DeferredHolder<Item, Item> FIRMWARE_SCOUT = component("firmware_scout",
-        ComponentCatalog.FIRMWARE_SCOUT, s -> new FirmwareItem(s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
+        ComponentCatalog.FIRMWARE_SCOUT, (p, s) -> new FirmwareItem(p, s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
     public static final DeferredHolder<Item, Item> FIRMWARE_GUARDIAN = component("firmware_guardian",
-        ComponentCatalog.FIRMWARE_GUARDIAN, s -> new FirmwareItem(s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
+        ComponentCatalog.FIRMWARE_GUARDIAN, (p, s) -> new FirmwareItem(p, s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
     public static final DeferredHolder<Item, Item> FIRMWARE_TRADER = component("firmware_trader",
-        ComponentCatalog.FIRMWARE_TRADER, s -> new FirmwareItem(s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
+        ComponentCatalog.FIRMWARE_TRADER, (p, s) -> new FirmwareItem(p, s, ComponentCatalog.FIRMWARE_TYPES.get(s)));
 }

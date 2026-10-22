@@ -4,7 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
@@ -20,7 +20,7 @@ public record RaceGateConfigPacket(BlockPos pos, int action, int value) implemen
     public static final int FLIP_NORMAL = 5;
 
     public static final Type<RaceGateConfigPacket> TYPE =
-        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "race_gate_config"));
+        new Type<>(Identifier.fromNamespaceAndPath(Fpv.MODID, "race_gate_config"));
 
     public static final StreamCodec<FriendlyByteBuf, RaceGateConfigPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

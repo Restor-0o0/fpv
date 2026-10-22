@@ -1,5 +1,7 @@
 package org.restor.fpv.assembly;
 
+import java.util.function.Consumer;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
@@ -14,7 +16,6 @@ import org.restor.fpv.component.ComponentType;
 import org.restor.fpv.item.ModItems;
 import org.restor.fpv.warhead.WarheadType;
 
-import java.util.List;
 
 /**
  * A whole armed aircraft folded into a card: the bench turns an assembled drone or wing
@@ -22,8 +23,8 @@ import java.util.List;
  * they stack — which is what makes a magazine of seven-inchers possible.
  */
 public class DroneCardItem extends Item {
-    public DroneCardItem() {
-        super(new Item.Properties().stacksTo(16));
+    public DroneCardItem(Item.Properties props) {
+        super(props.stacksTo(16));
     }
 
     public static ItemStack of(DroneAssembly assembly, WarheadType warhead) {
@@ -47,12 +48,12 @@ public class DroneCardItem extends Item {
 
     public static DroneAssembly assembly(ItemStack stack) {
         CompoundTag tag = data(stack);
-        return tag == null ? null : DroneAssembly.load(tag.getCompound("Assembly"));
+        return tag == null ? null : DroneAssembly.load(tag.getCompoundOrEmpty("Assembly"));
     }
 
     public static WarheadType warhead(ItemStack stack) {
         CompoundTag tag = data(stack);
-        return tag != null && tag.contains("Warhead") ? WarheadType.byId(tag.getString("Warhead")) : null;
+        return tag != null && tag.contains("Warhead") ? WarheadType.byId(tag.getStringOr("Warhead", "")) : null;
     }
 
     /** Frame size in inches of the aircraft on the card, or 0 when the card is blank. */
@@ -82,20 +83,20 @@ public class DroneCardItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context,
-                                List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display,
+                                Consumer<Component> tooltip, TooltipFlag flag) {
         DroneAssembly a = assembly(stack);
         if (a == null) {
-            tooltip.add(Component.translatable("tooltip.fpv.drone_card.blank")
+            tooltip.accept(Component.translatable("tooltip.fpv.drone_card.blank")
                 .withStyle(ChatFormatting.DARK_GRAY));
             return;
         }
         WarheadType w = warhead(stack);
-        tooltip.add(Component.translatable("tooltip.fpv.drone_card.warhead",
+        tooltip.accept(Component.translatable("tooltip.fpv.drone_card.warhead",
             w == null ? Component.translatable("tooltip.fpv.drone_card.none")
                       : Component.translatable("item.fpv." + w.itemName())).withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.fpv.drone_card.mass",
+        tooltip.accept(Component.translatable("tooltip.fpv.drone_card.mass",
             String.format(java.util.Locale.ROOT, "%.2f", a.totalMassKg())).withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.translatable("tooltip.fpv.drone_card.hint").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("tooltip.fpv.drone_card.hint").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

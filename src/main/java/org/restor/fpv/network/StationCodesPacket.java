@@ -4,7 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
@@ -13,7 +13,7 @@ import org.restor.fpv.block.entity.ControlStationBlockEntity;
 // Adds or removes a saved link code on a control station block.
 public record StationCodesPacket(BlockPos pos, String code, boolean add) implements CustomPacketPayload {
     public static final Type<StationCodesPacket> TYPE =
-        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "station_codes"));
+        new Type<>(Identifier.fromNamespaceAndPath(Fpv.MODID, "station_codes"));
 
     public static final StreamCodec<FriendlyByteBuf, StationCodesPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

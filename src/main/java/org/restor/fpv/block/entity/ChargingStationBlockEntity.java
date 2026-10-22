@@ -1,5 +1,7 @@
 package org.restor.fpv.block.entity;
 
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
@@ -69,16 +71,16 @@ public class ChargingStationBlockEntity extends BlockEntity implements Container
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
         items.clear();
-        ContainerHelper.loadAllItems(tag, items, registries);
+        ContainerHelper.loadAllItems(input, items);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        ContainerHelper.saveAllItems(tag, items, registries);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        ContainerHelper.saveAllItems(output, items);
     }
 
     @Override public int getContainerSize() { return SLOTS; }

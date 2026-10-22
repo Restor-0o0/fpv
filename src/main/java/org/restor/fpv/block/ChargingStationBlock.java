@@ -22,7 +22,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -38,8 +38,7 @@ public class ChargingStationBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty CHARGING = BooleanProperty.create("charging");
 
     public ChargingStationBlock(Properties props) {
@@ -72,21 +71,12 @@ public class ChargingStationBlock extends BaseEntityBlock {
         return StationShapes.CRATE;
     }
 
-
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof ChargingStationBlockEntity be) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof ChargingStationBlockEntity be) {
             be.openFor((ServerPlayer) player);
         }
         return InteractionResult.SUCCESS;
-    }
-
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof ChargingStationBlockEntity be) {
-            Containers.dropContents(level, pos, be);
-        }
-        super.onRemove(state, level, pos, newState, moved);
     }
 
     @Nullable
@@ -98,7 +88,7 @@ public class ChargingStationBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (level.isClientSide) return null;
+        if (level.isClientSide()) return null;
         return createTickerHelper(type, ModBlockEntities.CHARGING_STATION.get(), ChargingStationBlockEntity::serverTick);
     }
 

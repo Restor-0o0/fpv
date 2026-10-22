@@ -192,7 +192,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         resultContainer.setItem(0, ItemStack.EMPTY);
         // A drone parked in the output was brought in by the player; a generated result is
         // rebuilt from the parts that stay in the bench, so only the former is handed back.
-        if (!left.isEmpty() && areComponentSlotsEmpty() && !player.level().isClientSide) {
+        if (!left.isEmpty() && areComponentSlotsEmpty() && !player.level().isClientSide()) {
             if (!player.getInventory().add(left)) player.drop(left, false);
         }
     }
@@ -234,8 +234,8 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
             ItemStack out = new ItemStack(DroneAssembly.isPlaneFrame(a.frame)
                 ? ModItems.MODULAR_PLANE.get() : ModItems.MODULAR_DRONE.get());
             CustomData.update(DataComponents.CUSTOM_DATA, out, t -> {
-                t.put("Assembly", src.getCompound("Assembly"));
-                if (src.contains("Warhead")) t.putString("Warhead", src.getString("Warhead"));
+                t.put("Assembly", src.getCompoundOrEmpty("Assembly"));
+                if (src.contains("Warhead")) t.putString("Warhead", src.getStringOr("Warhead", ""));
             });
             return out;
         }
@@ -245,10 +245,10 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         CustomData data = in.get(DataComponents.CUSTOM_DATA);
         if (data == null || !data.contains("Assembly")) return ItemStack.EMPTY;
         CompoundTag tag = data.copyTag();
-        DroneAssembly a = DroneAssembly.load(tag.getCompound("Assembly"));
+        DroneAssembly a = DroneAssembly.load(tag.getCompoundOrEmpty("Assembly"));
         if (!a.isComplete()) return ItemStack.EMPTY;
         return DroneCardItem.of(a, tag.contains("Warhead")
-            ? org.restor.fpv.warhead.WarheadType.byId(tag.getString("Warhead")) : null);
+            ? org.restor.fpv.warhead.WarheadType.byId(tag.getStringOr("Warhead", "")) : null);
     }
 
     private void updateCardResult() {
@@ -360,7 +360,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         ItemStack stack = resultContainer.getItem(0);
         if (!canDisassemble(stack)) return false;
         CompoundTag tag = stack.get(DataComponents.CUSTOM_DATA).copyTag();
-        DroneAssembly a = DroneAssembly.load(tag.getCompound("Assembly"));
+        DroneAssembly a = DroneAssembly.load(tag.getCompoundOrEmpty("Assembly"));
         FrameSpec spec = a.frameSpec();
         if (spec == null) return false;
         container.setItem(SLOT_FRAME, a.frame.copy());
@@ -405,7 +405,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
     @Override
     public boolean clickMenuButton(Player player, int id) {
         if (id == BUTTON_CHANNEL) {
-            if (player.level().isClientSide) return true;
+            if (player.level().isClientSide()) return true;
             ItemStack radio = container.getItem(SLOT_VTX);
             if (radio.isEmpty()) return false;
             org.restor.fpv.component.RadioChannel.set(radio,
@@ -417,7 +417,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
             return true;
         }
         if (id != BUTTON_REPAIR) return false;
-        if (player.level().isClientSide) return true;
+        if (player.level().isClientSide()) return true;
         DroneAssembly.RepairTarget target = buildAssembly().repairTarget();
         if (target == null) return false;
         Item required = repairMaterialFor(target.type());

@@ -5,7 +5,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
@@ -18,7 +18,7 @@ public final class BlockHintTooltips {
 
     @SubscribeEvent
     public static void onTooltip(ItemTooltipEvent event) {
-        ResourceLocation id = BuiltInRegistries.ITEM.getKey(event.getItemStack().getItem());
+        Identifier id = BuiltInRegistries.ITEM.getKey(event.getItemStack().getItem());
         if (!Fpv.MODID.equals(id.getNamespace())) return;
         String key = "tooltip.fpv.hint." + id.getPath();
         if (I18n.exists(key)) {

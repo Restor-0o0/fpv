@@ -51,7 +51,7 @@ public class RocketDroneEntity extends NpcDroneEntity {
                                        boolean hitByPlayer) {
         super.dropCustomDeathLoot(level, source, hitByPlayer);
         if (hitByPlayer) {
-            spawnAtLocation(new ItemStack(org.restor.fpv.item.ModItems.MINI_ROCKET.get(), random.nextInt(3) + 1));
+            spawnAtLocation(level, new ItemStack(org.restor.fpv.item.ModItems.MINI_ROCKET.get(), random.nextInt(3) + 1));
         }
     }
 

@@ -1,5 +1,6 @@
 package org.restor.fpv.client.ui.screen;
 
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -75,14 +76,14 @@ public class StationScreen extends Screen {
     }
 
     private void fly(String code) {
-        PacketDistributor.sendToServer(new StartRemoteControlPacket(code));
+        ClientPacketDistributor.sendToServer(new StartRemoteControlPacket(code));
         onClose();
     }
 
     private void addCode() {
         String code = codeBox.getValue();
         if (code.length() != 6) return;
-        PacketDistributor.sendToServer(new StationCodesPacket(pos, code, true));
+        ClientPacketDistributor.sendToServer(new StationCodesPacket(pos, code, true));
         if (minecraft.level.getBlockEntity(pos) instanceof ControlStationBlockEntity be) {
             be.addCode(code);
         }
@@ -90,7 +91,7 @@ public class StationScreen extends Screen {
     }
 
     private void removeCode(String code) {
-        PacketDistributor.sendToServer(new StationCodesPacket(pos, code, false));
+        ClientPacketDistributor.sendToServer(new StationCodesPacket(pos, code, false));
         if (minecraft.level.getBlockEntity(pos) instanceof ControlStationBlockEntity be) {
             be.removeCode(code);
         }
@@ -98,12 +99,13 @@ public class StationScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int keyCode = event.key();
         if ((keyCode == 257 || keyCode == 335) && codeBox.isFocused()) {
             addCode();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override

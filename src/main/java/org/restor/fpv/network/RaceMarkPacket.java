@@ -5,7 +5,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
@@ -39,7 +39,7 @@ public record RaceMarkPacket(BlockPos startPos, int action, BlockPos gatePos) im
     }
 
     public static final Type<RaceMarkPacket> TYPE =
-        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "race_mark"));
+        new Type<>(Identifier.fromNamespaceAndPath(Fpv.MODID, "race_mark"));
 
     public static final StreamCodec<FriendlyByteBuf, RaceMarkPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {
@@ -93,7 +93,7 @@ public record RaceMarkPacket(BlockPos startPos, int action, BlockPos gatePos) im
         MarkingSession session = MARKING_SESSIONS.remove(player.getUUID());
         if (session == null || !session.startPos.equals(startPos)) return;
         if (!gatePos.equals(startPos) && !player.level().getBlockState(gatePos).is(ModBlocks.RACE_FINISH.get())) return;
-        player.serverLevel().getChunkAt(startPos);
+        player.level().getChunkAt(startPos);
         if (player.level().getBlockEntity(startPos) instanceof RaceStartBlockEntity be) {
             be.finishMarking(player, session.route, gatePos);
         }

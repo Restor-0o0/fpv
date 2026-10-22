@@ -1,5 +1,7 @@
 package org.restor.fpv.block.entity;
 
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -30,15 +32,15 @@ public class DroneJammerBlockEntity extends OwnedAntiDroneBlockEntity {
     }
 
     @Override
-    protected void loadAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        channel = tag.contains("Channel") ? tag.getInt("Channel") : RadioChannel.SWEEP;
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        channel = input.getIntOr("Channel", RadioChannel.SWEEP);
     }
 
     @Override
-    protected void saveAdditional(net.minecraft.nbt.CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        tag.putInt("Channel", channel);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.putInt("Channel", channel);
     }
 
     public static void serverTick(Level level, BlockPos pos, BlockState state, DroneJammerBlockEntity jammer) {

@@ -1,0 +1,14 @@
+{
+  "model": {
+    "type": "minecraft:condition",
+    "property": "fpv:slim_frame",
+    "on_true": {
+      "type": "minecraft:model",
+      "model": "fpv:drone/frame_5inch_slim"
+    },
+    "on_false": {
+      "type": "minecraft:model",
+      "model": "fpv:item/frame_5inch"
+    }
+  }
+}

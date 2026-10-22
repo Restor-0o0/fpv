@@ -42,7 +42,7 @@ public class DroneDetectorBlock extends BaseEntityBlock {
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide && placer instanceof Player player
+        if (!level.isClientSide() && placer instanceof Player player
             && level.getBlockEntity(pos) instanceof DroneDetectorBlockEntity detector) {
             detector.setOwner(player);
         }
@@ -82,7 +82,7 @@ public class DroneDetectorBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return level.isClientSide ? null
+        return level.isClientSide() ? null
             : createTickerHelper(type, ModBlockEntities.DRONE_DETECTOR.get(), DroneDetectorBlockEntity::serverTick);
     }
 

@@ -32,7 +32,7 @@ public final class ServerRules {
     private ServerRules() {}
 
     public static boolean canEdit(ServerPlayer player) {
-        return player.hasPermissions(2) || player.server.isSingleplayerOwner(player.getGameProfile());
+        return player.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER) || player.level().getServer().isSingleplayerOwner(player.nameAndId());
     }
 
     public static void apply(Map<ServerRule, Double> changes) {
@@ -93,7 +93,7 @@ public final class ServerRules {
         }
 
         dispatcher.register(Commands.literal("fpv")
-            .requires(src -> src.hasPermission(2))
+            .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
             .then(rules)
             .then(explosivesCommand()));
     }
@@ -104,9 +104,8 @@ public final class ServerRules {
             MutableComponent line = Component.literal("  " + rule.id + ": ").withStyle(ChatFormatting.GRAY)
                 .append(valueText(rule.flag(), rule.format(rule.local()), rule.local()))
                 .withStyle(style -> style
-                    .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/fpv rules " + rule.id + " "))
-                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                        Component.translatable("commands.fpv.rules.hover", rule.format(rule.defaultValue()), range(rule)))));
+                    .withClickEvent(new ClickEvent.SuggestCommand("/fpv rules " + rule.id + " "))
+                    .withHoverEvent(new HoverEvent.ShowText(Component.translatable("commands.fpv.rules.hover", rule.format(rule.defaultValue()), range(rule)))));
             source.sendSuccess(() -> line, false);
         }
         return ServerRule.values().length;
@@ -172,9 +171,8 @@ public final class ServerRules {
                     .append(Component.literal(param.format(param.local()) + " ").withStyle(ChatFormatting.GRAY));
             }
             MutableComponent full = line.append(summary).withStyle(style -> style
-                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/fpv explosives " + explosive.id))
-                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                    Component.translatable("commands.fpv.explosives.hover"))));
+                .withClickEvent(new ClickEvent.RunCommand("/fpv explosives " + explosive.id))
+                .withHoverEvent(new HoverEvent.ShowText(Component.translatable("commands.fpv.explosives.hover"))));
             source.sendSuccess(() -> full, false);
         }
         return Explosive.values().length;
@@ -188,10 +186,8 @@ public final class ServerRules {
             MutableComponent line = Component.literal("  " + param.stat.id + ": ").withStyle(ChatFormatting.GRAY)
                 .append(valueText(param.flag(), param.format(param.local()), param.local()))
                 .withStyle(style -> style
-                    .withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND,
-                        "/fpv explosives " + explosive.id + " " + param.stat.id + " "))
-                    .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                        Component.literal(param.stat.comment + "\n")
+                    .withClickEvent(new ClickEvent.SuggestCommand("/fpv explosives " + explosive.id + " " + param.stat.id + " "))
+                    .withHoverEvent(new HoverEvent.ShowText(Component.literal(param.stat.comment + "\n")
                             .append(Component.translatable("commands.fpv.rules.hover",
                                 param.format(param.defaultValue()), param.range())))));
             source.sendSuccess(() -> line, false);

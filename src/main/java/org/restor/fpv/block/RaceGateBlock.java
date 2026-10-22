@@ -17,7 +17,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -38,7 +38,7 @@ public class RaceGateBlock extends BaseEntityBlock {
     }
 
     public static final float FRAME_RADIUS = 0.32f;
-    public static final DirectionProperty FACING = BlockStateProperties.FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
 
     public RaceGateBlock(Properties props) {
         super(props);
@@ -48,7 +48,7 @@ public class RaceGateBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             org.restor.fpv.client.RaceMarkingClient.onGateClicked(pos);
         }
         return InteractionResult.SUCCESS;
@@ -64,7 +64,7 @@ public class RaceGateBlock extends BaseEntityBlock {
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof RaceGateBlockEntity be) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof RaceGateBlockEntity be) {
             be.initOrientationFromFacing(state.getValue(FACING));
         }
     }

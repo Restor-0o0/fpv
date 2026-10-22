@@ -24,24 +24,24 @@ public final class PartsPiles {
 
         if (level.getBlockEntity(pos) instanceof PartsPileBlockEntity pile) {
             if (!pile.accepts(held)) return InteractionResult.PASS;
-            if (!level.isClientSide) {
+            if (!level.isClientSide()) {
                 pile.insert(creative ? held.copy() : held);
                 playSet(level, pos);
             }
-            return InteractionResult.sidedSuccess(level.isClientSide);
+            return InteractionResult.SUCCESS;
         }
 
         if (!place.canPlace()) return InteractionResult.PASS;
         BlockState state = ModBlocks.PARTS_PILE.get().getStateForPlacement(place);
         if (state == null || !state.canSurvive(level, pos)) return InteractionResult.PASS;
-        if (!level.isClientSide) {
+        if (!level.isClientSide()) {
             if (!level.setBlock(pos, state, 3)) return InteractionResult.PASS;
             if (level.getBlockEntity(pos) instanceof PartsPileBlockEntity pile) {
                 pile.insert(creative ? held.copy() : held, 1);
             }
             playSet(level, pos);
         }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return InteractionResult.SUCCESS;
     }
 
     private static void playSet(Level level, BlockPos pos) {

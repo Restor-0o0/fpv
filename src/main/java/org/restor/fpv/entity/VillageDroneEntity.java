@@ -5,9 +5,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
-import net.minecraft.world.entity.animal.IronGolem;
+import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.level.Level;
 
 /**
@@ -34,13 +34,13 @@ public class VillageDroneEntity extends PatrolDroneEntity {
         super.registerGoals();
         targetSelector.removeAllGoals(goal -> true);
         targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Monster.class, 10, true, false,
-            e -> !(e instanceof VillageDroneEntity)));
+            (e, level) -> !(e instanceof VillageDroneEntity)));
     }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
+    public boolean hurtServer(net.minecraft.server.level.ServerLevel level, DamageSource source, float amount) {
         if (source.getEntity() instanceof IronGolem || source.getEntity() instanceof Villager) return false;
-        return super.hurt(source, amount);
+        return super.hurtServer(level, source, amount);
     }
 
     @Override

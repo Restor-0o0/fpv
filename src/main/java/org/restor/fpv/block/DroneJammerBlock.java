@@ -1,5 +1,6 @@
 package org.restor.fpv.block;
 
+import net.minecraft.world.level.redstone.Orientation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -46,9 +47,9 @@ public class DroneJammerBlock extends BaseEntityBlock {
     }
 
     @Override
-    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
-                                   BlockPos neighborPos, boolean movedByPiston) {
-        if (!level.isClientSide) {
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighborBlock,
+                                   @Nullable Orientation orientation, boolean movedByPiston) {
+        if (!level.isClientSide()) {
             boolean powered = level.hasNeighborSignal(pos);
             if (powered != state.getValue(POWERED)) {
                 level.setBlock(pos, state.setValue(POWERED, powered), Block.UPDATE_CLIENTS);
@@ -58,7 +59,7 @@ public class DroneJammerBlock extends BaseEntityBlock {
 
     @Override
     protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, net.minecraft.world.phys.BlockHitResult hit) {
-        if (level.isClientSide) return net.minecraft.world.InteractionResult.SUCCESS;
+        if (level.isClientSide()) return net.minecraft.world.InteractionResult.SUCCESS;
         if (!(level.getBlockEntity(pos) instanceof DroneJammerBlockEntity jammer)) {
             return net.minecraft.world.InteractionResult.PASS;
         }
@@ -73,7 +74,7 @@ public class DroneJammerBlock extends BaseEntityBlock {
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide && placer instanceof Player player
+        if (!level.isClientSide() && placer instanceof Player player
             && level.getBlockEntity(pos) instanceof DroneJammerBlockEntity jammer) {
             jammer.setOwner(player);
         }
@@ -98,7 +99,7 @@ public class DroneJammerBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return level.isClientSide ? null
+        return level.isClientSide() ? null
             : createTickerHelper(type, ModBlockEntities.DRONE_JAMMER.get(), DroneJammerBlockEntity::serverTick);
     }
 

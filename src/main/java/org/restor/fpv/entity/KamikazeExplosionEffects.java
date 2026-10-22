@@ -178,7 +178,7 @@ public final class KamikazeExplosionEffects {
                                                               double x, double y, double z, int count,
                                                               double dx, double dy, double dz, double speed) {
         for (var player : sl.players()) {
-            sl.sendParticles(player, particle, true, x, y, z, count, dx, dy, dz, speed);
+            sl.sendParticles(player, particle, true, true, x, y, z, count, dx, dy, dz, speed);
         }
     }
 

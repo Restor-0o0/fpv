@@ -1,5 +1,7 @@
 package org.restor.fpv.entity;
 
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import com.mojang.logging.LogUtils;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
@@ -177,7 +179,7 @@ public class PlaneEntity extends Entity
         super.tick();
         if (isNoGravity()) setNoGravity(false);
 
-        if (!level().isClientSide) serverTick();
+        if (!level().isClientSide()) serverTick();
         else clientTick();
     }
 
@@ -582,13 +584,21 @@ public class PlaneEntity extends Entity
     }
 
     @Override
-    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
-        if (level().isClientSide && (predAge <= 5 || entityData.get(DATA_ORBIT))) {
-            serverSyncPos = new Vec3(x, y, z);
-            return;
-        }
-        super.lerpTo(x, y, z, yRot, xRot, steps);
+    public net.minecraft.world.entity.InterpolationHandler getInterpolation() {
+        return interpolation;
     }
+
+    private final net.minecraft.world.entity.InterpolationHandler interpolation = new net.minecraft.world.entity.InterpolationHandler(this) {
+        @Override
+        public void interpolateTo(Vec3 pos, float yRot, float xRot) {
+            if (level().isClientSide() && (predAge <= 5 || entityData.get(DATA_ORBIT))) {
+                serverSyncPos = pos;
+                return;
+            }
+            setPos(pos);
+            setRot(yRot, xRot);
+        }
+    };
 
     public void setClientPredictedInputs(float throttle, float pitch, float roll, float yaw) {
         predThrottle = throttle;
@@ -612,7 +622,7 @@ public class PlaneEntity extends Entity
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
         if (player.isSecondaryUseActive()) return InteractionResult.PASS;
-        if (!level().isClientSide && !hasPassenger(player)) {
+        if (!level().isClientSide() && !hasPassenger(player)) {
             if (player instanceof ServerPlayer sp) {
                 if (!org.restor.fpv.item.RcLink.hasTransmitter(sp)) {
                     sp.displayClientMessage(Component.translatable("msg.fpv.need_transmitter"), true);
@@ -627,7 +637,7 @@ public class PlaneEntity extends Entity
 
     /** Boards the pilot for a mounted FPV flight; fails when the goggles are missing. */
     public boolean mountPilot(ServerPlayer player) {
-        if (level().isClientSide || hasAnyPilot()) return false;
+        if (level().isClientSide() || hasAnyPilot()) return false;
         if (!org.restor.fpv.item.RcLink.hasGoggles(player)) return false;
         PilotReturn boardPos = PilotReturn.capture(player, this);
         if (!player.startRiding(this)) return false;
@@ -642,7 +652,7 @@ public class PlaneEntity extends Entity
     @Override
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
-        if (!level().isClientSide && passenger instanceof ServerPlayer sp) {
+        if (!level().isClientSide() && passenger instanceof ServerPlayer sp) {
             PilotReturn home = pilotHome(sp);
             PilotSessions.close(sp);
             sp.setInvisible(false);
@@ -666,7 +676,7 @@ public class PlaneEntity extends Entity
     private void spawnDummy(ServerPlayer player, Vec3 at) {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel sl)) return;
         discardDummy();
-        OperatorDummyEntity dummy = ModEntities.OPERATOR_DUMMY.get().create(sl);
+        OperatorDummyEntity dummy = ModEntities.OPERATOR_DUMMY.get().create(sl, net.minecraft.world.entity.EntitySpawnReason.EVENT);
         if (dummy == null) return;
         dummy.setPos(at.x, at.y, at.z);
         dummy.setYRot(player.getYRot());
@@ -866,7 +876,7 @@ public class PlaneEntity extends Entity
                         sentThisTick++;
                     } else if (targetStreamTickets.size() < MAX_STREAM_TICKETS && targetStreamTickets.add(key)) {
                         net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(cx, cz);
-                        sl.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 1, cp);
+                        sl.getChunkSource().addTicketWithRadius(net.minecraft.server.level.TicketType.FORCED, cp, 1);
                     }
                 }
             }
@@ -914,8 +924,8 @@ public class PlaneEntity extends Entity
     private static void setEntityTicking(net.minecraft.server.level.ServerLevel sl, long key, boolean add) {
         net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(
             net.minecraft.world.level.ChunkPos.getX(key), net.minecraft.world.level.ChunkPos.getZ(key));
-        if (add) sl.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 2, cp);
-        else sl.getChunkSource().removeRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 2, cp);
+        if (add) sl.getChunkSource().addTicketWithRadius(net.minecraft.server.level.TicketType.FORCED, cp, 2);
+        else sl.getChunkSource().removeTicketWithRadius(net.minecraft.server.level.TicketType.FORCED, cp, 2);
     }
 
     private static int chunkDist(long key, net.minecraft.world.level.ChunkPos center) {
@@ -926,12 +936,12 @@ public class PlaneEntity extends Entity
     private static void removeStreamTicket(net.minecraft.server.level.ServerLevel sl, long key) {
         net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(
             net.minecraft.world.level.ChunkPos.getX(key), net.minecraft.world.level.ChunkPos.getZ(key));
-        sl.getChunkSource().removeRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 1, cp);
+        sl.getChunkSource().removeTicketWithRadius(net.minecraft.server.level.TicketType.FORCED, cp, 1);
     }
 
     @Override
     public void remove(Entity.RemovalReason reason) {
-        if (!level().isClientSide) {
+        if (!level().isClientSide()) {
             if (!getPassengers().isEmpty()) ejectPassengers();
             clearForcedChunks();
             clearTargetStreaming();
@@ -975,16 +985,15 @@ public class PlaneEntity extends Entity
     public boolean isPushable() { return !isFlightReady(); }
 
     @Override
-    public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
-        if (isInvulnerableTo(source)) return false;
+    public boolean hurtServer(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source, float amount) {
+        if (isInvulnerableToBase(source)) return false;
         if (source.getEntity() instanceof Player && hasPassenger(source.getEntity())) return false;
-        if (level().isClientSide) return true;
 
         boolean explosion = source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION);
         if (!explosion && source.getEntity() instanceof Player p) {
             org.restor.fpv.util.CraftPickup.giveTo(p, getDropStack());
         } else if (!explosion) {
-            spawnAtLocation(getDropStack());
+            spawnAtLocation(level, getDropStack());
         }
         discard();
         return true;
@@ -1033,9 +1042,9 @@ public class PlaneEntity extends Entity
 
     @Override
     public void applyRadioInterference(long sourceId, float strength, int durationTicks) {
-        if (level().isClientSide || !ServerRule.RADIO.on()) return;
+        if (level().isClientSide() || !ServerRule.RADIO.on()) return;
         ServerPlayer pilot = getControllingPassenger() instanceof ServerPlayer sp ? sp : null;
-        if (pilot != null && (pilot.isCreative() || pilot.hasPermissions(2))) return;
+        if (pilot != null && (pilot.isCreative() || pilot.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER))) return;
         jamState.apply(sourceId, strength, durationTicks, level().getGameTime());
     }
 
@@ -1098,20 +1107,18 @@ public class PlaneEntity extends Entity
     }
 
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
-        entityData.set(DATA_ROLL, tag.getFloat("Roll"));
-        armed = tag.getBoolean("Armed");
+    protected void readAdditionalSaveData(ValueInput input) {
+        entityData.set(DATA_ROLL, input.getFloatOr("Roll", 0f));
+        armed = input.getBooleanOr("Armed", false);
         entityData.set(DATA_ARMED, armed);
-        // Persist the launch point so a save/reload mid-flight doesn't lose it (which used
-        // to leave the pilot dumped at the plane's position on dismount/detonation).
-        mountReturn = PilotReturn.load(tag, "Return", level());
+        mountReturn = input.read("Return", PilotReturn.CODEC).orElse(null);
     }
 
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
-        tag.putFloat("Roll", entityData.get(DATA_ROLL));
-        tag.putBoolean("Armed", armed);
-        if (mountReturn != null) mountReturn.save(tag, "Return");
+    protected void addAdditionalSaveData(ValueOutput output) {
+        output.putFloat("Roll", entityData.get(DATA_ROLL));
+        output.putBoolean("Armed", armed);
+        output.storeNullable("Return", PilotReturn.CODEC, mountReturn);
     }
 
 }

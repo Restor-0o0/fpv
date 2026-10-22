@@ -1,5 +1,7 @@
 package org.restor.fpv.entity;
 
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import org.restor.fpv.data.DroneData;
@@ -35,21 +37,21 @@ public class KamikazeDroneEntity extends RemoteDroneEntity {
             }
             return;
         }
-        if (!level().isClientSide && attackTarget != null) {
+        if (!level().isClientSide() && attackTarget != null) {
             xo = getX(); yo = getY(); zo = getZ();
             xRotO = getXRot(); yRotO = getYRot();
             guideAttackRun();
             return;
         }
         super.tick();
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
 
         if (fuze.tick(this, flightController.isArmed())) explodeNow();
     }
 
     @Override
     protected void onMovementImpact(net.minecraft.world.phys.Vec3 velocityDelta) {
-        if (!level().isClientSide) fuze.reportImpact(velocityDelta.length());
+        if (!level().isClientSide()) fuze.reportImpact(velocityDelta.length());
     }
 
     @Override
@@ -66,27 +68,27 @@ public class KamikazeDroneEntity extends RemoteDroneEntity {
     }
 
     @Override
-    public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
-        if (isInvulnerableTo(source)) return false;
+    public boolean hurtServer(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source, float amount) {
+        if (isInvulnerableToBase(source)) return false;
         // It's a flying warhead: explosions and fire set it off (chain reactions).
-        if (!level().isClientSide && (source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)
+        if ((source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)
             || source.is(net.minecraft.tags.DamageTypeTags.IS_FIRE))) {
             explodeNow();
             return true;
         }
-        return super.hurt(source, amount);
+        return super.hurtServer(level, source, amount);
     }
 
     @Override
-    protected void readAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        if (tag.contains("Warhead")) warhead = org.restor.fpv.warhead.WarheadType.byId(tag.getString("Warhead"));
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        input.getString("Warhead").ifPresent(id -> warhead = org.restor.fpv.warhead.WarheadType.byId(id));
     }
 
     @Override
-    protected void addAdditionalSaveData(net.minecraft.nbt.CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        tag.putString("Warhead", warhead.id());
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putString("Warhead", warhead.id());
     }
 
     @Override
@@ -95,11 +97,11 @@ public class KamikazeDroneEntity extends RemoteDroneEntity {
         net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
         if (player.isSecondaryUseActive() && org.restor.fpv.warhead.WarheadLoading.isWarhead(held)) {
             if (!canPlayerAccess(player)) return net.minecraft.world.InteractionResult.FAIL;
-            if (!level().isClientSide) {
+            if (!level().isClientSide()) {
                 org.restor.fpv.warhead.WarheadLoading.swap(player, held, warhead,
                     warheadCapacityKg(), this::setWarhead);
             }
-            return net.minecraft.world.InteractionResult.sidedSuccess(level().isClientSide);
+            return net.minecraft.world.InteractionResult.SUCCESS;
         }
         return super.interact(player, hand);
     }

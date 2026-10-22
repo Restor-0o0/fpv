@@ -38,12 +38,7 @@ public final class LineOfSightSession {
     public static void onMovementInput(MovementInputUpdateEvent event) {
         if (!active() || event.getEntity() != Minecraft.getInstance().player) return;
         var input = event.getInput();
-        input.forwardImpulse = 0f;
-        input.leftImpulse = 0f;
-        input.up = false;
-        input.down = false;
-        input.left = false;
-        input.right = false;
-        input.jumping = false;
+        input.keyPresses = new net.minecraft.world.entity.player.Input(false, false, false, false, false, input.keyPresses.shift(), false);
+        input.moveVector = net.minecraft.world.phys.Vec2.ZERO;
     }
 }

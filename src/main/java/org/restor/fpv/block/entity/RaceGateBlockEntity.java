@@ -1,5 +1,7 @@
 package org.restor.fpv.block.entity;
 
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -112,35 +114,35 @@ public class RaceGateBlockEntity extends BlockEntity {
 
     private void sync() {
         setChanged();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        if (tag.contains("Size"))  size = tag.getInt("Size");
-        if (tag.contains("Color")) color = tag.getInt("Color");
-        if (tag.contains("Yaw"))   yaw = tag.getInt("Yaw");
-        if (tag.contains("Pitch")) pitch = tag.getInt("Pitch");
-        if (tag.contains("Offset")) offset = tag.getInt("Offset");
-        routeIndex = tag.getInt("RouteIndex");
-        prevRoutePos = tag.contains("PrevRoutePos") ? BlockPos.of(tag.getLong("PrevRoutePos")) : null;
-        nextRoutePos = tag.contains("NextRoutePos") ? BlockPos.of(tag.getLong("NextRoutePos")) : null;
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        size = input.getIntOr("Size", size);
+        color = input.getIntOr("Color", color);
+        yaw = input.getIntOr("Yaw", yaw);
+        pitch = input.getIntOr("Pitch", pitch);
+        offset = input.getIntOr("Offset", offset);
+        routeIndex = input.getIntOr("RouteIndex", 0);
+        prevRoutePos = input.getLong("PrevRoutePos").map(BlockPos::of).orElse(null);
+        nextRoutePos = input.getLong("NextRoutePos").map(BlockPos::of).orElse(null);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        tag.putInt("Size", size);
-        tag.putInt("Color", color);
-        tag.putInt("Yaw", yaw);
-        tag.putInt("Pitch", pitch);
-        tag.putInt("Offset", offset);
-        tag.putInt("RouteIndex", routeIndex);
-        if (prevRoutePos != null) tag.putLong("PrevRoutePos", prevRoutePos.asLong());
-        if (nextRoutePos != null) tag.putLong("NextRoutePos", nextRoutePos.asLong());
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.putInt("Size", size);
+        output.putInt("Color", color);
+        output.putInt("Yaw", yaw);
+        output.putInt("Pitch", pitch);
+        output.putInt("Offset", offset);
+        output.putInt("RouteIndex", routeIndex);
+        if (prevRoutePos != null) output.putLong("PrevRoutePos", prevRoutePos.asLong());
+        if (nextRoutePos != null) output.putLong("NextRoutePos", nextRoutePos.asLong());
     }
 
     @Override

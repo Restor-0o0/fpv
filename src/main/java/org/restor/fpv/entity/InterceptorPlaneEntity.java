@@ -22,7 +22,7 @@ public class InterceptorPlaneEntity extends KamikazeWingEntity {
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide || !isAlive() || !isArmed()) return;
+        if (level().isClientSide() || !isAlive() || !isArmed()) return;
         var prey = level().getEntities(this, getBoundingBox().inflate(CATCH_RADIUS),
             e -> (e instanceof NpcDroneEntity || e instanceof DroneEntity) && e.isAlive() && !hasPassenger(e));
         if (!prey.isEmpty()) hurt(damageSources().explosion(this, this), 100f);

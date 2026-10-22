@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.level.block.Block;
@@ -47,7 +47,7 @@ public class KamikazeStationBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!level.isClientSide && player instanceof ServerPlayer sp
+        if (!level.isClientSide() && player instanceof ServerPlayer sp
             && level.getBlockEntity(pos) instanceof KamikazeStationBlockEntity be) {
             be.startSession(sp);
         }
@@ -63,7 +63,7 @@ public class KamikazeStationBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        return level.isClientSide ? null
+        return level.isClientSide() ? null
             : createTickerHelper(type, ModBlockEntities.KAMIKAZE_STATION.get(), KamikazeStationBlockEntity::serverTick);
     }
 
@@ -72,7 +72,7 @@ public class KamikazeStationBlock extends BaseEntityBlock {
         return RenderShape.MODEL;
     }
 
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {

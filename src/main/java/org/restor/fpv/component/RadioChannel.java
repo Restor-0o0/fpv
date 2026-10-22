@@ -24,7 +24,7 @@ public final class RadioChannel {
 
     public static int of(ItemStack stack) {
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        return data == null ? DEFAULT : clamp(data.copyTag().getInt(KEY));
+        return data == null ? DEFAULT : clamp(data.copyTag().getIntOr(KEY, 0));
     }
 
     public static void set(ItemStack stack, int channel) {

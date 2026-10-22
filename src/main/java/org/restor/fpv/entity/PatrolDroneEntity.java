@@ -10,7 +10,7 @@ import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.Arrow;
+import net.minecraft.world.entity.projectile.arrow.Arrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -61,8 +61,8 @@ public class PatrolDroneEntity extends NpcDroneEntity {
                                        boolean hitByPlayer) {
         super.dropCustomDeathLoot(level, source, hitByPlayer);
         if (hitByPlayer && hasModule(org.restor.fpv.component.ModuleType.STORAGE)) {
-            spawnAtLocation(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, random.nextInt(3) + 1));
-            spawnAtLocation(new ItemStack(net.minecraft.world.item.Items.GUNPOWDER, random.nextInt(2) + 1));
+            spawnAtLocation(level, new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, random.nextInt(3) + 1));
+            spawnAtLocation(level, new ItemStack(net.minecraft.world.item.Items.GUNPOWDER, random.nextInt(2) + 1));
         }
     }
 
@@ -152,7 +152,7 @@ public class PatrolDroneEntity extends NpcDroneEntity {
             Arrow dart = new Arrow(level(), PatrolDroneEntity.this,
                 new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARROW), null);
             dart.setBaseDamage(1.5);
-            dart.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
+            dart.pickup = net.minecraft.world.entity.projectile.arrow.AbstractArrow.Pickup.DISALLOWED;
             Vec3 to = new Vec3(t.getX() - getX(), t.getEyeY() - 0.4 - dart.getY(), t.getZ() - getZ());
             dart.shoot(to.x, to.y, to.z, 2.2f, 4.0f);
             level().addFreshEntity(dart);

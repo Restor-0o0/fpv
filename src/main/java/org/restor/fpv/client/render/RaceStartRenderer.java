@@ -3,7 +3,10 @@ package org.restor.fpv.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
@@ -19,16 +22,37 @@ import org.restor.fpv.client.ClientRaceState;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEntity> {
+public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEntity, RaceStartRenderer.State> {
+    public static class State extends BlockEntityRenderState {
+        RaceStartBlockEntity be;
+    }
+
     private final Font font;
 
     public RaceStartRenderer(BlockEntityRendererProvider.Context ctx) {
-        this.font = ctx.getFont();
+        this.font = ctx.font();
     }
 
     @Override
-    public void render(RaceStartBlockEntity start, float partialTick, PoseStack pose,
-                       MultiBufferSource buffer, int packedLight, int packedOverlay) {
+    public State createRenderState() {
+        return new State();
+    }
+
+    @Override
+    public void extractRenderState(RaceStartBlockEntity be, State state, float partialTick, Vec3 cameraPos,
+                                   ModelFeatureRenderer.CrumblingOverlay crumbling) {
+        BlockEntityRenderer.super.extractRenderState(be, state, partialTick, cameraPos, crumbling);
+        state.be = be;
+    }
+
+    @Override
+    public void submit(State state, PoseStack pose, SubmitNodeCollector collector, CameraRenderState camera) {
+        SubmitBuffers buffer = new SubmitBuffers(collector);
+        render(state.be, pose, buffer, camera);
+        buffer.flush();
+    }
+
+    private void render(RaceStartBlockEntity start, PoseStack pose, SubmitBuffers buffer, CameraRenderState camera) {
         if (start.getRouteSize() <= 0) return;
         int c = start.getColor();
         float a = ((c >> 24) & 0xFF) / 255f;
@@ -52,8 +76,6 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
             }
         }
 
-        // One shared builder backs every batch, and drawInBatch below switches it to the font
-        // format — so all of the quads have to be written before the first plate is drawn.
         VertexConsumer vc = buffer.getBuffer(RaceFrames.type());
         RaceFrames.hoop(vc, mat, center, n, half, org.restor.fpv.block.RaceGateBlock.FRAME_RADIUS,
             RaceFrames.shade(c, 1f), RaceFrames.WHITE, a);
@@ -69,7 +91,7 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
         }
     }
 
-    private void renderPlateText(PoseStack pose, MultiBufferSource buffer, Vector3f center, Vector3f normal,
+    private void renderPlateText(PoseStack pose, SubmitBuffers buffer, Vector3f center, Vector3f normal,
                                  float half, String text, int color) {
         Vector3f[] axes = RaceFrames.basis(normal);
         Vector3f p = new Vector3f(center)
@@ -79,9 +101,8 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
         pose.translate(p.x, p.y, p.z);
         pose.mulPose(new org.joml.Quaternionf().rotationTo(new Vector3f(0, 0, 1), new Vector3f(normal).normalize()));
         pose.scale(-0.14f, -0.14f, 0.14f);
-        Matrix4f m = pose.last().pose();
-        font.drawInBatch(text, -font.width(text) / 2f, -4f, color, false, m, buffer,
-            Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
+        buffer.collector().submitText(pose, -font.width(text) / 2f, -4f, net.minecraft.network.chat.Component.literal(text).getVisualOrderText(),
+            false, Font.DisplayMode.SEE_THROUGH, 0xF000F0, color, 0, 0);
         pose.popPose();
     }
 
@@ -164,7 +185,7 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
     }
 
     @Override
-    public boolean shouldRenderOffScreen(RaceStartBlockEntity start) {
+    public boolean shouldRenderOffScreen() {
         return true;
     }
 

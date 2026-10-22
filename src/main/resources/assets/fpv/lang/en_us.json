@@ -183,7 +183,7 @@
   "item.fpv.warhead_shaped": "Shaped Charge Warhead",
   "item.fpv.warhead_thermo": "Thermobaric Warhead",
   "itemGroup.fpv": "FPV Drones",
-  "key.categories.fpv": "FPV Drones",
+  "key.category.fpv.main": "FPV Drones",
   "key.fpv.arm_switch": "Drone Arm Switch",
   "key.fpv.camera_down": "Camera Angle Down",
   "key.fpv.camera_up": "Camera Angle Up",

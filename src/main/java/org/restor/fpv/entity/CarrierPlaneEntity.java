@@ -1,5 +1,7 @@
 package org.restor.fpv.entity;
 
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -85,7 +87,7 @@ public class CarrierPlaneEntity extends PlaneEntity implements MenuProvider {
     }
 
     private void refreshLoad() {
-        if (!level().isClientSide) entityData.set(DATA_LOAD, Math.min(loadedMass(), MAX_PAYLOAD_MASS * 1.5f));
+        if (!level().isClientSide()) entityData.set(DATA_LOAD, Math.min(loadedMass(), MAX_PAYLOAD_MASS * 1.5f));
     }
 
     @Override
@@ -105,7 +107,7 @@ public class CarrierPlaneEntity extends PlaneEntity implements MenuProvider {
     @Override
     public net.minecraft.world.InteractionResult interact(Player player, net.minecraft.world.InteractionHand hand) {
         if (player.isSecondaryUseActive()) {
-            if (!level().isClientSide && player instanceof ServerPlayer sp) openHardpoints(sp);
+            if (!level().isClientSide() && player instanceof ServerPlayer sp) openHardpoints(sp);
             return net.minecraft.world.InteractionResult.SUCCESS;
         }
         return super.interact(player, hand);
@@ -114,7 +116,7 @@ public class CarrierPlaneEntity extends PlaneEntity implements MenuProvider {
     @Override
     public void tick() {
         super.tick();
-        if (!level().isClientSide && releaseCooldown > 0) releaseCooldown--;
+        if (!level().isClientSide() && releaseCooldown > 0) releaseCooldown--;
     }
 
     public boolean canRelease() {
@@ -138,14 +140,14 @@ public class CarrierPlaneEntity extends PlaneEntity implements MenuProvider {
         String label;
 
         if (stack.getItem() instanceof WarheadItem w) {
-            KamikazeWingEntity bomb = ModEntities.PLANE_KAMIKAZE.get().create(sl);
+            KamikazeWingEntity bomb = ModEntities.PLANE_KAMIKAZE.get().create(sl, net.minecraft.world.entity.EntitySpawnReason.EVENT);
             if (bomb == null) return null;
             bomb.setWarhead(w.getType());
             bomb.beginAttackRun(target, drop);
             sl.addFreshEntity(bomb);
             label = "warhead";
         } else {
-            KamikazeDroneEntity fpv = ModEntities.KAMIKAZE.get().create(sl);
+            KamikazeDroneEntity fpv = ModEntities.KAMIKAZE.get().create(sl, net.minecraft.world.entity.EntitySpawnReason.EVENT);
             if (fpv == null) return null;
             fpv.setPos(drop.x, drop.y, drop.z);
             fpv.setWarhead(pickWarhead(stack));
@@ -170,23 +172,23 @@ public class CarrierPlaneEntity extends PlaneEntity implements MenuProvider {
 
     @Override
     public void remove(RemovalReason reason) {
-        if (!level().isClientSide && reason.shouldDestroy()) {
+        if (!level().isClientSide() && reason.shouldDestroy()) {
             Containers.dropContents(level(), blockPosition(), hardpoints);
         }
         super.remove(reason);
     }
 
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        hardpoints.fromTag(tag.getList("Hardpoints", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
+    protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        hardpoints.fromItemList(input.listOrEmpty("Hardpoints", ItemStack.OPTIONAL_CODEC));
         refreshLoad();
     }
 
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        tag.put("Hardpoints", hardpoints.createTag(registryAccess()));
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        hardpoints.storeAsItemList(output.list("Hardpoints", ItemStack.OPTIONAL_CODEC));
     }
 
     @Override

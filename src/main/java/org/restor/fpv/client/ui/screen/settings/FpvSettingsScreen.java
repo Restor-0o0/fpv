@@ -1,5 +1,6 @@
 package org.restor.fpv.client.ui.screen.settings;
 
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
@@ -73,7 +74,7 @@ public class FpvSettingsScreen extends Screen {
 
     private boolean creativeAllowed() {
         Minecraft mc = Minecraft.getInstance();
-        return mc.player != null && mc.player.isCreative() && (mc.hasSingleplayerServer() || mc.player.hasPermissions(2));
+        return mc.player != null && mc.player.isCreative() && (mc.hasSingleplayerServer() || mc.player.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER));
     }
 
     private List<Tab> visibleTabs() {
@@ -204,7 +205,7 @@ public class FpvSettingsScreen extends Screen {
 
     private static void setDroneRate(DroneEntity drone, int axis, float value) {
         drone.setRateMultiplier(axis, value);
-        PacketDistributor.sendToServer(new DroneRatesPacket(drone.getId(), axis, value));
+        ClientPacketDistributor.sendToServer(new DroneRatesPacket(drone.getId(), axis, value));
     }
 
     private void axis(String key, ModConfigSpec.IntValue axis, ModConfigSpec.BooleanValue invert) {
@@ -419,7 +420,7 @@ public class FpvSettingsScreen extends Screen {
             changes.put(params.get(i).id(), explosives[i]);
         }
         if (!changes.isEmpty() && minecraft != null && minecraft.getConnection() != null) {
-            PacketDistributor.sendToServer(new SetServerRulesPacket(changes));
+            ClientPacketDistributor.sendToServer(new SetServerRulesPacket(changes));
         }
     }
 
@@ -496,7 +497,7 @@ public class FpvSettingsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        float delta = minecraft.getTimer().getRealtimeDeltaTicks();
+        float delta = minecraft.getDeltaTracker().getRealtimeDeltaTicks();
         openAnim = Math.min(1f, openAnim + delta * 0.25f);
         scroll += (scrollTarget - scroll) * Math.min(1f, delta * 0.6f);
         if (Math.abs(scrollTarget - scroll) < 0.25) scroll = scrollTarget;
@@ -504,11 +505,11 @@ public class FpvSettingsScreen extends Screen {
         renderBackground(g, mouseX, mouseY, partialTick);
         g.fill(0, 0, width, height, (int) (openAnim * 0x60) << 24);
 
-        g.pose().pushPose();
+        g.pose().pushMatrix();
         float scale = 0.97f + 0.03f * easeOut(openAnim);
-        g.pose().translate(width / 2f, height / 2f, 0);
-        g.pose().scale(scale, scale, 1f);
-        g.pose().translate(-width / 2f, -height / 2f, 0);
+        g.pose().translate(width / 2f, height / 2f);
+        g.pose().scale(scale, scale);
+        g.pose().translate(-width / 2f, -height / 2f);
 
         g.fill(wx - 1, wy - 1, wx + ww + 1, wy + wh + 1, 0x60000000);
         SettingsUi.rect(g, wx, wy, ww, wh, SettingsUi.WINDOW);
@@ -520,13 +521,13 @@ public class FpvSettingsScreen extends Screen {
         renderHeader(g);
         renderList(g, mouseX, mouseY, delta);
 
-        g.pose().popPose();
+        g.pose().popMatrix();
         renderRowTooltip(g, mouseX, mouseY);
     }
 
     private void renderRowTooltip(GuiGraphics g, int mouseX, int mouseY) {
         if (tipRow == null || pressed != null || listening != null) return;
-        if (net.minecraft.Util.getMillis() - tipSince < TOOLTIP_DELAY_MS) return;
+        if (net.minecraft.util.Util.getMillis() - tipSince < TOOLTIP_DELAY_MS) return;
         List<net.minecraft.util.FormattedCharSequence> lines = new ArrayList<>();
         int wrap = Math.min(TOOLTIP_WIDTH, width - 24);
         if (!tipRow.label.getString().isEmpty()) lines.addAll(font.split(tipRow.label, wrap));
@@ -540,8 +541,7 @@ public class FpvSettingsScreen extends Screen {
         int bx = Math.min(mouseX + 12, width - bw - 4);
         int by = mouseY + 14;
         if (by + bh > height - 4) by = Math.max(4, mouseY - bh - 6);
-        g.pose().pushPose();
-        g.pose().translate(0, 0, 400);
+        g.nextStratum();
         g.fill(bx - 1, by - 1, bx + bw + 1, by + bh + 1, 0x60000000);
         SettingsUi.rect(g, bx, by, bw, bh, 0xF8111317);
         SettingsUi.outline(g, bx, by, bw, bh, SettingsUi.WINDOW_EDGE);
@@ -551,7 +551,6 @@ public class FpvSettingsScreen extends Screen {
             g.drawString(font, lines.get(i), bx + 6, ly, i < labelLines ? SettingsUi.TEXT : SettingsUi.MUTED, false);
             ly += 10;
         }
-        g.pose().popPose();
     }
 
     private static float easeOut(float t) {
@@ -627,7 +626,7 @@ public class FpvSettingsScreen extends Screen {
         g.disableScissor();
         if (hovered != tipRow) {
             tipRow = hovered;
-            tipSince = net.minecraft.Util.getMillis();
+            tipSince = net.minecraft.util.Util.getMillis();
         }
 
         if (scroll > 0.5) g.fillGradient(x - 2, top, x + contentW() + 2, top + 8, 0x40000000, 0x00000000);
@@ -646,8 +645,10 @@ public class FpvSettingsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        tipSince = net.minecraft.Util.getMillis() + 60_000;
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
+        double mx = event.x(), my = event.y();
+        int button = event.button();
+        tipSince = net.minecraft.util.Util.getMillis() + 60_000;
         SettingRow cancelled = null;
         if (listening != null) {
             if (listening.listenMouse(button)) return true;
@@ -702,11 +703,12 @@ public class FpvSettingsScreen extends Screen {
                 y += h;
             }
         }
-        return super.mouseClicked(mx, my, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent event, double dx, double dy) {
+        double mx = event.x(), my = event.y();
         if (draggingScrollbar) {
             int top = listTop();
             int trackH = listBottom() - top;
@@ -718,11 +720,11 @@ public class FpvSettingsScreen extends Screen {
             return true;
         }
         if (pressed != null && pressed.mouseDragged(mx, my, contentX(), contentW() - 8)) return true;
-        return super.mouseDragged(mx, my, button, dx, dy);
+        return super.mouseDragged(event, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double mx, double my, int button) {
+    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent event) {
         draggingScrollbar = false;
         if (pressed != null) {
             pressed.mouseReleased();
@@ -732,7 +734,7 @@ public class FpvSettingsScreen extends Screen {
             }
             pressed = null;
         }
-        return super.mouseReleased(mx, my, button);
+        return super.mouseReleased(event);
     }
 
     @Override
@@ -750,7 +752,8 @@ public class FpvSettingsScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int keyCode = event.key(), scanCode = event.scancode(), modifiers = event.modifiers();
         if (listening != null) {
             listening.keyPressed(keyCode, scanCode);
             return true;
@@ -766,11 +769,11 @@ public class FpvSettingsScreen extends Screen {
             scrollTarget = Math.max(0, Math.min(maxScroll(), scrollTarget + (keyCode == GLFW.GLFW_KEY_PAGE_DOWN ? page : -page)));
             return true;
         }
-        if (ModKeyBindings.OPEN_SETTINGS.matches(keyCode, scanCode)) {
+        if (ModKeyBindings.OPEN_SETTINGS.matches(event)) {
             onClose();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override

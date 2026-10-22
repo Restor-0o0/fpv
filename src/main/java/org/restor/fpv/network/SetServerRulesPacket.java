@@ -1,7 +1,7 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import org.restor.fpv.Fpv;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -17,7 +17,7 @@ import java.util.Map;
 
 public record SetServerRulesPacket(Map<String, Double> changes) implements CustomPacketPayload {
     public static final Type<SetServerRulesPacket> TYPE =
-        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "set_server_rules"));
+        new Type<>(Identifier.fromNamespaceAndPath(Fpv.MODID, "set_server_rules"));
 
     public static final StreamCodec<FriendlyByteBuf, SetServerRulesPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

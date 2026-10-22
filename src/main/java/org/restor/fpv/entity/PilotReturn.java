@@ -1,9 +1,8 @@
 package org.restor.fpv.entity;
 
-import net.minecraft.core.registries.Registries;
-import net.minecraft.nbt.CompoundTag;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.mojang.serialization.Codec;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -12,6 +11,10 @@ import net.minecraft.world.phys.Vec3;
 
 /** Where a pilot's body belongs once an FPV session ends, and the only way it is put there. */
 public record PilotReturn(ResourceKey<Level> dimension, Vec3 pos) {
+    public static final Codec<PilotReturn> CODEC = RecordCodecBuilder.create(i -> i.group(
+        Level.RESOURCE_KEY_CODEC.fieldOf("Dim").forGetter(PilotReturn::dimension),
+        Vec3.CODEC.fieldOf("Pos").forGetter(PilotReturn::pos)
+    ).apply(i, PilotReturn::new));
 
     public static PilotReturn capture(ServerPlayer player, Entity craft) {
         Vec3 pos = player.position();
@@ -27,28 +30,12 @@ public record PilotReturn(ResourceKey<Level> dimension, Vec3 pos) {
     // then ignores its movement until it acknowledges. Entity#teleportTo is server-side only, so
     // the client's next position packet dragged the pilot straight back onto the wreck.
     public void send(ServerPlayer player) {
-        ServerLevel target = player.getServer() == null ? null : player.getServer().getLevel(dimension);
-        if (target == null) target = player.serverLevel();
+        ServerLevel target = player.level().getServer().getLevel(dimension);
+        if (target == null) target = player.level();
         player.stopRiding();
         player.setCamera(player);
-        player.teleportTo(target, pos.x, pos.y, pos.z, player.getYRot(), player.getXRot());
+        player.teleportTo(target, pos.x, pos.y, pos.z, java.util.Set.of(), player.getYRot(), player.getXRot(), true);
         player.setDeltaMovement(Vec3.ZERO);
         player.resetFallDistance();
-    }
-
-    public void save(CompoundTag tag, String prefix) {
-        tag.putDouble(prefix + "X", pos.x);
-        tag.putDouble(prefix + "Y", pos.y);
-        tag.putDouble(prefix + "Z", pos.z);
-        tag.putString(prefix + "Dim", dimension.location().toString());
-    }
-
-    public static PilotReturn load(CompoundTag tag, String prefix, Level fallback) {
-        if (!tag.contains(prefix + "X")) return null;
-        ResourceKey<Level> dim = fallback.dimension();
-        ResourceLocation id = ResourceLocation.tryParse(tag.getString(prefix + "Dim"));
-        if (id != null) dim = ResourceKey.create(Registries.DIMENSION, id);
-        return new PilotReturn(dim, new Vec3(
-            tag.getDouble(prefix + "X"), tag.getDouble(prefix + "Y"), tag.getDouble(prefix + "Z")));
     }
 }

@@ -3,14 +3,17 @@ package org.restor.fpv.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.core.Direction;
-import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Blocks;
@@ -24,12 +27,15 @@ import org.restor.fpv.block.entity.PartsPileBlockEntity.Layout;
 import org.restor.fpv.component.ComponentItem;
 import org.restor.fpv.component.ComponentType;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEntity> {
+public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEntity, PartsPileRenderer.State> {
+    public static class State extends BlockEntityRenderState {
+        PartsPileBlockEntity pile;
+    }
+
     private static final float USABLE = 0.9375f;
 
     private static final float SLAT = 0.5f / 16f;
@@ -39,14 +45,28 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
     private static final float LIP = 1.0f / 16f;
     private static final BlockState SLAT_STATE = Blocks.BLACK_CONCRETE.defaultBlockState();
 
-    private static final Map<BakedModel, float[]> BOUNDS = new HashMap<>();
+    private static final Map<Item, float[]> BOUNDS = new HashMap<>();
 
     public PartsPileRenderer(BlockEntityRendererProvider.Context ctx) {
     }
 
     @Override
-    public void render(PartsPileBlockEntity pile, float partialTick, PoseStack pose, MultiBufferSource buffer,
-                       int light, int overlay) {
+    public State createRenderState() {
+        return new State();
+    }
+
+    @Override
+    public void extractRenderState(PartsPileBlockEntity pile, State state, float partialTick, Vec3 cameraPos,
+                                   ModelFeatureRenderer.CrumblingOverlay crumbling) {
+        BlockEntityRenderer.super.extractRenderState(pile, state, partialTick, cameraPos, crumbling);
+        state.pile = pile;
+    }
+
+    @Override
+    public void submit(State state, PoseStack pose, SubmitNodeCollector buffer, CameraRenderState camera) {
+        PartsPileBlockEntity pile = state.pile;
+        int light = state.lightCoords;
+        int overlay = OverlayTexture.NO_OVERLAY;
         List<ItemStack> sections = pile.sections();
         float facing = pile.getBlockState().getValue(PartsPileBlock.FACING).toYRot();
         float base = 0f;
@@ -63,7 +83,7 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
         }
     }
 
-    private static void renderLegs(PoseStack pose, MultiBufferSource buffer, int light, int overlay, float drop) {
+    private static void renderLegs(PoseStack pose, SubmitNodeCollector buffer, int light, int overlay, float drop) {
         float post = SLAT * 1.4f;
         float lo = 0.5f - USABLE / 2f - post / 2f;
         float hi = 0.5f + USABLE / 2f - post / 2f;
@@ -73,10 +93,11 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
     }
 
     private static void renderSection(PartsPileBlockEntity pile, ItemStack stored, float base, boolean coveredAbove,
-                                      float facing, PoseStack pose, MultiBufferSource buffer, int light, int overlay) {
+                                      float facing, PoseStack pose, SubmitNodeCollector buffer, int light, int overlay) {
         ItemStack one = stored.copyWithCount(1);
-        BakedModel model = Minecraft.getInstance().getItemRenderer().getModel(one, pile.getLevel(), null, 0);
-        float[] box = BOUNDS.computeIfAbsent(model, PartsPileRenderer::measure);
+        ItemStackRenderState model = new ItemStackRenderState();
+        Minecraft.getInstance().getItemModelResolver().updateForTopItem(model, one, ItemDisplayContext.NONE, pile.getLevel(), null, 0);
+        float[] box = BOUNDS.computeIfAbsent(one.getItem(), item -> measure(model));
 
         Layout layout = PartsPileBlockEntity.layoutFor(stored);
         float width = box[3] - box[0];
@@ -128,8 +149,7 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
             } else {
                 pose.translate(0.5f - centerX, 0.5f - box[1], 0.5f - centerZ);
             }
-            Minecraft.getInstance().getItemRenderer().renderStatic(one, ItemDisplayContext.NONE,
-                light, OverlayTexture.NO_OVERLAY, pose, buffer, pile.getLevel(), 0);
+            model.submit(pose, buffer, light, OverlayTexture.NO_OVERLAY, 0);
             pose.popPose();
         }
     }
@@ -143,7 +163,7 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
         return v.scale() * v.frameScale();
     }
 
-    private static void renderTray(PoseStack pose, MultiBufferSource buffer, int light, int overlay,
+    private static void renderTray(PoseStack pose, SubmitNodeCollector buffer, int light, int overlay,
                                    Layout layout, float y, boolean supportsNext) {
         float lo = 0.5f - USABLE / 2f;
         float deck = y + BEARER;
@@ -177,36 +197,20 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
         }
     }
 
-    private static void slat(PoseStack pose, MultiBufferSource buffer, int light, int overlay,
+    private static void slat(PoseStack pose, SubmitNodeCollector buffer, int light, int overlay,
                              float x, float y, float z, float sx, float sy, float sz) {
         pose.pushPose();
         pose.translate(x, y, z);
         pose.scale(sx, sy, sz);
-        Minecraft.getInstance().getBlockRenderer().renderSingleBlock(SLAT_STATE, pose, buffer, light, overlay);
+        buffer.submitBlock(pose, SLAT_STATE, light, overlay, 0);
         pose.popPose();
     }
 
-    /** Model-space AABB read straight off the baked quads, so every part centres and sits flat. */
-    private static float[] measure(BakedModel model) {
-        RandomSource random = RandomSource.create(42L);
-        List<BakedQuad> quads = new ArrayList<>(model.getQuads(null, null, random));
-        for (Direction dir : Direction.values()) quads.addAll(model.getQuads(null, dir, random));
-        if (quads.isEmpty()) return new float[]{0f, 0f, 0f, 1f, 1f, 1f};
-
-        float[] box = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE,
-            -Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE};
-        for (BakedQuad quad : quads) {
-            int[] data = quad.getVertices();
-            int stride = data.length / 4;
-            for (int vertex = 0; vertex < 4; vertex++) {
-                for (int axis = 0; axis < 3; axis++) {
-                    float value = Float.intBitsToFloat(data[vertex * stride + axis]);
-                    box[axis] = Math.min(box[axis], value);
-                    box[axis + 3] = Math.max(box[axis + 3], value);
-                }
-            }
-        }
-        return box;
+    private static float[] measure(ItemStackRenderState model) {
+        AABB b = model.getModelBoundingBox();
+        if (b.getXsize() <= 0 && b.getYsize() <= 0 && b.getZsize() <= 0) return new float[]{0f, 0f, 0f, 1f, 1f, 1f};
+        return new float[]{(float) b.minX + 0.5f, (float) b.minY + 0.5f, (float) b.minZ + 0.5f,
+            (float) b.maxX + 0.5f, (float) b.maxY + 0.5f, (float) b.maxZ + 0.5f};
     }
 
     @Override

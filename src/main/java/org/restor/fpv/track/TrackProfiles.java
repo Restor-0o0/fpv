@@ -1,11 +1,11 @@
 package org.restor.fpv.track;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import net.minecraft.resources.FileToIdConverter;
+import net.minecraft.util.ExtraCodecs;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
 import com.mojang.logging.LogUtils;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
@@ -16,25 +16,24 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class TrackProfiles extends SimpleJsonResourceReloadListener {
-    private static final Gson GSON = new GsonBuilder().create();
+public final class TrackProfiles extends SimpleJsonResourceReloadListener<JsonElement> {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static volatile List<Map.Entry<ResourceLocation, TrackProfile>> profiles = List.of();
+    private static volatile List<Map.Entry<Identifier, TrackProfile>> profiles = List.of();
 
     public TrackProfiles() {
-        super(GSON, "track_profiles");
+        super(ExtraCodecs.JSON, FileToIdConverter.json("track_profiles"));
     }
 
     public static TrackProfile select(long seed) {
-        List<Map.Entry<ResourceLocation, TrackProfile>> current = profiles;
+        List<Map.Entry<Identifier, TrackProfile>> current = profiles;
         if (current.isEmpty()) return null;
         return current.get(Math.floorMod(mix(seed), current.size())).getValue();
     }
 
     @Override
-    protected void apply(Map<ResourceLocation, JsonElement> resources, ResourceManager manager, ProfilerFiller profiler) {
-        Map<ResourceLocation, TrackProfile> loaded = new LinkedHashMap<>();
-        resources.entrySet().stream().sorted(Map.Entry.comparingByKey(Comparator.comparing(ResourceLocation::toString)))
+    protected void apply(Map<Identifier, JsonElement> resources, ResourceManager manager, ProfilerFiller profiler) {
+        Map<Identifier, TrackProfile> loaded = new LinkedHashMap<>();
+        resources.entrySet().stream().sorted(Map.Entry.comparingByKey(Comparator.comparing(Identifier::toString)))
             .forEach(entry -> {
                 try {
                     loaded.put(entry.getKey(), TrackProfile.fromJson(entry.getValue().getAsJsonObject()));

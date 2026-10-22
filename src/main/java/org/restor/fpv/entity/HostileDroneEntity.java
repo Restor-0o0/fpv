@@ -36,7 +36,7 @@ public class HostileDroneEntity extends NpcDroneEntity {
     public void tick() {
         super.tick();
         // Contact detonation while chasing.
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
         Entity t = engagementTarget();
         if (t != null && t.isAlive() && distanceToSqr(t) < RAM_TRIGGER_DIST_SQR) explode();
     }
@@ -48,7 +48,7 @@ public class HostileDroneEntity extends NpcDroneEntity {
     protected boolean attacksAircraft() { return true; }
 
     private void explode() {
-        if (exploded || level().isClientSide) return;
+        if (exploded || level().isClientSide()) return;
         exploded = true;
         float power = org.restor.fpv.rules.Explosive.HOSTILE_DRONE.param(org.restor.fpv.rules.Explosive.Stat.POWER).f();
         boolean breakBlocks = org.restor.fpv.rules.Explosive.HOSTILE_DRONE.param(org.restor.fpv.rules.Explosive.Stat.BREAK_BLOCKS).on();
@@ -60,14 +60,14 @@ public class HostileDroneEntity extends NpcDroneEntity {
 
     // Chain reaction: explosions and fire set the warhead off.
     @Override
-    public boolean hurt(DamageSource source, float amount) {
-        if (isInvulnerableTo(source)) return false;
-        if (!level().isClientSide && (source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)
+    public boolean hurtServer(net.minecraft.server.level.ServerLevel level, DamageSource source, float amount) {
+        if (isInvulnerableTo(level, source)) return false;
+        if ((source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)
             || source.is(net.minecraft.tags.DamageTypeTags.IS_FIRE))) {
             explode();
             return true;
         }
-        return super.hurt(source, amount);
+        return super.hurtServer(level, source, amount);
     }
 
     // Chase the target's eyes at ram speed; the contact check in tick() detonates.

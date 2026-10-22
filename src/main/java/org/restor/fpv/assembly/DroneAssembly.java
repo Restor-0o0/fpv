@@ -3,8 +3,7 @@ package org.restor.fpv.assembly;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -110,18 +109,18 @@ public class DroneAssembly {
         if (tag.contains("Fc")) a.fc = readStack(tag, "Fc");
         // Builds saved before avionics were required carry no channel either; give them stock parts.
         if (!tag.contains("Channel") && !a.frame.isEmpty() && !a.isBareFrame()) a.fitStockAvionics();
-        a.channel = org.restor.fpv.component.RadioChannel.clamp(tag.getInt("Channel"));
+        a.channel = org.restor.fpv.component.RadioChannel.clamp(tag.getIntOr("Channel", 0));
         for (int i = 0; i < MAX_MOTORS; i++) {
             if (tag.contains("Motor" + i)) a.motors[i] = readStack(tag, "Motor" + i);
             if (tag.contains("Prop" + i))  a.props[i]  = readStack(tag, "Prop" + i);
         }
         for (int i = 0; i < BAY_SIZE; i++) {
-            if (!tag.contains("Bay" + i, Tag.TAG_COMPOUND)) continue;
-            CompoundTag card = tag.getCompound("Bay" + i);
+            CompoundTag card = tag.getCompound("Bay" + i).orElse(null);
+            if (card == null) continue;
             ItemStack stack = new ItemStack(org.restor.fpv.item.ModItems.DRONE_CARD.get(),
-                Math.max(1, card.getByte("Count")));
-            if (card.contains("Data", Tag.TAG_COMPOUND)) {
-                CustomData.set(DataComponents.CUSTOM_DATA, stack, card.getCompound("Data"));
+                Math.max(1, card.getByteOr("Count", (byte) 0)));
+            if (card.contains("Data")) {
+                CustomData.set(DataComponents.CUSTOM_DATA, stack, card.getCompoundOrEmpty("Data"));
             }
             a.bay[i] = stack;
         }
@@ -130,9 +129,9 @@ public class DroneAssembly {
 
     private static ItemStack readStack(CompoundTag tag, String key) {
         if (!tag.contains(key)) return ItemStack.EMPTY;
-        CompoundTag component = tag.contains(key, Tag.TAG_COMPOUND) ? tag.getCompound(key) : null;
-        ResourceLocation id = ResourceLocation.tryParse(component == null ? tag.getString(key) : component.getString("Id"));
-        Item item = id != null ? BuiltInRegistries.ITEM.get(id) : Items.AIR;
+        CompoundTag component = tag.getCompound(key).orElse(null);
+        Identifier id = Identifier.tryParse(component == null ? tag.getStringOr(key, "") : component.getStringOr("Id", ""));
+        Item item = id != null ? BuiltInRegistries.ITEM.getValue(id) : Items.AIR;
         if (item == Items.AIR) return ItemStack.EMPTY;
         ItemStack stack = new ItemStack(item);
         if (component != null) ComponentCondition.set(stack, ComponentCondition.read(component));

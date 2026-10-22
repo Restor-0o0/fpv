@@ -1,5 +1,8 @@
 package org.restor.fpv.entity;
 
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.component.DataComponents;
 import com.mojang.logging.LogUtils;
 import net.minecraft.nbt.CompoundTag;
@@ -224,7 +227,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         applyEnduranceProfile();
         this.entityData.set(DATA_CAMERA_ANGLE, data.cameraAngle);
         this.blocksBuilding = true;
-        if (!level.isClientSide) {
+        if (!level.isClientSide()) {
             // New drones adopt the saved default config; NBT load overrides for existing ones.
             entityData.set(DATA_RATE_PITCH, org.restor.fpv.Config.RC_PITCH_RATE.get().floatValue());
             entityData.set(DATA_RATE_ROLL,  org.restor.fpv.Config.RC_ROLL_RATE.get().floatValue());
@@ -310,7 +313,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             refreshDimensions();
         }
 
-        if (!level().isClientSide) {
+        if (!level().isClientSide()) {
             serverTick();
         } else {
             clientTick();
@@ -463,11 +466,11 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
                 }
                 if (activePilot != null) {
                     LOGGER.info("[CHUNKSTREAM] pilot={} dim={} candidates={} sentThisTick={} totalStreamed={} pendingTickets={} chunkR={} viewDist={}",
-                        activePilot.getGameProfile().getName(),
-                        level().dimension().location(),
+                        activePilot.getGameProfile().name(),
+                        level().dimension().identifier(),
                         lastStreamCandidates, lastStreamSentThisTick, streamedChunks.size(), lastStreamPendingThisTick,
                         org.restor.fpv.Config.DEV_CHUNK_RADIUS.get(),
-                        activePilot.server.getPlayerList().getViewDistance());
+                        activePilot.level().getServer().getPlayerList().getViewDistance());
                 }
                 LOGGER.info("[FPV-THRUST] dir=({},{},{}) | vel=({},{},{}) spd={} h={}",
                     String.format("%.2f", upLog.x),
@@ -686,7 +689,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     /** While locked the server is authoritative again — used for the explosion camera. */
     public void setPoseLocked(boolean locked) {
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
         entityData.set(DATA_POSE_LOCK, locked);
         if (locked) {
             clientPoseTicks = 0;
@@ -697,13 +700,13 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     private float bodyRoll() {
-        return level().isClientSide ? displayRoll : entityData.get(DATA_ROLL);
+        return level().isClientSide() ? displayRoll : entityData.get(DATA_ROLL);
     }
 
     private void sendClientPose() {
         Vec3 pos = position();
         Vec3 vel = getDeltaMovement();
-        net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+        net.neoforged.neoforge.client.network.ClientPacketDistributor.sendToServer(
             new org.restor.fpv.network.DronePosePacket(getId(), pos.x, pos.y, pos.z,
                 getYRot(), getXRot(), displayRoll,
                 (float) vel.x, (float) vel.y, (float) vel.z,
@@ -861,7 +864,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             setDeltaMovement(vel);
         }
         moveWithBlockCollisionDamping(vel, dt);
-        if (!level().isClientSide) collideWithEntities(vel);
+        if (!level().isClientSide()) collideWithEntities(vel);
     }
 
     private void moveWithBlockCollisionDamping(Vec3 vel, float dt) {
@@ -874,7 +877,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         setDeltaMovement(damped);
         Vec3 velocityDelta = vel.subtract(damped);
         if (velocityDelta.lengthSqr() > 1.0e-8) {
-            if (level().isClientSide) clientImpact = clientImpact.add(velocityDelta);
+            if (level().isClientSide()) clientImpact = clientImpact.add(velocityDelta);
             else onMovementImpact(velocityDelta);
         }
     }
@@ -949,7 +952,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         float po = flightController.pitchOutput;
         float yo = flightController.yawOutput;
 
-        if (level().isClientSide) {
+        if (level().isClientSide()) {
             displayRoll = integrateRotation(dt, ro, po, yo, displayRoll);
         } else {
             entityData.set(DATA_ROLL, integrateRotation(dt, ro, po, yo, entityData.get(DATA_ROLL)));
@@ -1200,7 +1203,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
-        if (!level().isClientSide) {
+        if (!level().isClientSide()) {
             if (!canPlayerAccess(player)) return InteractionResult.FAIL;
             claimOwner(player);
         }
@@ -1209,25 +1212,25 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (player.isSecondaryUseActive()) {
             net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
             if (held.is(org.restor.fpv.item.ModItems.DROP_CHARGE.get())) {
-                if (!level().isClientSide) loadPayload(player, held);
-                return InteractionResult.sidedSuccess(level().isClientSide);
+                if (!level().isClientSide()) loadPayload(player, held);
+                return InteractionResult.SUCCESS;
             }
             if (held.is(org.restor.fpv.item.ModItems.MINI_ROCKET.get())) {
-                if (!level().isClientSide) loadRockets(player, held);
-                return InteractionResult.sidedSuccess(level().isClientSide);
+                if (!level().isClientSide()) loadRockets(player, held);
+                return InteractionResult.SUCCESS;
             }
             if (held.isEmpty()) {
-                if (!level().isClientSide && !unloadOrdnance(player)) cycleMode(player);
-                return InteractionResult.sidedSuccess(level().isClientSide);
+                if (!level().isClientSide() && !unloadOrdnance(player)) cycleMode(player);
+                return InteractionResult.SUCCESS;
             }
             return InteractionResult.PASS;
         }
         // While flying itself, right-click talks to the firmware (trades, cargo box) instead of riding.
         if (autoMode.isAutonomous()) {
-            if (!level().isClientSide && !autonomousInteract(player)) openStorage(player);
-            return InteractionResult.sidedSuccess(level().isClientSide);
+            if (!level().isClientSide() && !autonomousInteract(player)) openStorage(player);
+            return InteractionResult.SUCCESS;
         }
-        if (!level().isClientSide) {
+        if (!level().isClientSide()) {
             if (!hasPassenger(player)) {
                 if (player instanceof ServerPlayer sp) startPilotSession(sp);
                 return InteractionResult.SUCCESS;
@@ -1259,11 +1262,11 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     /** Starts the same mounted FPV session as right-clicking a regular racing drone. */
     public boolean beginRidingControl(ServerPlayer player) {
-        if (level().isClientSide || hasAnyPilot() || !canPlayerAccess(player)) return false;
+        if (level().isClientSide() || hasAnyPilot() || !canPlayerAccess(player)) return false;
         PilotReturn boardPos = safeReturn(player);
         // Forced mounting lets launch stations use RemoteDroneEntity subclasses while
         // their normal right-click remains reserved for link-code configuration.
-        if (!player.startRiding(this, true)) return false;
+        if (!player.startRiding(this, true, true)) return false;
         claimOwner(player);
         mountReturn = boardPos;
         PilotSessions.open(player, this, boardPos);
@@ -1276,7 +1279,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     @Override
     protected void removePassenger(Entity passenger) {
         super.removePassenger(passenger);
-        if (!level().isClientSide && passenger instanceof ServerPlayer sp) {
+        if (!level().isClientSide() && passenger instanceof ServerPlayer sp) {
             PilotReturn home = pilotHome(mountReturn, sp);
             PilotSessions.close(sp);
             sp.setInvisible(false);
@@ -1337,8 +1340,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     @Override
-    protected net.minecraft.world.phys.AABB makeBoundingBox() {
-        return super.makeBoundingBox()
+    protected net.minecraft.world.phys.AABB makeBoundingBox(Vec3 pos) {
+        return super.makeBoundingBox(pos)
             .move(0, org.restor.fpv.Config.DEV_HITBOX_Y_OFFSET.get(), 0);
     }
 
@@ -1352,11 +1355,10 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     @Override
-    public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
-        if (isInvulnerableTo(source)) return false;
+    public boolean hurtServer(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source, float amount) {
+        if (isInvulnerableToBase(source)) return false;
         if (ServerRule.NO_DAMAGE.on() && !(source.getEntity() instanceof Player)) return false;
         if (source.getEntity() instanceof Player && hasPassenger(source.getEntity())) return false;
-        if (level().isClientSide) return true;
         if (!isAuthorizedPlayerDamage(source)) return false;
         // Any real damage breaks the drone (punch, explosion, arrows, mobs) —
         // like a boat/minecart. Explosions vaporize it (no drop); a player in
@@ -1365,7 +1367,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (!explosion && source.getEntity() instanceof Player p) {
             org.restor.fpv.util.CraftPickup.giveTo(p, getDropStack());
         } else if (!explosion) {
-            spawnAtLocation(getDropStack());
+            spawnAtLocation(level, getDropStack());
         }
         discard();
         return true;
@@ -1383,7 +1385,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         CompoundTag batteryTag = new CompoundTag();
         battery.save(batteryTag);
         persistent.put("Battery", batteryTag);
-        if (companionOwnerId != null) persistent.putUUID("CompanionOwner", companionOwnerId);
+        if (companionOwnerId != null) persistent.store("CompanionOwner", UUIDUtil.CODEC, companionOwnerId);
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.merge(persistent));
         return stack;
     }
@@ -1399,62 +1401,56 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // -------------------------------------------------------------------------
 
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
-        entityData.set(DATA_ROLL, tag.getFloat("Roll"));
-        if (tag.contains("Battery")) battery.load(tag.getCompound("Battery"));
-        if (tag.contains("FlightMode")) {
+    protected void readAdditionalSaveData(ValueInput input) {
+        entityData.set(DATA_ROLL, input.getFloatOr("Roll", 0f));
+        input.read("Battery", CompoundTag.CODEC).ifPresent(battery::load);
+        input.getInt("FlightMode").ifPresent(mode -> {
             radioFailsafe.forceDisarm();
             flightController.armed = false;
             entityData.set(DATA_ARMED, false);
-            FlightMode saved = FlightMode.byOrdinal(tag.getInt("FlightMode"));
+            FlightMode saved = FlightMode.byOrdinal(mode);
             flightController.setMode(availableModes().contains(saved) ? saved : defaultFlightMode());
+        });
+        if (input.getBooleanOr("CamV2", false)) {
+            entityData.set(DATA_CAMERA_ANGLE, input.getFloatOr("CameraAngle", entityData.get(DATA_CAMERA_ANGLE)));
         }
-        // CamV2 marks saves made after racing uptilt changed 35°→20°; older saved angles
-        // are dropped once so existing drones pick up the new default from droneData.
-        if (tag.contains("CameraAngle") && tag.getBoolean("CamV2")) {
-            entityData.set(DATA_CAMERA_ANGLE, tag.getFloat("CameraAngle"));
-        }
-        if (tag.contains("RatePitch")) {
-            entityData.set(DATA_RATE_PITCH, tag.getFloat("RatePitch"));
-            entityData.set(DATA_RATE_ROLL,  tag.getFloat("RateRoll"));
-            entityData.set(DATA_RATE_YAW,   tag.getFloat("RateYaw"));
-        }
-        if (tag.contains("LinkCode")) entityData.set(DATA_LINK_CODE, tag.getString("LinkCode"));
-        if (tag.contains("PayloadAmmo")) entityData.set(DATA_PAYLOAD_AMMO,
-            Math.max(0, Math.min(MAX_PAYLOAD, tag.getInt("PayloadAmmo"))));
-        if (tag.contains("RocketAmmo")) entityData.set(DATA_ROCKET_AMMO,
-            Math.max(0, Math.min(MAX_ROCKETS, tag.getInt("RocketAmmo"))));
-        autoMode = tag.contains("AutoMode") ? DroneMode.byOrdinal(tag.getInt("AutoMode"))
-            : tag.getBoolean("Follow") ? DroneMode.FOLLOW : DroneMode.OFF;
-        if (tag.contains("Anchor")) anchor = net.minecraft.core.BlockPos.of(tag.getLong("Anchor"));
-        if (tag.hasUUID("CompanionOwner")) companionOwnerId = tag.getUUID("CompanionOwner");
-        mountReturn = PilotReturn.load(tag, "MountReturn", level());
-        stationReturn = PilotReturn.load(tag, "StationReturn", level());
+        entityData.set(DATA_RATE_PITCH, input.getFloatOr("RatePitch", entityData.get(DATA_RATE_PITCH)));
+        entityData.set(DATA_RATE_ROLL,  input.getFloatOr("RateRoll", entityData.get(DATA_RATE_ROLL)));
+        entityData.set(DATA_RATE_YAW,   input.getFloatOr("RateYaw", entityData.get(DATA_RATE_YAW)));
+        input.getString("LinkCode").ifPresent(code -> entityData.set(DATA_LINK_CODE, code));
+        input.getInt("PayloadAmmo").ifPresent(n -> entityData.set(DATA_PAYLOAD_AMMO, Math.max(0, Math.min(MAX_PAYLOAD, n))));
+        input.getInt("RocketAmmo").ifPresent(n -> entityData.set(DATA_ROCKET_AMMO, Math.max(0, Math.min(MAX_ROCKETS, n))));
+        autoMode = input.getInt("AutoMode").map(DroneMode::byOrdinal)
+            .orElse(input.getBooleanOr("Follow", false) ? DroneMode.FOLLOW : DroneMode.OFF);
+        input.getLong("Anchor").ifPresent(p -> anchor = net.minecraft.core.BlockPos.of(p));
+        input.read("CompanionOwner", UUIDUtil.CODEC).ifPresent(id -> companionOwnerId = id);
+        mountReturn = input.read("MountReturn", PilotReturn.CODEC).orElse(null);
+        stationReturn = input.read("StationReturn", PilotReturn.CODEC).orElse(null);
         entityData.set(DATA_FLIGHT_MODE, flightController.getMode().ordinal());
     }
 
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
-        tag.putFloat("Roll", entityData.get(DATA_ROLL));
+    protected void addAdditionalSaveData(ValueOutput output) {
+        output.putFloat("Roll", entityData.get(DATA_ROLL));
         CompoundTag batteryTag = new CompoundTag();
         battery.save(batteryTag);
-        tag.put("Battery", batteryTag);
-        tag.putBoolean("Armed", flightController.armed);
-        tag.putInt("FlightMode", flightController.getMode().ordinal());
-        tag.putBoolean("ModeV2", true);
-        tag.putFloat("CameraAngle", entityData.get(DATA_CAMERA_ANGLE));
-        tag.putBoolean("CamV2", true);
-        tag.putFloat("RatePitch", entityData.get(DATA_RATE_PITCH));
-        tag.putFloat("RateRoll",  entityData.get(DATA_RATE_ROLL));
-        tag.putFloat("RateYaw",   entityData.get(DATA_RATE_YAW));
-        tag.putString("LinkCode", entityData.get(DATA_LINK_CODE));
-        tag.putInt("PayloadAmmo", getPayloadAmmo());
-        tag.putInt("RocketAmmo", getRocketAmmo());
-        tag.putInt("AutoMode", autoMode.ordinal());
-        if (anchor != null) tag.putLong("Anchor", anchor.asLong());
-        if (companionOwnerId != null) tag.putUUID("CompanionOwner", companionOwnerId);
-        if (mountReturn != null) mountReturn.save(tag, "MountReturn");
-        if (stationReturn != null) stationReturn.save(tag, "StationReturn");
+        output.store("Battery", CompoundTag.CODEC, batteryTag);
+        output.putBoolean("Armed", flightController.armed);
+        output.putInt("FlightMode", flightController.getMode().ordinal());
+        output.putBoolean("ModeV2", true);
+        output.putFloat("CameraAngle", entityData.get(DATA_CAMERA_ANGLE));
+        output.putBoolean("CamV2", true);
+        output.putFloat("RatePitch", entityData.get(DATA_RATE_PITCH));
+        output.putFloat("RateRoll",  entityData.get(DATA_RATE_ROLL));
+        output.putFloat("RateYaw",   entityData.get(DATA_RATE_YAW));
+        output.putString("LinkCode", entityData.get(DATA_LINK_CODE));
+        output.putInt("PayloadAmmo", getPayloadAmmo());
+        output.putInt("RocketAmmo", getRocketAmmo());
+        output.putInt("AutoMode", autoMode.ordinal());
+        if (anchor != null) output.putLong("Anchor", anchor.asLong());
+        output.storeNullable("CompanionOwner", UUIDUtil.CODEC, companionOwnerId);
+        output.storeNullable("MountReturn", PilotReturn.CODEC, mountReturn);
+        output.storeNullable("StationReturn", PilotReturn.CODEC, stationReturn);
     }
 
     /** Boarding spot to come back to; never the drone itself, which would strand the pilot midair. */
@@ -1516,7 +1512,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     @Override
     public void applyRadioInterference(long sourceId, float strength, int durationTicks) {
-        if (!ServerRule.RADIO.on() || level().isClientSide
+        if (!ServerRule.RADIO.on() || level().isClientSide()
             || !Float.isFinite(strength) || strength <= 0.0f || durationTicks <= 0
             || isRadioInterferenceBypassed()) return;
         float boundedStrength = clamp01(strength);
@@ -1549,7 +1545,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     private static boolean isPrivilegedRadioPlayer(ServerPlayer player) {
-        return player != null && (player.isCreative() || player.hasPermissions(2));
+        return player != null && (player.isCreative() || player.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER));
     }
 
     protected float radioRangeMultiplier() {
@@ -1567,7 +1563,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
     private float getBatteryPowerFactor() {
         if (!ServerRule.BATTERY.on()) return 1.0f;
-        float charge = level().isClientSide ? entityData.get(DATA_BATTERY) : battery.getPercentRemaining();
+        float charge = level().isClientSide() ? entityData.get(DATA_BATTERY) : battery.getPercentRemaining();
         // Resting voltage falls as the pack drains, and drawing current sags it further on the
         // pack's internal resistance — so the same stick buys less thrust in a punch than in a
         // hover, and less again on a tired pack.
@@ -1621,7 +1617,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     public void claimOwner(Player player) {
-        if (!level().isClientSide && companionOwnerId == null) companionOwnerId = player.getUUID();
+        if (!level().isClientSide() && companionOwnerId == null) companionOwnerId = player.getUUID();
     }
 
     protected boolean isAuthorizedPlayerDamage(net.minecraft.world.damagesource.DamageSource source) {
@@ -1929,7 +1925,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     /** Weapon key: launches a rocket off the rails, or fires the dart gun straight ahead. */
     public void fireWeapon(ServerPlayer pilot) {
-        if (level().isClientSide || !canPlayerAccess(pilot)) return;
+        if (level().isClientSide() || !canPlayerAccess(pilot)) return;
         if (weaponCooldown > 0) return;
         if (rocketCapacity() > 0) {
             boolean infinite = ServerRule.INFINITE_AMMO.on();
@@ -1946,11 +1942,11 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (hasDartGun()) {
             if (!consumeCompanionWeaponEnergy(DART_SHOT_POWER)) return;
             weaponCooldown = WEAPON_COOLDOWN;
-            net.minecraft.world.entity.projectile.Arrow dart =
-                new net.minecraft.world.entity.projectile.Arrow(level(), getX(), getY(), getZ(),
+            net.minecraft.world.entity.projectile.arrow.Arrow dart =
+                new net.minecraft.world.entity.projectile.arrow.Arrow(level(), getX(), getY(), getZ(),
                     new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARROW), null);
             dart.setBaseDamage(2.0);
-            dart.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
+            dart.pickup = net.minecraft.world.entity.projectile.arrow.AbstractArrow.Pickup.DISALLOWED;
             launchProjectile(pilot, dart, 2.6f, 0.6f);
             playSound(org.restor.fpv.sound.ModSounds.DART.get(), 0.7f, 1.7f);
             return;
@@ -1978,7 +1974,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // Drops one charge (a primed TNT) from the belly, inheriting the drone's velocity so it
     // lands where the drone is heading. Costs mass while carried and has a short fire cooldown.
     public void firePayload(ServerPlayer pilot) {
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
         if (!canPlayerAccess(pilot)) return;
         boolean infinite = ServerRule.INFINITE_AMMO.on() && payloadCapacity() > 0;
         if (!infinite && getPayloadAmmo() <= 0) {
@@ -2024,8 +2020,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
     public float getCameraAngle()    { return entityData.get(DATA_CAMERA_ANGLE); }
     public void readFromItemTag(CompoundTag tag) {
-        if (tag.contains("Battery")) battery.load(tag.getCompound("Battery"));
-        if (tag.hasUUID("CompanionOwner")) companionOwnerId = tag.getUUID("CompanionOwner");
+        if (tag.contains("Battery")) battery.load(tag.getCompoundOrEmpty("Battery"));
+        tag.read("CompanionOwner", UUIDUtil.CODEC).ifPresent(id -> companionOwnerId = id);
     }
 
     public void adjustCameraAngle(float delta) {
@@ -2074,7 +2070,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         angVelRoll = 0;
         angVelPitch = 0;
         angVelYaw = 0;
-        if (!level().isClientSide) entityData.set(DATA_FLIGHT_MODE, mode.ordinal());
+        if (!level().isClientSide()) entityData.set(DATA_FLIGHT_MODE, mode.ordinal());
     }
 
     /** Radio mode switch: steps through the airframe's modes, or in/out of turtle after a crash. */
@@ -2206,7 +2202,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         lastControlSeq = seq;
         if (!Float.isFinite(throttle) || !Float.isFinite(pitch)
             || !Float.isFinite(roll) || !Float.isFinite(yaw)) return;
-        if (!level().isClientSide && isRadioReceptionBlocked()) return;
+        if (!level().isClientSide() && isRadioReceptionBlocked()) return;
         useController   = true;
         ctrlThrottle    = clamp(throttle, 0, 1);
         ctrlPitch       = clamp(pitch, -1, 1);
@@ -2263,7 +2259,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     public void beginRemoteControl(ServerPlayer player) { beginRemoteControl(player, true); }
 
     public void beginRemoteControl(ServerPlayer player, boolean fpv) {
-        if (level().isClientSide || !canPlayerAccess(player)) return;
+        if (level().isClientSide() || !canPlayerAccess(player)) return;
         clearControllerInput();
         claimOwner(player);
         remotePilotId = player.getUUID();
@@ -2349,7 +2345,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private void spawnDummy(ServerPlayer player, Vec3 at) {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel sl)) return;
         discardDummy();
-        OperatorDummyEntity dummy = ModEntities.OPERATOR_DUMMY.get().create(sl);
+        OperatorDummyEntity dummy = ModEntities.OPERATOR_DUMMY.get().create(sl, net.minecraft.world.entity.EntitySpawnReason.EVENT);
         if (dummy == null) return;
         dummy.setPos(at.x, at.y, at.z);
         dummy.setYRot(player.getYRot());
@@ -2435,7 +2431,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
                         if (streamTickets.remove(key)) removeStreamTicket(sl, key);
                     } else if (streamTickets.size() < MAX_STREAM_TICKETS && streamTickets.add(key)) {
                         net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(cx, cz);
-                        sl.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 1, cp);
+                        sl.getChunkSource().addTicketWithRadius(net.minecraft.server.level.TicketType.FORCED, cp, 1);
                     }
                 }
             }
@@ -2465,7 +2461,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private static void removeStreamTicket(net.minecraft.server.level.ServerLevel sl, long key) {
         net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(
             net.minecraft.world.level.ChunkPos.getX(key), net.minecraft.world.level.ChunkPos.getZ(key));
-        sl.getChunkSource().removeRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 1, cp);
+        sl.getChunkSource().removeTicketWithRadius(net.minecraft.server.level.TicketType.FORCED, cp, 1);
     }
 
     private void clearChunkStreaming() {
@@ -2513,8 +2509,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private static void setEntityTicking(net.minecraft.server.level.ServerLevel sl, long key, boolean add) {
         net.minecraft.world.level.ChunkPos cp = new net.minecraft.world.level.ChunkPos(
             net.minecraft.world.level.ChunkPos.getX(key), net.minecraft.world.level.ChunkPos.getZ(key));
-        if (add) sl.getChunkSource().addRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 2, cp);
-        else sl.getChunkSource().removeRegionTicket(net.minecraft.server.level.TicketType.FORCED, cp, 2, cp);
+        if (add) sl.getChunkSource().addTicketWithRadius(net.minecraft.server.level.TicketType.FORCED, cp, 2);
+        else sl.getChunkSource().removeTicketWithRadius(net.minecraft.server.level.TicketType.FORCED, cp, 2);
     }
 
     private void clearForcedChunks() {
@@ -2528,7 +2524,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     @Override
     public void remove(RemovalReason reason) {
-        if (!level().isClientSide) {
+        if (!level().isClientSide()) {
             if (!getPassengers().isEmpty()) ejectPassengers();
             endRemoteControl();
             clearForcedChunks();
@@ -2544,26 +2540,34 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // Server motion packets echo our own velocity back a full slow tick later; applying
     // them over the local simulation was the visible stutter.
     @Override
-    public void lerpMotion(double x, double y, double z) {
-        if (level().isClientSide && predAge <= 5 && clientPhysics()) return;
-        super.lerpMotion(x, y, z);
+    public void lerpMotion(Vec3 motion) {
+        if (level().isClientSide() && predAge <= 5 && clientPhysics()) return;
+        super.lerpMotion(motion);
     }
 
     // Vanilla's ServerboundMoveVehiclePacket round trip answers with an absMoveTo snap
     // whenever the server disagrees. We send our own pose packet instead.
     @Override
-    public boolean isControlledByLocalInstance() {
-        return !clientPhysics() && super.isControlledByLocalInstance();
+    protected boolean isLocalClientAuthoritative() {
+        return !clientPhysics() && super.isLocalClientAuthoritative();
     }
 
     @Override
-    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
-        if (level().isClientSide && (predAge <= 5 || entityData.get(DATA_POSE_LOCK))) {
-            serverSyncPos = new Vec3(x, y, z);
-            return;
-        }
-        super.lerpTo(x, y, z, yRot, xRot, steps);
+    public net.minecraft.world.entity.InterpolationHandler getInterpolation() {
+        return interpolation;
     }
+
+    private final net.minecraft.world.entity.InterpolationHandler interpolation = new net.minecraft.world.entity.InterpolationHandler(this) {
+        @Override
+        public void interpolateTo(Vec3 pos, float yRot, float xRot) {
+            if (level().isClientSide() && (predAge <= 5 || entityData.get(DATA_POSE_LOCK))) {
+                serverSyncPos = pos;
+                return;
+            }
+            setPos(pos);
+            setRot(yRot, xRot);
+        }
+    };
 
     // Called client-side by ClientEventHandler with the same values it sends to the
     // server, enabling zero-latency rotation prediction in clientTick().

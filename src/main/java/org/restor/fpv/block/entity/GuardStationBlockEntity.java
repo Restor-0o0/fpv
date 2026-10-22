@@ -1,5 +1,8 @@
 package org.restor.fpv.block.entity;
 
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -124,34 +127,30 @@ public class GuardStationBlockEntity extends BlockEntity implements Container, M
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
         items.clear();
-        ContainerHelper.loadAllItems(tag, items, registries);
-        ownerId = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
-        ListTag flying = tag.getList("Flying", Tag.TAG_COMPOUND);
+        ContainerHelper.loadAllItems(input, items);
+        ownerId = input.read("Owner", UUIDUtil.CODEC).orElse(null);
         for (int i = 0; i < SLOTS; i++) launched[i] = null;
-        for (int i = 0; i < flying.size(); i++) {
-            CompoundTag entry = flying.getCompound(i);
-            int slot = entry.getInt("Slot");
-            if (slot >= 0 && slot < SLOTS && entry.hasUUID("Id")) launched[slot] = entry.getUUID("Id");
+        for (ValueInput entry : input.childrenListOrEmpty("Flying")) {
+            int slot = entry.getIntOr("Slot", 0);
+            if (slot >= 0 && slot < SLOTS) launched[slot] = entry.read("Id", UUIDUtil.CODEC).orElse(null);
         }
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        ContainerHelper.saveAllItems(tag, items, registries);
-        if (ownerId != null) tag.putUUID("Owner", ownerId);
-        ListTag flying = new ListTag();
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        ContainerHelper.saveAllItems(output, items);
+        output.storeNullable("Owner", UUIDUtil.CODEC, ownerId);
+        var flying = output.childrenList("Flying");
         for (int i = 0; i < SLOTS; i++) {
             if (launched[i] == null) continue;
-            CompoundTag entry = new CompoundTag();
+            ValueOutput entry = flying.addChild();
             entry.putInt("Slot", i);
-            entry.putUUID("Id", launched[i]);
-            flying.add(entry);
+            entry.store("Id", UUIDUtil.CODEC, launched[i]);
         }
-        tag.put("Flying", flying);
     }
 
     @Override public int getContainerSize() { return SLOTS; }

@@ -61,7 +61,7 @@ public class InterceptorDroneEntity extends NpcDroneEntity {
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
 
         // Validate / refresh prey.
         if (prey != null && (!prey.isAlive() || !prey.hasAnyPilot())) {
@@ -112,9 +112,9 @@ public class InterceptorDroneEntity extends NpcDroneEntity {
     }
 
     @Override
-    public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
+    public boolean hurtServer(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source, float amount) {
         // Getting hit drops the lock — it re-acquires on the next scan if the drone is still close.
-        boolean result = super.hurt(source, amount);
+        boolean result = super.hurtServer(level, source, amount);
         if (result) {
             prey = null;
             beeped = false;
@@ -128,7 +128,7 @@ public class InterceptorDroneEntity extends NpcDroneEntity {
     }
 
     private void setHunting(boolean hunting) {
-        if (!level().isClientSide && entityData.get(DATA_HUNTING) != hunting) {
+        if (!level().isClientSide() && entityData.get(DATA_HUNTING) != hunting) {
             entityData.set(DATA_HUNTING, hunting);
         }
     }

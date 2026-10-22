@@ -1,5 +1,6 @@
 package org.restor.fpv.item;
 
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -55,18 +56,18 @@ public final class RcLink {
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data == null) return null;
         CompoundTag tag = data.copyTag();
-        return tag.hasUUID("BoundEntity") ? tag.getUUID("BoundEntity") : null;
+        return tag.read("BoundEntity", UUIDUtil.CODEC).orElse(null);
     }
 
     public static String boundName(ItemStack stack) {
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data == null) return "";
-        return data.copyTag().getString("BoundName");
+        return data.copyTag().getStringOr("BoundName", "");
     }
 
     public static void bind(ItemStack stack, Entity target) {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
-            tag.putUUID("BoundEntity", target.getUUID());
+            tag.store("BoundEntity", UUIDUtil.CODEC, target.getUUID());
             tag.putString("BoundName", target.getType().getDescriptionId());
         });
     }
@@ -128,8 +129,8 @@ public final class RcLink {
         player.level().playSound(null, player.blockPosition(),
             wasBound ? org.restor.fpv.sound.ModSounds.TX_UNBIND.get() : org.restor.fpv.sound.ModSounds.TX_BIND.get(),
             SoundSource.PLAYERS, 0.6f, wasBound ? 0.8f : 1.5f);
-        if (player.serverLevel() != null) {
-            player.serverLevel().sendParticles(
+        if (player.level() != null) {
+            player.level().sendParticles(
                 wasBound ? ParticleTypes.SMOKE : ParticleTypes.END_ROD,
                 target.getX(), target.getY() + target.getBbHeight() * 0.5, target.getZ(),
                 wasBound ? 6 : 12, 0.25, 0.25, 0.25, 0.02);

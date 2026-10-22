@@ -3,11 +3,10 @@ package org.restor.fpv.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.restor.fpv.Fpv;
@@ -15,8 +14,12 @@ import org.restor.fpv.entity.PlaneEntity;
 import org.restor.fpv.item.ModItems;
 import org.joml.Quaternionf;
 
-public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "textures/entity/plane.png");
+public class PlaneRenderer extends EntityRenderer<PlaneEntity, PlaneRenderer.State> {
+    public static class State extends net.minecraft.client.renderer.entity.state.EntityRenderState {
+        PlaneEntity entity;
+    }
+
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(Fpv.MODID, "textures/entity/plane.png");
     private static final double FAR_RENDER_DISTANCE_SQR = 2048.0 * 2048.0;
     private static final float MODEL_SCALE = 1.95f;
 
@@ -39,15 +42,33 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
     }
 
     @Override
-    public void render(PlaneEntity entity, float yaw, float partialTick, PoseStack poseStack,
-                       MultiBufferSource buffer, int packedLight) {
+    public State createRenderState() {
+        return new State();
+    }
+
+    @Override
+    public void extractRenderState(PlaneEntity entity, State state, float partialTick) {
+        super.extractRenderState(entity, state, partialTick);
+        state.entity = entity;
+    }
+
+    @Override
+    public void submit(State state, PoseStack poseStack, net.minecraft.client.renderer.SubmitNodeCollector collector,
+                       net.minecraft.client.renderer.state.CameraRenderState camera) {
+        SubmitBuffers buffer = new SubmitBuffers(collector);
+        render(state.entity, state.partialTick, poseStack, buffer, state.lightCoords);
+        buffer.flush();
+        super.submit(state, poseStack, collector, camera);
+    }
+
+    private void render(PlaneEntity entity, float partialTick, PoseStack poseStack,
+                        SubmitBuffers buffer, int packedLight) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.getCameraEntity() != null
             && (mc.getCameraEntity() == entity || mc.getCameraEntity().getVehicle() == entity)
             && mc.options.getCameraType() == CameraType.FIRST_PERSON) {
             return;
         }
-        super.render(entity, yaw, partialTick, poseStack, buffer, packedLight);
 
         poseStack.pushPose();
         poseStack.translate(0, entity.getBbHeight() / 2, 0);
@@ -68,8 +89,7 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
 
         float scale = MODEL_SCALE * entity.getModelScale();
         poseStack.scale(scale, scale, scale);
-        mc.getItemRenderer().renderStatic(modelStack(entity), ItemDisplayContext.NONE,
-            packedLight, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        buffer.item(modelStack(entity), poseStack, packedLight);
         renderExtras(entity, partialTick, poseStack, buffer, packedLight);
 
         poseStack.popPose();
@@ -77,7 +97,7 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
 
     /** Called inside the oriented, model-scaled pose so subclasses can bolt parts on. */
     protected void renderExtras(PlaneEntity entity, float partialTick, PoseStack poseStack,
-                                MultiBufferSource buffer, int packedLight) {
+                                SubmitBuffers buffer, int packedLight) {
     }
 
     protected ItemStack cachedStack(net.minecraft.world.item.Item item) {
@@ -97,8 +117,4 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
             .rotateZ((float) Math.toRadians(-roll));
     }
 
-    @Override
-    public ResourceLocation getTextureLocation(PlaneEntity entity) {
-        return TEXTURE;
-    }
 }

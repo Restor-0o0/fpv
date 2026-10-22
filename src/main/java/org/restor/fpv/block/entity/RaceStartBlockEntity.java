@@ -1,5 +1,9 @@
 package org.restor.fpv.block.entity;
 
+import com.mojang.serialization.Codec;
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -614,7 +618,7 @@ public class RaceStartBlockEntity extends BlockEntity {
     }
 
     private String courseKey(ServerLevel level) {
-        StringBuilder sb = new StringBuilder(level.dimension().location().toString());
+        StringBuilder sb = new StringBuilder(level.dimension().identifier().toString());
         appendGeometry(sb, worldPosition, size, yaw, pitch, offset);
         sb.append("|laps=").append(totalLaps());
         for (BlockPos p : route) {
@@ -751,62 +755,56 @@ public class RaceStartBlockEntity extends BlockEntity {
 
     private void sync() {
         setChanged();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        laps = Math.max(1, tag.getInt("Laps"));
-        if (tag.contains("Color")) color = tag.getInt("Color");
-        if (tag.contains("Size")) size = Math.max(2, Math.min(15, tag.getInt("Size")));
-        if (tag.contains("Yaw")) yaw = tag.getInt("Yaw");
-        if (tag.contains("Pitch")) pitch = tag.getInt("Pitch");
-        if (tag.contains("Offset")) offset = tag.getInt("Offset");
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        laps = Math.max(1, input.getIntOr("Laps", 0));
+        color = input.getIntOr("Color", color);
+        size = Math.max(2, Math.min(15, input.getIntOr("Size", size)));
+        yaw = input.getIntOr("Yaw", yaw);
+        pitch = input.getIntOr("Pitch", pitch);
+        offset = input.getIntOr("Offset", offset);
         results.clear();
-        ListTag list = tag.getList("Results", Tag.TAG_COMPOUND);
-        for (int i = 0; i < list.size(); i++) {
-            CompoundTag c = list.getCompound(i);
-            UUID playerId = c.hasUUID("PlayerId") ? c.getUUID("PlayerId") : null;
-            String key = c.contains("CourseKey") ? c.getString("CourseKey") : null;
-            results.add(new Result(c.getString("Player"), playerId, c.getInt("Time"), c.getInt("Laps"), key));
+        for (ValueInput c : input.childrenListOrEmpty("Results")) {
+            UUID playerId = c.read("PlayerId", UUIDUtil.CODEC).orElse(null);
+            String key = c.getString("CourseKey").orElse(null);
+            results.add(new Result(c.getStringOr("Player", ""), playerId, c.getIntOr("Time", 0), c.getIntOr("Laps", 0), key));
         }
         route.clear();
-        ListTag r = tag.getList("Route", Tag.TAG_LONG);
-        for (int i = 0; i < r.size(); i++) route.add(BlockPos.of(((LongTag) r.get(i)).getAsLong()));
-        finishPos = tag.contains("FinishPos") ? BlockPos.of(tag.getLong("FinishPos")) : null;
-        activeCourseKey = tag.contains("CourseKey") ? tag.getString("CourseKey") : null;
-        courseDirty = tag.getBoolean("CourseDirty");
+        input.listOrEmpty("Route", Codec.LONG).forEach(p -> route.add(BlockPos.of(p)));
+        finishPos = input.getLong("FinishPos").map(BlockPos::of).orElse(null);
+        activeCourseKey = input.getString("CourseKey").orElse(null);
+        courseDirty = input.getBooleanOr("CourseDirty", false);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        tag.putInt("Laps", laps);
-        tag.putInt("Color", color);
-        tag.putInt("Size", size);
-        tag.putInt("Yaw", yaw);
-        tag.putInt("Pitch", pitch);
-        tag.putInt("Offset", offset);
-        ListTag list = new ListTag();
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.putInt("Laps", laps);
+        output.putInt("Color", color);
+        output.putInt("Size", size);
+        output.putInt("Yaw", yaw);
+        output.putInt("Pitch", pitch);
+        output.putInt("Offset", offset);
+        var list = output.childrenList("Results");
         for (Result r : results) {
-            CompoundTag c = new CompoundTag();
+            ValueOutput c = list.addChild();
             c.putString("Player", r.player());
-            if (r.playerId() != null) c.putUUID("PlayerId", r.playerId());
+            c.storeNullable("PlayerId", UUIDUtil.CODEC, r.playerId());
             c.putInt("Time", r.timeTicks());
             c.putInt("Laps", r.laps());
             if (r.courseKey() != null) c.putString("CourseKey", r.courseKey());
-            list.add(c);
         }
-        tag.put("Results", list);
-        ListTag r = new ListTag();
-        for (BlockPos p : route) r.add(LongTag.valueOf(p.asLong()));
-        tag.put("Route", r);
-        if (finishPos != null) tag.putLong("FinishPos", finishPos.asLong());
-        if (activeCourseKey != null) tag.putString("CourseKey", activeCourseKey);
-        tag.putBoolean("CourseDirty", courseDirty);
+        var routeList = output.list("Route", Codec.LONG);
+        for (BlockPos p : route) routeList.add(p.asLong());
+        if (finishPos != null) output.putLong("FinishPos", finishPos.asLong());
+        if (activeCourseKey != null) output.putString("CourseKey", activeCourseKey);
+        output.putBoolean("CourseDirty", courseDirty);
     }
 
     @Override

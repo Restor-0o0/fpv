@@ -1,7 +1,7 @@
 package org.restor.fpv.client.render;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -19,7 +19,7 @@ public final class RaceFrames {
     private RaceFrames() {}
 
     public static RenderType type() {
-        return RenderType.debugQuads();
+        return net.minecraft.client.renderer.rendertype.RenderTypes.debugQuads();
     }
 
     public static Vector3f[] basis(Vector3f normal) {

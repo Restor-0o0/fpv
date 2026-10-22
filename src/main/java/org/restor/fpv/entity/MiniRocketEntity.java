@@ -12,7 +12,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 import org.restor.fpv.rules.Explosive;
 
-public class MiniRocketEntity extends net.minecraft.world.entity.projectile.ThrowableItemProjectile {
+public class MiniRocketEntity extends net.minecraft.world.entity.projectile.throwableitemprojectile.ThrowableItemProjectile {
 
     private static final int MAX_LIFE = 120;
 
@@ -55,7 +55,7 @@ public class MiniRocketEntity extends net.minecraft.world.entity.projectile.Thro
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide) {
+        if (level().isClientSide()) {
             Vec3 back = getDeltaMovement().scale(-0.35);
             level().addParticle(ParticleTypes.SMOKE, getX() + back.x, getY() + back.y, getZ() + back.z, 0, 0, 0);
             level().addParticle(ParticleTypes.FLAME, getX(), getY(), getZ(), 0, 0, 0);
@@ -67,7 +67,7 @@ public class MiniRocketEntity extends net.minecraft.world.entity.projectile.Thro
     @Override
     protected void onHitEntity(EntityHitResult result) {
         super.onHitEntity(result);
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
         Entity owner = getOwner();
         float damage = impactDamage();
         if (damage > 0.0f) {
@@ -81,7 +81,7 @@ public class MiniRocketEntity extends net.minecraft.world.entity.projectile.Thro
     @Override
     protected void onHitBlock(BlockHitResult result) {
         super.onHitBlock(result);
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
         detonate(result.getLocation(), result.getBlockPos());
     }
 

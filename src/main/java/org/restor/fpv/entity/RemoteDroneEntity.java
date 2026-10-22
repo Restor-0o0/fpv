@@ -19,7 +19,7 @@ public abstract class RemoteDroneEntity extends DroneEntity {
 
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
-        if (level().isClientSide && hand == InteractionHand.MAIN_HAND) {
+        if (level().isClientSide() && hand == InteractionHand.MAIN_HAND) {
             org.restor.fpv.client.ui.screen.ClientScreens.openSetCode(getId(), getLinkCode());
         }
         return InteractionResult.SUCCESS;

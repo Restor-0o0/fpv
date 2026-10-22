@@ -24,13 +24,13 @@ public final class BatteryCharge {
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         CompoundTag tag = data == null ? null : data.copyTag();
         if (stack.getItem() instanceof BatteryItem) {
-            return tag != null && tag.contains("Charge") ? clamp(tag.getFloat("Charge")) : 1f;
+            return tag != null && tag.contains("Charge") ? clamp(tag.getFloatOr("Charge", 0f)) : 1f;
         }
         if (tag == null || !tag.contains("Battery")) return 1f;
-        CompoundTag battery = tag.getCompound("Battery");
-        float capacity = battery.getFloat("capacity");
+        CompoundTag battery = tag.getCompoundOrEmpty("Battery");
+        float capacity = battery.getFloatOr("capacity", 0f);
         if (capacity <= 0) return 1f;
-        return clamp(battery.getFloat("currentCapacity") / capacity);
+        return clamp(battery.getFloatOr("currentCapacity", 0f) / capacity);
     }
 
     /** Adds charge; returns true when something actually changed. */
@@ -53,8 +53,8 @@ public final class BatteryCharge {
             return;
         }
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
-            CompoundTag pack = tag.getCompound("Battery");
-            float capacity = pack.getFloat("capacity");
+            CompoundTag pack = tag.getCompoundOrEmpty("Battery");
+            float capacity = pack.getFloatOr("capacity", 0f);
             if (capacity <= 0) {
                 capacity = 1300f;
                 pack.putFloat("capacity", capacity);

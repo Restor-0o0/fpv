@@ -1,7 +1,7 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.restor.fpv.Fpv;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -9,7 +9,7 @@ import net.minecraft.network.codec.StreamCodec;
 
 public record ServerRulesPacket(double[] values, double[] explosives) implements CustomPacketPayload {
     public static final Type<ServerRulesPacket> TYPE =
-        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "server_rules"));
+        new Type<>(Identifier.fromNamespaceAndPath(Fpv.MODID, "server_rules"));
 
     public static final StreamCodec<FriendlyByteBuf, ServerRulesPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

@@ -3,7 +3,7 @@ package org.restor.fpv.network;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -13,7 +13,7 @@ import org.restor.fpv.entity.DroneEntity;
 // Sets one per-drone rate multiplier (axis: 0 = pitch, 1 = roll, 2 = yaw).
 public record DroneRatesPacket(int droneId, int axis, float value) implements CustomPacketPayload {
     public static final Type<DroneRatesPacket> TYPE =
-        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "drone_rates"));
+        new Type<>(Identifier.fromNamespaceAndPath(Fpv.MODID, "drone_rates"));
 
     public static final StreamCodec<FriendlyByteBuf, DroneRatesPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

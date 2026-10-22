@@ -15,15 +15,15 @@ import java.util.function.Supplier;
 public class PlaneItem extends Item {
     private final Supplier<? extends EntityType<? extends PlaneEntity>> type;
 
-    public PlaneItem(Supplier<? extends EntityType<? extends PlaneEntity>> type) {
-        super(new Item.Properties().stacksTo(16));
+    public PlaneItem(Item.Properties props, Supplier<? extends EntityType<? extends PlaneEntity>> type) {
+        super(props.stacksTo(16));
         this.type = type;
     }
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
-        if (level.isClientSide) return InteractionResult.SUCCESS;
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
 
         var player = context.getPlayer();
         var pos = context.getClickedPos();
@@ -34,7 +34,7 @@ public class PlaneItem extends Item {
             spawnPos = spawnPos.add(0, 0.5, 0);
         }
 
-        PlaneEntity plane = type.get().create((ServerLevel) level);
+        PlaneEntity plane = type.get().create(level, net.minecraft.world.entity.EntitySpawnReason.SPAWN_ITEM_USE);
         if (plane != null) {
             plane.setPos(spawnPos);
             plane.setYRot(player != null ? player.getYRot() : 0);

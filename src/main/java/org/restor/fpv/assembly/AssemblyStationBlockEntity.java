@@ -1,5 +1,8 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.world.Containers;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -28,6 +31,11 @@ public class AssemblyStationBlockEntity extends BlockEntity implements MenuProvi
     }
 
     @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        if (level != null) Containers.dropContents(level, pos, items);
+    }
+
+    @Override
     public Component getDisplayName() {
         return Component.translatable("container.fpv.assembly_station");
     }
@@ -39,21 +47,19 @@ public class AssemblyStationBlockEntity extends BlockEntity implements MenuProvi
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        var list = tag.getList("Items", 10);
-        for (int i = 0; i < list.size() && i < items.getContainerSize(); i++) {
-            items.setItem(i, ItemStack.parseOptional(registries, list.getCompound(i)));
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        int i = 0;
+        for (ItemStack stack : input.listOrEmpty("Items", ItemStack.OPTIONAL_CODEC)) {
+            if (i >= items.getContainerSize()) break;
+            items.setItem(i++, stack);
         }
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        var list = new net.minecraft.nbt.ListTag();
-        for (int i = 0; i < items.getContainerSize(); i++) {
-            list.add(items.getItem(i).saveOptional(registries));
-        }
-        tag.put("Items", list);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        var list = output.list("Items", ItemStack.OPTIONAL_CODEC);
+        for (int i = 0; i < items.getContainerSize(); i++) list.add(items.getItem(i));
     }
 }

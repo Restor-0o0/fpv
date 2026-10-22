@@ -2,7 +2,6 @@ package org.restor.fpv.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -26,7 +25,7 @@ public class ModularPlaneRenderer extends PlaneRenderer {
 
     @Override
     protected void renderExtras(PlaneEntity entity, float partialTick, PoseStack poseStack,
-                                MultiBufferSource buffer, int packedLight) {
+                                SubmitBuffers buffer, int packedLight) {
         if (!(entity instanceof ModularPlaneEntity plane)) return;
         DroneAssembly a = plane.getAssembly();
         FrameSpec spec = a.frameSpec();
@@ -49,7 +48,7 @@ public class ModularPlaneRenderer extends PlaneRenderer {
         }
     }
 
-    private void renderPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+    private void renderPart(ItemStack stack, PoseStack poseStack, SubmitBuffers buffer,
                             int light, MountPoint at, float spinDeg, float scale, boolean flip) {
         if (stack.isEmpty()) return;
         poseStack.pushPose();
@@ -57,8 +56,7 @@ public class ModularPlaneRenderer extends PlaneRenderer {
         poseStack.scale(scale, scale, scale);
         if (flip) poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180f));
         if (spinDeg != 0) poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(spinDeg));
-        Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
-            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        buffer.item(stack, poseStack, light);
         poseStack.popPose();
     }
 }

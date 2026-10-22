@@ -3,12 +3,10 @@ package org.restor.fpv.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -23,8 +21,12 @@ import org.restor.fpv.entity.DroneEntity;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
-public class DroneRenderer extends EntityRenderer<DroneEntity> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "textures/entity/drone.png");
+public class DroneRenderer extends EntityRenderer<DroneEntity, DroneRenderer.State> {
+    public static class State extends net.minecraft.client.renderer.entity.state.EntityRenderState {
+        DroneEntity entity;
+    }
+
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(Fpv.MODID, "textures/entity/drone.png");
     private static final double FAR_RENDER_DISTANCE_SQR = 1024.0 * 1024.0;
 
     public DroneRenderer(EntityRendererProvider.Context ctx) {
@@ -44,8 +46,27 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
     }
 
     @Override
-    public void render(DroneEntity entity, float yaw, float partialTick, PoseStack poseStack,
-                       MultiBufferSource buffer, int packedLight) {
+    public State createRenderState() {
+        return new State();
+    }
+
+    @Override
+    public void extractRenderState(DroneEntity entity, State state, float partialTick) {
+        super.extractRenderState(entity, state, partialTick);
+        state.entity = entity;
+    }
+
+    @Override
+    public void submit(State state, PoseStack poseStack, net.minecraft.client.renderer.SubmitNodeCollector collector,
+                       net.minecraft.client.renderer.state.CameraRenderState camera) {
+        SubmitBuffers buffer = new SubmitBuffers(collector);
+        render(state.entity, state.partialTick, poseStack, buffer, state.lightCoords);
+        buffer.flush();
+        super.submit(state, poseStack, collector, camera);
+    }
+
+    private void render(DroneEntity entity, float partialTick, PoseStack poseStack,
+                        SubmitBuffers buffer, int packedLight) {
         // FPV self-view only keeps the front motors and props visible. Drawing the frame,
         // camera and payload here encloses the viewpoint inside the drone model.
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
@@ -66,8 +87,6 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
 
         float scale = getScale(entity);
 
-        super.render(entity, yaw, partialTick, poseStack, buffer, packedLight);
-
         poseStack.pushPose();
         poseStack.translate(0, entity.getBbHeight() / 2, 0);
 
@@ -81,7 +100,7 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
         poseStack.scale(scale, scale, scale);
 
         renderAssembledDrone(entity, poseStack, buffer, packedLight, entity.tickCount + partialTick, false);
-        VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
+        VertexConsumer consumer = buffer.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityCutoutNoCull(TEXTURE));
         renderPayload(entity, consumer, poseStack, packedLight);
 
         poseStack.popPose();
@@ -98,7 +117,7 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
      */
     public static void applyFpvViewmodelPose(PoseStack ps, DroneEntity e, float partialTick) {
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-        Vec3 camPos = mc.gameRenderer.getMainCamera().getPosition();
+        Vec3 camPos = mc.gameRenderer.getMainCamera().position();
         double ex = Mth.lerp(partialTick, e.xOld, e.getX());
         double ey = Mth.lerp(partialTick, e.yOld, e.getY());
         double ez = Mth.lerp(partialTick, e.zOld, e.getZ());
@@ -132,7 +151,7 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
         return defaultBuild(entity).visual().scale();
     }
 
-    private void renderAssembledDrone(DroneEntity entity, PoseStack poseStack, MultiBufferSource buffer,
+    private void renderAssembledDrone(DroneEntity entity, PoseStack poseStack, SubmitBuffers buffer,
                                       int packedLight, float tick, boolean propsOnly) {
         DefaultBuild build = defaultBuild(entity);
         if (!propsOnly) {
@@ -172,49 +191,46 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
         if (!propsOnly) renderTypeDetails(entity, build, poseStack, buffer, packedLight);
     }
 
-    private void renderPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+    private void renderPart(ItemStack stack, PoseStack poseStack, SubmitBuffers buffer,
                             int light, float x, float y, float z, float spinDeg) {
         renderPart(stack, poseStack, buffer, light, x, y, z, spinDeg, 1.0f);
     }
 
-    private void renderPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+    private void renderPart(ItemStack stack, PoseStack poseStack, SubmitBuffers buffer,
                             int light, float x, float y, float z, float spinDeg, float scale) {
         poseStack.pushPose();
         poseStack.translate(x, y, z);
         poseStack.scale(scale, scale, scale);
         if (spinDeg != 0) poseStack.mulPose(Axis.YP.rotationDegrees(spinDeg));
-        net.minecraft.client.Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
-            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        buffer.item(stack, poseStack, light);
         poseStack.popPose();
     }
 
     /** Lays a rotor on its side so its thrust axis runs along the fuselage. */
-    private void renderRotorPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+    private void renderRotorPart(ItemStack stack, PoseStack poseStack, SubmitBuffers buffer,
                                  int light, float x, float y, float z, float spinDeg, float scale) {
         poseStack.pushPose();
         poseStack.translate(x, y, z);
         poseStack.mulPose(Axis.XP.rotationDegrees(90));
         poseStack.scale(scale, scale, scale);
         if (spinDeg != 0) poseStack.mulPose(Axis.YP.rotationDegrees(spinDeg));
-        net.minecraft.client.Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
-            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        buffer.item(stack, poseStack, light);
         poseStack.popPose();
     }
 
-    private void renderCameraPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+    private void renderCameraPart(ItemStack stack, PoseStack poseStack, SubmitBuffers buffer,
                                   int light, float x, float y, float z, float scale) {
         poseStack.pushPose();
         poseStack.translate(x, y, z);
         poseStack.mulPose(Axis.XP.rotationDegrees(22.5f));
         poseStack.scale(scale, scale, scale);
-        net.minecraft.client.Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
-            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        buffer.item(stack, poseStack, light);
         poseStack.popPose();
     }
 
     private void renderTypeDetails(DroneEntity entity, DefaultBuild build, PoseStack poseStack,
-                                   MultiBufferSource buffer, int packedLight) {
-        VertexConsumer consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
+                                   SubmitBuffers buffer, int packedLight) {
+        VertexConsumer consumer = buffer.getBuffer(net.minecraft.client.renderer.rendertype.RenderTypes.entityCutoutNoCull(TEXTURE));
         if (entity instanceof org.restor.fpv.entity.TinyWhoopDroneEntity
             || entity instanceof org.restor.fpv.entity.CinewhoopDroneEntity) {
             float radius = entity instanceof org.restor.fpv.entity.TinyWhoopDroneEntity ? 0.12f : 0.16f;
@@ -438,8 +454,4 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
         consumer.addVertex(mat, x1, y1, z2).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(-1, 0, 0);
     }
 
-    @Override
-    public ResourceLocation getTextureLocation(DroneEntity entity) {
-        return TEXTURE;
-    }
 }

@@ -1,7 +1,7 @@
 package org.restor.fpv.sound;
 
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -43,7 +43,7 @@ public final class ModSounds {
     private ModSounds() {}
 
     private static DeferredHolder<SoundEvent, SoundEvent> register(String name) {
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(Fpv.MODID, name);
+        Identifier id = Identifier.fromNamespaceAndPath(Fpv.MODID, name);
         return SOUNDS.register(name, () -> SoundEvent.createVariableRangeEvent(id));
     }
 }

@@ -1,5 +1,6 @@
 package org.restor.fpv.client.ui.screen;
 
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -37,7 +38,7 @@ public class DroneCodeScreen extends Screen {
         addRenderableWidget(Button.builder(Component.translatable("screen.fpv.set_code_remember"), b -> save(true))
             .bounds(cx - 75, cy + 32, 150, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("screen.fpv.set_code_clear"), b -> {
-                PacketDistributor.sendToServer(new SetDroneCodePacket(droneId, ""));
+                ClientPacketDistributor.sendToServer(new SetDroneCodePacket(droneId, ""));
                 onClose();
             })
             .bounds(cx - 75, cy + 56, 72, 20).build());
@@ -48,7 +49,7 @@ public class DroneCodeScreen extends Screen {
     private void save(boolean remember) {
         String code = codeBox.getValue();
         if (code.length() == 6) {
-            PacketDistributor.sendToServer(new SetDroneCodePacket(droneId, code));
+            ClientPacketDistributor.sendToServer(new SetDroneCodePacket(droneId, code));
             if (remember) {
                 // Remembered code is auto-assigned to newly placed remote drones.
                 org.restor.fpv.Config.DEFAULT_LINK_CODE.set(code);
@@ -59,12 +60,13 @@ public class DroneCodeScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
+        int keyCode = event.key();
         if (keyCode == 257 || keyCode == 335) { // Enter / numpad Enter
             save(false);
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override

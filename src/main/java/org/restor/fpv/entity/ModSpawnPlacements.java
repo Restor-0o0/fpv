@@ -25,7 +25,7 @@ public final class ModSpawnPlacements {
     private static <T extends net.minecraft.world.entity.Mob> boolean canSpawn(
             net.minecraft.world.entity.EntityType<T> type,
             net.minecraft.world.level.ServerLevelAccessor level,
-            net.minecraft.world.entity.MobSpawnType spawnType,
+            net.minecraft.world.entity.EntitySpawnReason spawnType,
             net.minecraft.core.BlockPos pos,
             net.minecraft.util.RandomSource random) {
         if (level.getDifficulty() == Difficulty.PEACEFUL) return false;

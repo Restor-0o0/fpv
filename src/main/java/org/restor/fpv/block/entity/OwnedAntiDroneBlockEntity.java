@@ -1,5 +1,8 @@
 package org.restor.fpv.block.entity;
 
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -49,20 +52,20 @@ abstract class OwnedAntiDroneBlockEntity extends BlockEntity {
     }
 
     private static boolean isPrivileged(ServerPlayer player) {
-        return player != null && (player.isCreative() || player.hasPermissions(2));
+        return player != null && (player.isCreative() || player.permissions().hasPermission(net.minecraft.server.permissions.Permissions.COMMANDS_GAMEMASTER));
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        ownerId = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
-        ownerTeam = tag.getString("OwnerTeam");
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        ownerId = input.read("Owner", UUIDUtil.CODEC).orElse(null);
+        ownerTeam = input.getStringOr("OwnerTeam", "");
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        if (ownerId != null) tag.putUUID("Owner", ownerId);
-        if (!ownerTeam.isBlank()) tag.putString("OwnerTeam", ownerTeam);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.storeNullable("Owner", UUIDUtil.CODEC, ownerId);
+        if (!ownerTeam.isBlank()) output.putString("OwnerTeam", ownerTeam);
     }
 }

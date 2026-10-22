@@ -20,7 +20,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -36,8 +36,7 @@ public class PartsPileBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     private static final VoxelShape[] SHAPES = new VoxelShape[17];
 
@@ -49,7 +48,6 @@ public class PartsPileBlock extends BaseEntityBlock {
         super(props);
         registerDefaultState(stateDefinition.any().setValue(FACING, Direction.NORTH));
     }
-
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
@@ -89,36 +87,26 @@ public class PartsPileBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack held, BlockState state, Level level, BlockPos pos,
+    protected InteractionResult useItemOn(ItemStack held, BlockState state, Level level, BlockPos pos,
                                                                   Player player, InteractionHand hand, BlockHitResult hit) {
-        if (!PartsPileBlockEntity.isStorable(held)) return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (!PartsPileBlockEntity.isStorable(held)) return InteractionResult.TRY_WITH_EMPTY_HAND;
         if (!(level.getBlockEntity(pos) instanceof PartsPileBlockEntity pile) || !pile.accepts(held)) {
-            return net.minecraft.world.ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+            return InteractionResult.PASS;
         }
-        if (level.isClientSide) return net.minecraft.world.ItemInteractionResult.SUCCESS;
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
         pile.insert(player.getAbilities().instabuild ? held.copy() : held);
         level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 0.7f, 1.4f);
-        return net.minecraft.world.ItemInteractionResult.CONSUME;
+        return InteractionResult.CONSUME;
     }
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!(level.getBlockEntity(pos) instanceof PartsPileBlockEntity pile) || pile.isEmpty()) return InteractionResult.PASS;
-        if (level.isClientSide) return InteractionResult.SUCCESS;
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
         ItemStack out = pile.extract(player.isShiftKeyDown() ? PartsPileBlockEntity.MAX_CAPACITY : 1);
         if (!player.addItem(out)) player.drop(out, false);
         level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 0.7f, 1.4f);
         if (pile.isEmpty()) level.removeBlock(pos, false);
         return InteractionResult.CONSUME;
-    }
-
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof PartsPileBlockEntity pile) {
-            for (ItemStack rest : pile.takeAll()) {
-                net.minecraft.world.Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), rest);
-            }
-        }
-        super.onRemove(state, level, pos, newState, moved);
     }
 }

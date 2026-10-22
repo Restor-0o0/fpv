@@ -5,9 +5,10 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -29,7 +30,7 @@ import org.restor.fpv.replay.ReplayRecording;
 @EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public final class GhostRenderer {
     private static final Minecraft MC = Minecraft.getInstance();
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "textures/entity/drone.png");
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(Fpv.MODID, "textures/entity/drone.png");
     private static final float ALPHA = 0.42f;
 
     // A ghost queued for playback and the colour that identifies which record it is.
@@ -54,22 +55,22 @@ public final class GhostRenderer {
     public static void clear() { GHOSTS.clear(); }
 
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent event) {
-        if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
+    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
         if (MC.level == null) return;
 
         boolean renderRaceGhosts = !GHOSTS.isEmpty() && ClientRaceState.active();
         ReplayRecording replay = ReplayManager.playback();
         if (!renderRaceGhosts && replay == null) return;
 
-        float partial = event.getPartialTick().getGameTimeDeltaPartialTick(false);
+        float partial = MC.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         float elapsed = (MC.level.getGameTime() - startTime) + partial;
         if (elapsed < 0) elapsed = 0;
 
-        Vec3 cam = MC.gameRenderer.getMainCamera().getPosition();
-        PoseStack pose = event.getPoseStack();
+        Vec3 cam = event.getLevelRenderState().cameraRenderState.pos;
+        PoseStack pose = new PoseStack();
         MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
-        VertexConsumer vc = buffers.getBuffer(RenderType.entityTranslucentCull(TEXTURE));
+        RenderType type = RenderTypes.entityTranslucent(TEXTURE);
+        VertexConsumer vc = buffers.getBuffer(type);
 
         if (renderRaceGhosts) {
             for (Ghost ghost : GHOSTS) {
@@ -77,7 +78,7 @@ public final class GhostRenderer {
             }
         }
         if (replay != null) drawReplay(replay, ReplayManager.renderFrame(partial), cam, pose, vc);
-        buffers.endBatch(RenderType.entityTranslucentCull(TEXTURE));
+        buffers.endBatch(type);
     }
 
     private static void drawGhost(Ghost ghost, float elapsed, Vec3 cam, PoseStack pose, VertexConsumer vc) {

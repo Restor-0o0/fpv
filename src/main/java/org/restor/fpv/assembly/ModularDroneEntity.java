@@ -1,5 +1,7 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -27,7 +29,7 @@ import org.restor.fpv.item.ModItems;
  */
 public class ModularDroneEntity extends DroneEntity {
     private static final EntityDataAccessor<CompoundTag> DATA_ASSEMBLY =
-        SynchedEntityData.defineId(ModularDroneEntity.class, EntityDataSerializers.COMPOUND_TAG);
+        SynchedEntityData.defineId(ModularDroneEntity.class, org.restor.fpv.entity.ModDataSerializers.COMPOUND_TAG);
 
     private DroneAssembly assembly = new DroneAssembly();
     private boolean flightReady;
@@ -154,7 +156,7 @@ public class ModularDroneEntity extends DroneEntity {
     public void onSyncedDataUpdated(EntityDataAccessor<?> key) {
         super.onSyncedDataUpdated(key);
         // Client receives the assembly → rebuild derived stats + renderer data.
-        if (DATA_ASSEMBLY.equals(key) && level().isClientSide) {
+        if (DATA_ASSEMBLY.equals(key) && level().isClientSide()) {
             assembly = DroneAssembly.load(entityData.get(DATA_ASSEMBLY));
             updateWearEffects();
             refreshDimensions();
@@ -178,7 +180,7 @@ public class ModularDroneEntity extends DroneEntity {
 
     @Override
     protected void onMovementImpact(Vec3 velocityDelta) {
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
         fuze.reportImpact(velocityDelta.length());
         FrameSpec spec = assembly.frameSpec();
         if (spec == null || spec.motorCount() == 0) return;
@@ -259,7 +261,7 @@ public class ModularDroneEntity extends DroneEntity {
         ItemStack held = player.getItemInHand(hand);
         if (player.isSecondaryUseActive() && org.restor.fpv.warhead.WarheadLoading.isWarhead(held)) {
             if (!canPlayerAccess(player)) return net.minecraft.world.InteractionResult.FAIL;
-            if (!level().isClientSide) {
+            if (!level().isClientSide()) {
                 if (!hasWarhead()) {
                     player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
                         "msg.fpv.warhead_no_module"), true);
@@ -268,7 +270,7 @@ public class ModularDroneEntity extends DroneEntity {
                         warheadCapacityKg(), this::setWarhead);
                 }
             }
-            return net.minecraft.world.InteractionResult.sidedSuccess(level().isClientSide);
+            return net.minecraft.world.InteractionResult.SUCCESS;
         }
         return super.interact(player, hand);
     }
@@ -331,12 +333,12 @@ public class ModularDroneEntity extends DroneEntity {
         if (!consumeCompanionWeaponEnergy(DART_SHOT_POWER_FACTOR)) return;
 
         dartCooldown = 18;
-        net.minecraft.world.entity.projectile.Arrow dart = new net.minecraft.world.entity.projectile.Arrow(
+        net.minecraft.world.entity.projectile.arrow.Arrow dart = new net.minecraft.world.entity.projectile.arrow.Arrow(
             level(), getX(), getY() - 0.1, getZ(),
             new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARROW), null);
         dart.setOwner(owner);
         dart.setBaseDamage(2.0);
-        dart.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
+        dart.pickup = net.minecraft.world.entity.projectile.arrow.AbstractArrow.Pickup.DISALLOWED;
         Vec3 to = target.getEyePosition().subtract(dart.position());
         dart.shoot(to.x, to.y, to.z, 2.4f, 2.0f);
         level().addFreshEntity(dart);
@@ -370,7 +372,7 @@ sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
     // Cargo drops when the drone is destroyed (not on chunk unload).
     @Override
     public void remove(RemovalReason reason) {
-        if (!level().isClientSide && reason.shouldDestroy() && !cargo.isEmpty()) {
+        if (!level().isClientSide() && reason.shouldDestroy() && !cargo.isEmpty()) {
             net.minecraft.world.Containers.dropContents(level(), blockPosition(), cargo);
         }
         super.remove(reason);
@@ -379,7 +381,7 @@ sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
 
         if (assemblyResyncDelay >= 0 && assemblyResyncDelay-- == 0) {
             entityData.set(DATA_ASSEMBLY, assembly.save());
@@ -410,12 +412,11 @@ sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
             return;
         }
         setDeltaMovement(getDeltaMovement().add(0, 0.03, 0));
-        if (level() instanceof net.minecraft.server.level.ServerLevel sl) {
-            sl.sendParticles(net.minecraft.core.particles.ParticleTypes.PORTAL,
-                getX(), getY() + 0.3, getZ(), 4, 0.3, 0.3, 0.3, 0.05);
-        }
+        if (!(level() instanceof net.minecraft.server.level.ServerLevel sl)) return;
+        sl.sendParticles(net.minecraft.core.particles.ParticleTypes.PORTAL,
+            getX(), getY() + 0.3, getZ(), 4, 0.3, 0.3, 0.3, 0.05);
         if (--traderDepartureTimer > 0) return;
-        spawnAtLocation(getDropStack());
+        spawnAtLocation(sl, getDropStack());
         discard();
     }
 
@@ -439,17 +440,17 @@ sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
     }
 
     @Override
-    public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
-        if (isInvulnerableTo(source)) return false;
+    public boolean hurtServer(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source, float amount) {
+        if (isInvulnerableToBase(source)) return false;
         if (!isAuthorizedPlayerDamage(source)) return false;
         // A warhead build is a flying bomb: explosions and fire set it off.
-        if (hasWarhead() && !level().isClientSide
+        if (hasWarhead() && !level().isClientSide()
             && (source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)
                 || source.is(net.minecraft.tags.DamageTypeTags.IS_FIRE))) {
             explodeWarhead();
             return true;
         }
-        return super.hurt(source, amount);
+        return super.hurtServer(level, source, amount);
     }
 
     private void explodeWarhead() {
@@ -486,32 +487,28 @@ sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
     @Override
     public void readFromItemTag(CompoundTag tag) {
         if (tag.contains("Assembly")) {
-            setAssembly(DroneAssembly.load(tag.getCompound("Assembly")));
+            setAssembly(DroneAssembly.load(tag.getCompoundOrEmpty("Assembly")));
         }
-        if (tag.contains("Warhead")) warhead = org.restor.fpv.warhead.WarheadType.byId(tag.getString("Warhead"));
+        if (tag.contains("Warhead")) warhead = org.restor.fpv.warhead.WarheadType.byId(tag.getStringOr("Warhead", ""));
         super.readFromItemTag(tag);
     }
 
     @Override
-    protected void readAdditionalSaveData(CompoundTag tag) {
-        if (tag.contains("Assembly")) {
-            setAssembly(DroneAssembly.load(tag.getCompound("Assembly")));
-        }
-        if (tag.contains("Warhead")) warhead = org.restor.fpv.warhead.WarheadType.byId(tag.getString("Warhead"));
-        super.readAdditionalSaveData(tag);
-        if (tag.contains("Cargo")) {
-            cargo.fromTag(tag.getList("Cargo", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
-        }
-        trader.load(tag);
+    protected void readAdditionalSaveData(ValueInput input) {
+        input.read("Assembly", CompoundTag.CODEC).ifPresent(t -> setAssembly(DroneAssembly.load(t)));
+        input.getString("Warhead").ifPresent(id -> warhead = org.restor.fpv.warhead.WarheadType.byId(id));
+        super.readAdditionalSaveData(input);
+        input.list("Cargo", ItemStack.OPTIONAL_CODEC).ifPresent(cargo::fromItemList);
+        trader.load(input);
     }
 
     @Override
-    protected void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        tag.put("Assembly", assembly.save());
-        tag.putString("Warhead", warhead.id());
-        tag.put("Cargo", cargo.createTag(registryAccess()));
-        trader.save(tag);
+    protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("Assembly", CompoundTag.CODEC, assembly.save());
+        output.putString("Warhead", warhead.id());
+        cargo.storeAsItemList(output.list("Cargo", ItemStack.OPTIONAL_CODEC));
+        trader.save(output);
     }
 
     @Override

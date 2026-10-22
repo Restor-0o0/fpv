@@ -19,8 +19,8 @@ public class DroneItem extends Item {
     private final Supplier<? extends EntityType<? extends DroneEntity>> entityTypeSupplier;
     private final boolean usesNbt;
 
-    public DroneItem(Supplier<? extends EntityType<? extends DroneEntity>> entityTypeSupplier, boolean usesNbt) {
-        super(new Item.Properties().stacksTo(16));
+    public DroneItem(Item.Properties props, Supplier<? extends EntityType<? extends DroneEntity>> entityTypeSupplier, boolean usesNbt) {
+        super(props.stacksTo(16));
         this.entityTypeSupplier = entityTypeSupplier;
         this.usesNbt = usesNbt;
     }
@@ -28,7 +28,7 @@ public class DroneItem extends Item {
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
-        if (level.isClientSide) return InteractionResult.SUCCESS;
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
 
         var player = context.getPlayer();
         var pos = context.getClickedPos();
@@ -52,7 +52,7 @@ public class DroneItem extends Item {
     public DroneEntity spawn(ServerLevel level, Vec3 pos, float yRot, ItemStack stack,
                              net.minecraft.world.entity.player.Player owner) {
         EntityType<? extends DroneEntity> type = entityTypeSupplier.get();
-        DroneEntity drone = type.create(level);
+        DroneEntity drone = type.create(level, net.minecraft.world.entity.EntitySpawnReason.SPAWN_ITEM_USE);
         if (drone == null) return null;
         drone.setPos(pos);
         drone.setYRot(yRot);
@@ -75,7 +75,7 @@ public class DroneItem extends Item {
         if (stack.is(ModItems.KAMIKAZE_DRONE.get())) return true;
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data == null || !data.contains("Assembly")) return false;
-        return org.restor.fpv.assembly.DroneAssembly.load(data.copyTag().getCompound("Assembly"))
+        return org.restor.fpv.assembly.DroneAssembly.load(data.copyTag().getCompoundOrEmpty("Assembly"))
             .moduleType() == org.restor.fpv.component.ModuleType.WARHEAD;
     }
 }

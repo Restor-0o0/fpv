@@ -2,10 +2,12 @@ package org.restor.fpv.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.core.BlockPos;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
+import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
+import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.world.level.Level;
@@ -23,16 +25,37 @@ import java.util.List;
 
 // Draws each gate as a solid banded hoop oriented by its yaw/pitch, with its route order
 // number at the centre and a tube leading to the next marker.
-public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity> {
+public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity, RaceGateRenderer.State> {
+    public static class State extends BlockEntityRenderState {
+        RaceGateBlockEntity be;
+    }
+
     private final Font font;
 
     public RaceGateRenderer(BlockEntityRendererProvider.Context ctx) {
-        this.font = ctx.getFont();
+        this.font = ctx.font();
     }
 
     @Override
-    public void render(RaceGateBlockEntity gate, float partialTick, PoseStack pose,
-                       MultiBufferSource buffer, int packedLight, int packedOverlay) {
+    public State createRenderState() {
+        return new State();
+    }
+
+    @Override
+    public void extractRenderState(RaceGateBlockEntity be, State state, float partialTick, Vec3 cameraPos,
+                                   ModelFeatureRenderer.CrumblingOverlay crumbling) {
+        BlockEntityRenderer.super.extractRenderState(be, state, partialTick, cameraPos, crumbling);
+        state.be = be;
+    }
+
+    @Override
+    public void submit(State state, PoseStack pose, SubmitNodeCollector collector, CameraRenderState camera) {
+        SubmitBuffers buffer = new SubmitBuffers(collector);
+        render(state.be, pose, buffer, camera);
+        buffer.flush();
+    }
+
+    private void render(RaceGateBlockEntity gate, PoseStack pose, SubmitBuffers buffer, CameraRenderState camera) {
         if (!ClientRaceState.active()) return;
 
         int c = gate.getColor();
@@ -59,11 +82,11 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
         float[] lineColor = activeSegment ? RaceFrames.NEXT : RaceFrames.shade(c, 0.85f);
         renderRouteLine(gate, center, vc, mat, lineColor, a);
 
-        if (idx > 0) renderLabel(String.valueOf(idx), center, pose, buffer, 0.05f, 0xFFFFFFFF);
+        if (idx > 0) renderLabel(String.valueOf(idx), center, pose, buffer, camera, 0.05f, 0xFFFFFFFF);
         if (next) {
             Vector3f[] axes = RaceFrames.basis(n);
             Vector3f label = new Vector3f(center).add(new Vector3f(axes[1]).mul(half + 0.9f));
-            renderLabel("GATE", label, pose, buffer, 0.09f, 0xFF40FF60);
+            renderLabel("GATE", label, pose, buffer, camera, 0.09f, 0xFF40FF60);
         }
     }
 
@@ -149,20 +172,19 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
             inv2 * inv * a.z + 3.0f * inv2 * t * b.z + 3.0f * inv * t2 * c.z + t2 * t * d.z);
     }
 
-    private void renderLabel(String s, Vector3f at, PoseStack pose, MultiBufferSource buffer,
-                             float scale, int color) {
+    private void renderLabel(String s, Vector3f at, PoseStack pose, SubmitBuffers buffer,
+                             CameraRenderState camera, float scale, int color) {
         pose.pushPose();
         pose.translate(at.x, at.y, at.z);
-        pose.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
+        pose.mulPose(camera.orientation);
         pose.scale(-scale, -scale, scale);
-        Matrix4f m = pose.last().pose();
-        font.drawInBatch(s, -font.width(s) / 2f, -4f, color, false, m, buffer,
-            Font.DisplayMode.SEE_THROUGH, 0, 0xF000F0);
+        buffer.collector().submitText(pose, -font.width(s) / 2f, -4f, net.minecraft.network.chat.Component.literal(s).getVisualOrderText(),
+            false, Font.DisplayMode.SEE_THROUGH, 0xF000F0, color, 0, 0);
         pose.popPose();
     }
 
     @Override
-    public boolean shouldRenderOffScreen(RaceGateBlockEntity gate) {
+    public boolean shouldRenderOffScreen() {
         return true;
     }
 

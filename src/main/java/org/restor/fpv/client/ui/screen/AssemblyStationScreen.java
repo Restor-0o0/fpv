@@ -138,7 +138,7 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
         } else {
             Component target = repairTargetName(repairType, menu.repairTargetIndex());
             repairStatus = Component.translatable("screen.fpv.assembly.repair_cost", target,
-                menu.repairMaterial().getDescription());
+                menu.repairMaterial().getName());
         }
         int repairY = 138;
         for (var line : font.split(repairStatus, 84)) {
@@ -221,9 +221,8 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
 
     private void drawGhost(GuiGraphics g, ItemStack stack, int x, int y) {
         if (stack.isEmpty()) return;
-        g.setColor(0.26f, 0.26f, 0.30f, 1.0f);
         g.renderFakeItem(stack, x, y);
-        g.setColor(1.0f, 1.0f, 1.0f, 1.0f);
+        g.fill(x, y, x + 16, y + 16, 0xB08B8B8B);
     }
 
     private Component slotName(int slotIndex) {
@@ -266,7 +265,7 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
             Component name = slotName(hoveredSlot.index);
             if (name != null) {
                 ItemStack ghost = ghostFor(hoveredSlot.index);
-                g.renderComponentTooltip(font, ghost.isEmpty() ? List.of(name) : List.of(name,
+                g.setComponentTooltipForNextFrame(font, ghost.isEmpty() ? List.of(name) : List.of(name,
                     Component.translatable("screen.fpv.assembly.slot_example", ghost.getHoverName())
                         .withStyle(net.minecraft.ChatFormatting.DARK_GRAY)), mouseX, mouseY);
             }

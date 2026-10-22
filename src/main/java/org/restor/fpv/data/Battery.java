@@ -81,14 +81,14 @@ public class Battery {
     }
 
     public void load(CompoundTag tag) {
-        if (tag.contains("capacity") && tag.getFloat("capacity") > 0) {
-            capacity = tag.getFloat("capacity");
+        if (tag.contains("capacity") && tag.getFloatOr("capacity", 0f) > 0) {
+            capacity = tag.getFloatOr("capacity", 0f);
         }
         if (tag.contains("currentCapacity")) {
-            currentCapacity = Math.max(0, Math.min(capacity, tag.getFloat("currentCapacity")));
+            currentCapacity = Math.max(0, Math.min(capacity, tag.getFloatOr("currentCapacity", 0f)));
         }
-        if (tag.contains("voltage")) voltage = tag.getFloat("voltage");
-        if (tag.contains("currentDraw")) currentDraw = tag.getFloat("currentDraw");
-        if (tag.contains("dischargeRate")) dischargeRate = tag.getFloat("dischargeRate");
+        if (tag.contains("voltage")) voltage = tag.getFloatOr("voltage", 0f);
+        if (tag.contains("currentDraw")) currentDraw = tag.getFloatOr("currentDraw", 0f);
+        if (tag.contains("dischargeRate")) dischargeRate = tag.getFloatOr("dischargeRate", 0f);
     }
 }

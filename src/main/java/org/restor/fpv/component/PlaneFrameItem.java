@@ -1,5 +1,6 @@
 package org.restor.fpv.component;
 
+import net.minecraft.world.item.Item;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
@@ -12,8 +13,8 @@ import org.restor.fpv.block.entity.PartsPileBlockEntity;
 // Fixed-wing airframe: needs plane motors and plane props, and the bench builds a
 // ModularPlaneEntity from it instead of a multirotor.
 public class PlaneFrameItem extends FrameItem {
-    public PlaneFrameItem(ComponentStats stats) {
-        super(stats);
+    public PlaneFrameItem(Item.Properties props, ComponentStats stats) {
+        super(props, stats);
     }
 
     /**
@@ -28,7 +29,7 @@ public class PlaneFrameItem extends FrameItem {
         if (level.getBlockEntity(ctx.getClickedPos()) instanceof PartsPileBlockEntity) {
             return super.useOn(ctx);
         }
-        if (level.isClientSide) return InteractionResult.SUCCESS;
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
 
         ModularPlaneEntity plane = ModularPlaneItem.spawn(ctx);
         if (plane == null) return InteractionResult.FAIL;

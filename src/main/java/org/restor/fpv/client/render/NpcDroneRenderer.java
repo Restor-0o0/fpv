@@ -3,11 +3,10 @@ package org.restor.fpv.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
@@ -19,18 +18,40 @@ import org.restor.fpv.assembly.MountPoint;
 import org.restor.fpv.entity.NpcDroneEntity;
 
 /** NPC drones are real builds, so they render from the same part models as a player drone. */
-public class NpcDroneRenderer extends EntityRenderer<NpcDroneEntity> {
-    private static final ResourceLocation TEXTURE =
-        ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "textures/entity/drone.png");
+public class NpcDroneRenderer extends EntityRenderer<NpcDroneEntity, NpcDroneRenderer.State> {
+    public static class State extends net.minecraft.client.renderer.entity.state.EntityRenderState {
+        NpcDroneEntity entity;
+    }
+
+    private static final Identifier TEXTURE =
+        Identifier.fromNamespaceAndPath(Fpv.MODID, "textures/entity/drone.png");
 
     public NpcDroneRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
     }
 
     @Override
-    public void render(NpcDroneEntity e, float entityYaw, float partialTick, PoseStack pose,
-                       MultiBufferSource buffer, int packedLight) {
-        super.render(e, entityYaw, partialTick, pose, buffer, packedLight);
+    public State createRenderState() {
+        return new State();
+    }
+
+    @Override
+    public void extractRenderState(NpcDroneEntity entity, State state, float partialTick) {
+        super.extractRenderState(entity, state, partialTick);
+        state.entity = entity;
+    }
+
+    @Override
+    public void submit(State state, PoseStack poseStack, net.minecraft.client.renderer.SubmitNodeCollector collector,
+                       net.minecraft.client.renderer.state.CameraRenderState camera) {
+        SubmitBuffers buffer = new SubmitBuffers(collector);
+        render(state.entity, state.partialTick, poseStack, buffer, state.lightCoords);
+        buffer.flush();
+        super.submit(state, poseStack, collector, camera);
+    }
+
+    private void render(NpcDroneEntity e, float partialTick, PoseStack pose,
+                        SubmitBuffers buffer, int packedLight) {
 
         DroneAssembly assembly = e.getAssembly();
         FrameSpec spec = assembly.frameSpec();
@@ -67,20 +88,15 @@ public class NpcDroneRenderer extends EntityRenderer<NpcDroneEntity> {
         pose.popPose();
     }
 
-    private void part(ItemStack stack, PoseStack pose, MultiBufferSource buffer,
+    private void part(ItemStack stack, PoseStack pose, SubmitBuffers buffer,
                       int light, float x, float y, float z, float spinDeg, float scale) {
         if (stack.isEmpty()) return;
         pose.pushPose();
         pose.translate(x, y, z);
         pose.scale(scale, scale, scale);
         if (spinDeg != 0) pose.mulPose(Axis.YP.rotationDegrees(spinDeg));
-        Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
-            light, OverlayTexture.NO_OVERLAY, pose, buffer, null, 0);
+        buffer.item(stack, pose, light);
         pose.popPose();
     }
 
-    @Override
-    public ResourceLocation getTextureLocation(NpcDroneEntity entity) {
-        return TEXTURE;
-    }
 }

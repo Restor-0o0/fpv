@@ -1,8 +1,9 @@
 package org.restor.fpv.race;
 
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 
@@ -24,8 +25,11 @@ public class GhostSavedData extends SavedData {
 
     private final Map<String, Course> courses = new HashMap<>();
 
+    private static final SavedDataType<GhostSavedData> TYPE = new SavedDataType<>(NAME, GhostSavedData::new,
+        CompoundTag.CODEC.xmap(GhostSavedData::load, GhostSavedData::save));
+
     public static GhostSavedData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(new SavedData.Factory<>(GhostSavedData::new, GhostSavedData::load, null), NAME);
+        return level.getDataStorage().computeIfAbsent(TYPE);
     }
 
     /** The personal best for this player on this course, or null. */
@@ -62,27 +66,26 @@ public class GhostSavedData extends SavedData {
     //  Persistence
     // -----------------------------------------------------------------
 
-    public static GhostSavedData load(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+    private static GhostSavedData load(CompoundTag tag) {
         GhostSavedData data = new GhostSavedData();
-        ListTag list = tag.getList("Courses", Tag.TAG_COMPOUND);
+        ListTag list = tag.getListOrEmpty("Courses");
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag ct = list.getCompound(i);
+            CompoundTag ct = list.getCompoundOrEmpty(i);
             Course c = new Course();
-            if (ct.contains("Overall")) c.bestOverall = GhostRecording.load(ct.getCompound("Overall"));
-            ListTag players = ct.getList("Players", Tag.TAG_COMPOUND);
+            if (ct.contains("Overall")) c.bestOverall = GhostRecording.load(ct.getCompoundOrEmpty("Overall"));
+            ListTag players = ct.getListOrEmpty("Players");
             for (int j = 0; j < players.size(); j++) {
-                CompoundTag pt = players.getCompound(j);
-                if (pt.hasUUID("Id")) {
-                    c.byPlayer.put(pt.getUUID("Id"), GhostRecording.load(pt.getCompound("Run")));
-                }
+                CompoundTag pt = players.getCompoundOrEmpty(j);
+                pt.read("Id", UUIDUtil.CODEC).ifPresent(id ->
+                    c.byPlayer.put(id, GhostRecording.load(pt.getCompoundOrEmpty("Run"))));
             }
-            data.courses.put(ct.getString("Hash"), c);
+            data.courses.put(ct.getStringOr("Hash", ""), c);
         }
         return data;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+    private CompoundTag save() {
+        CompoundTag tag = new CompoundTag();
         ListTag list = new ListTag();
         for (Map.Entry<String, Course> e : courses.entrySet()) {
             Course c = e.getValue();
@@ -92,7 +95,7 @@ public class GhostSavedData extends SavedData {
             ListTag players = new ListTag();
             for (Map.Entry<UUID, GhostRecording> pe : c.byPlayer.entrySet()) {
                 CompoundTag pt = new CompoundTag();
-                pt.putUUID("Id", pe.getKey());
+                pt.store("Id", UUIDUtil.CODEC, pe.getKey());
                 pt.put("Run", pe.getValue().save());
                 players.add(pt);
             }

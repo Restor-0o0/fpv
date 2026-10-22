@@ -1,5 +1,6 @@
 package org.restor.fpv.client.ui.screen;
 
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -92,7 +93,7 @@ public class RaceGateScreen extends Screen {
     }
 
     private void send(int action, int value) {
-        PacketDistributor.sendToServer(new RaceGateConfigPacket(pos, action, value));
+        ClientPacketDistributor.sendToServer(new RaceGateConfigPacket(pos, action, value));
     }
 
     private void updateSize(int value) {

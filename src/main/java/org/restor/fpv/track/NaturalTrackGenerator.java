@@ -1,5 +1,6 @@
 package org.restor.fpv.track;
 
+import net.minecraft.resources.Identifier;
 import net.neoforged.fml.common.EventBusSubscriber;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
@@ -11,7 +12,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -40,8 +41,8 @@ public final class NaturalTrackGenerator {
     private static final RoutePlanner PLANNER = new RoutePlanner();
 
     @SubscribeEvent
-    public static void addReloadListener(AddReloadListenerEvent event) {
-        event.addListener(new TrackProfiles());
+    public static void addReloadListener(AddServerReloadListenersEvent event) {
+        event.addListener(Identifier.fromNamespaceAndPath(Fpv.MODID, "track_profiles"), new TrackProfiles());
     }
 
     @SubscribeEvent
@@ -108,7 +109,7 @@ public final class NaturalTrackGenerator {
             PLANNER.plan(seed, originX, originZ, profile, new LevelTerrain(level),
                     TrackGenerationConfig.PLANNER_TERRAIN_CHECK_BUDGET.get())
                 .filter(plan -> place(level, plan, profile))
-                .ifPresent(plan -> LOGGER.info("Generated FPV track at {} in {}", plan.start().anchor(), level.dimension().location()));
+                .ifPresent(plan -> LOGGER.info("Generated FPV track at {} in {}", plan.start().anchor(), level.dimension().identifier()));
             return;
         }
     }
@@ -199,7 +200,7 @@ public final class NaturalTrackGenerator {
         public RoutePlanner.Surface surface(int x, int z) {
             int airY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
             int groundY = airY - 1;
-            if (groundY < level.getMinBuildHeight() || groundY >= level.getMaxBuildHeight() - 1) {
+            if (groundY < level.getMinY() || groundY >= level.getMaxY()) {
                 return new RoutePlanner.Surface(groundY, false);
             }
             BlockPos ground = new BlockPos(x, groundY, z);
@@ -212,14 +213,14 @@ public final class NaturalTrackGenerator {
 
         @Override
         public boolean isClear(int x, int y, int z) {
-            if (y < level.getMinBuildHeight() || y >= level.getMaxBuildHeight()) return false;
+            if (y < level.getMinY() || y > level.getMaxY()) return false;
             BlockPos pos = new BlockPos(x, y, z);
             return level.getFluidState(pos).isEmpty() && level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
         }
 
         @Override
         public boolean canPlaceAnchor(int x, int y, int z) {
-            if (y < level.getMinBuildHeight() || y >= level.getMaxBuildHeight()) return false;
+            if (y < level.getMinY() || y > level.getMaxY()) return false;
             BlockPos pos = new BlockPos(x, y, z);
             return level.getFluidState(pos).isEmpty() && level.getBlockState(pos).canBeReplaced();
         }

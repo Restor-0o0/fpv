@@ -1,12 +1,15 @@
 package org.restor.fpv.block.entity;
 
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -71,8 +74,8 @@ public class DroneNestBlockEntity extends BlockEntity {
 
     private void spawnDrone(ServerLevel level) {
         NpcDroneEntity drone = level.random.nextFloat() < 0.7f
-            ? ModEntities.HOSTILE_DRONE.get().create(level)
-            : ModEntities.PATROL_DRONE.get().create(level);
+            ? ModEntities.HOSTILE_DRONE.get().create(level, net.minecraft.world.entity.EntitySpawnReason.EVENT)
+            : ModEntities.PATROL_DRONE.get().create(level, net.minecraft.world.entity.EntitySpawnReason.EVENT);
         if (drone == null) return;
 
         Vec3 launch = findLaunchPoint(level, drone);
@@ -80,7 +83,7 @@ public class DroneNestBlockEntity extends BlockEntity {
         drone.setPos(launch.x, launch.y, launch.z);
         drone.setAnchor(worldPosition.above(2));
         drone.setOwnerNest(worldPosition, nestId);
-        drone.finalizeSpawn(level, level.getCurrentDifficultyAt(worldPosition), MobSpawnType.SPAWNER, null);
+        drone.finalizeSpawn(level, level.getCurrentDifficultyAt(worldPosition), EntitySpawnReason.SPAWNER, null);
         drone.setPersistenceRequired();
         level.addFreshEntity(drone);
         level.playSound(null, worldPosition, org.restor.fpv.sound.ModSounds.NEST_DEPLOY.get(), SoundSource.BLOCKS, 1.0f, 0.8f);
@@ -106,16 +109,16 @@ public class DroneNestBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
-        if (tag.contains("Cooldown")) cooldown = tag.getInt("Cooldown");
-        if (tag.hasUUID("NestId")) nestId = tag.getUUID("NestId");
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
+        cooldown = input.getIntOr("Cooldown", cooldown);
+        input.read("NestId", UUIDUtil.CODEC).ifPresent(id -> nestId = id);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        tag.putInt("Cooldown", cooldown);
-        tag.putUUID("NestId", nestId);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        output.putInt("Cooldown", cooldown);
+        output.store("NestId", UUIDUtil.CODEC, nestId);
     }
 }

@@ -12,8 +12,8 @@ public final class ComponentCondition {
     public static final int MAX = 1000;
 
     public static int read(CompoundTag tag) {
-        if (tag == null || !tag.contains(NBT_KEY, Tag.TAG_ANY_NUMERIC)) return MAX;
-        return clamp(tag.getInt(NBT_KEY));
+        if (tag == null || !tag.contains(NBT_KEY)) return MAX;
+        return clamp(tag.getIntOr(NBT_KEY, 0));
     }
 
     public static void write(CompoundTag tag, int condition) {

@@ -1,5 +1,8 @@
 package org.restor.fpv.entity;
 
+import net.minecraft.core.UUIDUtil;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvent;
@@ -44,7 +47,7 @@ public abstract class NpcDroneEntity extends Monster
 
     private static final net.minecraft.network.syncher.EntityDataAccessor<CompoundTag> DATA_ASSEMBLY =
         net.minecraft.network.syncher.SynchedEntityData.defineId(NpcDroneEntity.class,
-            net.minecraft.network.syncher.EntityDataSerializers.COMPOUND_TAG);
+            ModDataSerializers.COMPOUND_TAG);
 
     private org.restor.fpv.assembly.DroneAssembly assembly;
     protected BlockPos anchor;
@@ -63,13 +66,6 @@ public abstract class NpcDroneEntity extends Monster
 
     private static final float JAM_LINK_LOSS = 0.25f;
     private final org.restor.fpv.antidrone.RadioJamState jamState = new org.restor.fpv.antidrone.RadioJamState();
-
-    // Machines don't care about the difficulty setting, and a nest's swarm must not
-    // evaporate the moment the player backs off 32 blocks.
-    @Override
-    public boolean shouldDespawnInPeaceful() {
-        return false;
-    }
 
     @Override
     protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
@@ -153,7 +149,7 @@ public abstract class NpcDroneEntity extends Monster
     public net.minecraft.world.entity.SpawnGroupData finalizeSpawn(
             net.minecraft.world.level.ServerLevelAccessor level,
             net.minecraft.world.DifficultyInstance difficulty,
-            net.minecraft.world.entity.MobSpawnType reason,
+            net.minecraft.world.entity.EntitySpawnReason reason,
             net.minecraft.world.entity.SpawnGroupData data) {
         if (entityData.get(DATA_ASSEMBLY).isEmpty()) setAssembly(NpcDroneBuilds.roll(random, buildRole()));
         return super.finalizeSpawn(level, difficulty, reason, data);
@@ -188,7 +184,7 @@ public abstract class NpcDroneEntity extends Monster
 
     @Override
     public void applyRadioInterference(long sourceId, float strength, int durationTicks) {
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
         jamState.apply(sourceId, strength, durationTicks, level().getGameTime());
     }
 
@@ -198,8 +194,8 @@ public abstract class NpcDroneEntity extends Monster
 
     // Jammed: the flight controller loses its link, drops whatever it was chasing and sinks.
     @Override
-    protected void customServerAiStep() {
-        super.customServerAiStep();
+    protected void customServerAiStep(net.minecraft.server.level.ServerLevel level) {
+        super.customServerAiStep(level);
         if (jamState.refresh(level().getGameTime()) <= JAM_LINK_LOSS) return;
         setTarget(null);
         aircraftTarget = null;
@@ -210,7 +206,7 @@ public abstract class NpcDroneEntity extends Monster
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
         if (isRadioJammed()) return;
         if (anchor == null) anchor = blockPosition();
         if (entityData.get(DATA_ASSEMBLY).isEmpty()) setAssembly(NpcDroneBuilds.roll(random, buildRole()));
@@ -230,42 +226,42 @@ public abstract class NpcDroneEntity extends Monster
     protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, DamageSource source, boolean hitByPlayer) {
         super.dropCustomDeathLoot(level, source, hitByPlayer);
         if (hitByPlayer) {
-            spawnAtLocation(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.REDSTONE,
+            spawnAtLocation(level, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.REDSTONE,
                 random.nextInt(2) + 1));
             if (random.nextFloat() < 0.3f) {
-                spawnAtLocation(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COPPER_INGOT));
+                spawnAtLocation(level, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COPPER_INGOT));
             }
         }
     }
 
     // A quad doesn't take fall damage while its props run — and a dead one is already loot.
     @Override
-    public boolean causeFallDamage(float dist, float mult, DamageSource source) { return false; }
+    public boolean causeFallDamage(double dist, float mult, DamageSource source) { return false; }
 
     @Override protected SoundEvent getAmbientSound() { return null; }
     @Override protected SoundEvent getHurtSound(DamageSource source) { return org.restor.fpv.sound.ModSounds.CRASH.get(); }
     @Override protected SoundEvent getDeathSound() { return org.restor.fpv.sound.ModSounds.CRASH.get(); }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        if (tag.contains("Assembly")) setAssembly(org.restor.fpv.assembly.DroneAssembly.load(tag.getCompound("Assembly")));
-        if (tag.contains("Anchor")) anchor = BlockPos.of(tag.getLong("Anchor"));
-        if (tag.contains("OwnerNestPos")) ownerNestPos = BlockPos.of(tag.getLong("OwnerNestPos"));
-        if (tag.hasUUID("OwnerNestId")) ownerNestId = tag.getUUID("OwnerNestId");
+    public void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        input.read("Assembly", CompoundTag.CODEC).ifPresent(t -> setAssembly(org.restor.fpv.assembly.DroneAssembly.load(t)));
+        input.getLong("Anchor").ifPresent(p -> anchor = BlockPos.of(p));
+        input.getLong("OwnerNestPos").ifPresent(p -> ownerNestPos = BlockPos.of(p));
+        input.read("OwnerNestId", UUIDUtil.CODEC).ifPresent(id -> ownerNestId = id);
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        tag.put("Assembly", entityData.get(DATA_ASSEMBLY));
-        if (anchor != null) tag.putLong("Anchor", anchor.asLong());
-        if (ownerNestPos != null) tag.putLong("OwnerNestPos", ownerNestPos.asLong());
-        if (ownerNestId != null) tag.putUUID("OwnerNestId", ownerNestId);
+    public void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("Assembly", CompoundTag.CODEC, entityData.get(DATA_ASSEMBLY));
+        if (anchor != null) output.putLong("Anchor", anchor.asLong());
+        if (ownerNestPos != null) output.putLong("OwnerNestPos", ownerNestPos.asLong());
+        output.storeNullable("OwnerNestId", UUIDUtil.CODEC, ownerNestId);
     }
 
     protected void setFlightTarget(Vec3 target, double speed) {
-        if (level().isClientSide || anchor == null) return;
+        if (level().isClientSide() || anchor == null) return;
         requestedTarget = clampToAnchor(target);
         requestedSpeed = speed;
         if (tickCount < recoveryUntil) return;
@@ -407,7 +403,7 @@ public abstract class NpcDroneEntity extends Monster
                     if (outwardSpeed > 0) nextVelocity = nextVelocity.subtract(outward.scale(outwardSpeed));
                 }
             }
-            if (!drone.level().isClientSide
+            if (!drone.level().isClientSide()
                 && !drone.level().noCollision(drone, drone.getBoundingBox().move(nextVelocity))) {
                 operation = Operation.WAIT;
                 drone.setDeltaMovement(drone.getDeltaMovement().scale(0.2));

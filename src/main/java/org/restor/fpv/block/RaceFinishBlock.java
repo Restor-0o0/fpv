@@ -21,7 +21,7 @@ public class RaceFinishBlock extends Block {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (level.isClientSide) {
+        if (level.isClientSide()) {
             org.restor.fpv.client.RaceMarkingClient.onFinishClicked(pos);
         }
         return InteractionResult.SUCCESS;

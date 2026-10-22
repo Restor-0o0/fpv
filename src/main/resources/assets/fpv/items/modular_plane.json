@@ -1,0 +1,75 @@
+{
+  "model": {
+    "type": "minecraft:range_dispatch",
+    "property": "fpv:frame",
+    "entries": [
+      {
+        "threshold": 1,
+        "model": {
+          "type": "minecraft:model",
+          "model": "fpv:item/plane_delta"
+        }
+      },
+      {
+        "threshold": 2,
+        "model": {
+          "type": "minecraft:model",
+          "model": "fpv:item/plane_glider"
+        }
+      },
+      {
+        "threshold": 3,
+        "model": {
+          "type": "minecraft:model",
+          "model": "fpv:item/plane_longrange"
+        }
+      },
+      {
+        "threshold": 4,
+        "model": {
+          "type": "minecraft:model",
+          "model": "fpv:item/plane_cargo"
+        }
+      },
+      {
+        "threshold": 5,
+        "model": {
+          "type": "minecraft:model",
+          "model": "fpv:item/plane_interceptor"
+        }
+      },
+      {
+        "threshold": 6,
+        "model": {
+          "type": "minecraft:model",
+          "model": "fpv:item/plane_scout"
+        }
+      },
+      {
+        "threshold": 7,
+        "model": {
+          "type": "minecraft:model",
+          "model": "fpv:item/plane_kamikaze"
+        }
+      },
+      {
+        "threshold": 8,
+        "model": {
+          "type": "minecraft:model",
+          "model": "fpv:item/plane_carrier"
+        }
+      },
+      {
+        "threshold": 9,
+        "model": {
+          "type": "minecraft:model",
+          "model": "fpv:item/plane_loiter"
+        }
+      }
+    ],
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "fpv:item/plane"
+    }
+  }
+}

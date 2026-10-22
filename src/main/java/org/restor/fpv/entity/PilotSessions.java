@@ -35,17 +35,13 @@ public final class PilotSessions {
         CompoundTag data = player.getPersistentData();
         data.putBoolean(FLAG, true);
         data.putBoolean(WAS_INVULNERABLE, player.isInvulnerable());
-        if (home != null) {
-            CompoundTag tag = new CompoundTag();
-            home.save(tag, "");
-            data.put(HOME, tag);
-        }
+        if (home != null) data.store(HOME, PilotReturn.CODEC, home);
     }
 
     /** The craft owns the return point, but it dies with the craft — this copy does not. */
     public static PilotReturn home(ServerPlayer player) {
         CompoundTag data = player.getPersistentData();
-        return data.contains(HOME) ? PilotReturn.load(data.getCompound(HOME), "", player.level()) : null;
+        return data.read(HOME, PilotReturn.CODEC).orElse(null);
     }
 
     // A player never tracks itself, so vanilla never sends them their own entity
@@ -98,7 +94,7 @@ public final class PilotSessions {
 
     @SubscribeEvent
     public static void onCraftLeavesLevel(EntityLeaveLevelEvent event) {
-        if (event.getLevel().isClientSide) return;
+        if (event.getLevel().isClientSide()) return;
         if (event.getEntity() instanceof DroneEntity drone && drone.hasRemotePilot()) {
             drone.endRemoteControl();
         }
@@ -116,8 +112,8 @@ public final class PilotSessions {
     // also has to put it back; a respawn already has a bed or spawn point to go to.
     private static void repair(ServerPlayer player, boolean sendHome) {
         CompoundTag data = player.getPersistentData();
-        if (!data.getBoolean(FLAG)) return;
-        boolean wasInvulnerable = data.getBoolean(WAS_INVULNERABLE);
+        if (!data.getBooleanOr(FLAG, false)) return;
+        boolean wasInvulnerable = data.getBooleanOr(WAS_INVULNERABLE, false);
         PilotReturn home = sendHome ? home(player) : null;
         clearFlag(player);
         player.setInvisible(false);

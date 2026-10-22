@@ -183,7 +183,7 @@
   "item.fpv.warhead_shaped": "Кумулятивная БЧ",
   "item.fpv.warhead_thermo": "Термобарическая БЧ",
   "itemGroup.fpv": "FPV Дроны",
-  "key.categories.fpv": "FPV Дроны",
+  "key.category.fpv.main": "FPV Дроны",
   "key.fpv.arm_switch": "Переключатель ARM дрона",
   "key.fpv.camera_down": "Угол камеры вниз",
   "key.fpv.camera_up": "Угол камеры вверх",

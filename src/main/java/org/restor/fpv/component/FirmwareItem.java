@@ -1,17 +1,18 @@
 package org.restor.fpv.component;
 
+import java.util.function.Consumer;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 
-import java.util.List;
 
 public class FirmwareItem extends ComponentItem {
     private final FirmwareType firmwareType;
 
-    public FirmwareItem(ComponentStats stats, FirmwareType firmwareType) {
-        super(stats);
+    public FirmwareItem(Item.Properties props, ComponentStats stats, FirmwareType firmwareType) {
+        super(props, stats);
         this.firmwareType = firmwareType;
     }
 
@@ -20,11 +21,12 @@ public class FirmwareItem extends ComponentItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        super.appendHoverText(stack, context, tooltip, flag);
-        tooltip.add(Component.translatable("tooltip.fpv.firmware." + firmwareType.id()));
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display,
+                                Consumer<Component> tooltip, TooltipFlag flag) {
+        super.appendHoverText(stack, context, display, tooltip, flag);
+        tooltip.accept(Component.translatable("tooltip.fpv.firmware." + firmwareType.id()));
         for (org.restor.fpv.entity.DroneMode mode : firmwareType.modes()) {
-            tooltip.add(Component.literal(" • ").append(Component.translatable(mode.translationKey())));
+            tooltip.accept(Component.literal(" • ").append(Component.translatable(mode.translationKey())));
         }
     }
 }

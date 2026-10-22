@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -39,7 +39,7 @@ public class GuardStationBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public GuardStationBlock(Properties props) {
         super(props);
@@ -73,7 +73,7 @@ public class GuardStationBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof GuardStationBlockEntity be) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof GuardStationBlockEntity be) {
             be.openFor((ServerPlayer) player);
         }
         return InteractionResult.SUCCESS;
@@ -82,18 +82,10 @@ public class GuardStationBlock extends BaseEntityBlock {
     @Override
     public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
         super.setPlacedBy(level, pos, state, placer, stack);
-        if (!level.isClientSide && placer instanceof Player player
+        if (!level.isClientSide() && placer instanceof Player player
             && level.getBlockEntity(pos) instanceof GuardStationBlockEntity be) {
             be.setOwner(player);
         }
-    }
-
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean moved) {
-        if (!state.is(newState.getBlock()) && level.getBlockEntity(pos) instanceof GuardStationBlockEntity be) {
-            Containers.dropContents(level, pos, be);
-        }
-        super.onRemove(state, level, pos, newState, moved);
     }
 
     @Nullable
@@ -105,7 +97,7 @@ public class GuardStationBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (level.isClientSide) return null;
+        if (level.isClientSide()) return null;
         return createTickerHelper(type, ModBlockEntities.GUARD_STATION.get(), GuardStationBlockEntity::serverTick);
     }
 

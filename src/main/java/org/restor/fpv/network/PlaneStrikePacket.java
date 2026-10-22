@@ -3,7 +3,7 @@ package org.restor.fpv.network;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -16,7 +16,7 @@ import org.restor.fpv.entity.ScoutPlaneEntity;
 
 public record PlaneStrikePacket(int scoutId, double tx, double ty, double tz) implements CustomPacketPayload {
     public static final Type<PlaneStrikePacket> TYPE =
-        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "plane_strike"));
+        new Type<>(Identifier.fromNamespaceAndPath(Fpv.MODID, "plane_strike"));
 
     public static final StreamCodec<FriendlyByteBuf, PlaneStrikePacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {
@@ -70,7 +70,7 @@ public record PlaneStrikePacket(int scoutId, double tx, double ty, double tz) im
 
             double horizontal = 200.0;
             Vec3 spawn = target.subtract(approach.scale(horizontal)).add(0, horizontal, 0);
-            KamikazeWingEntity wing = ModEntities.PLANE_KAMIKAZE.get().create(sl);
+            KamikazeWingEntity wing = ModEntities.PLANE_KAMIKAZE.get().create(sl, net.minecraft.world.entity.EntitySpawnReason.EVENT);
             if (wing == null) return;
             wing.beginAttackRun(target, spawn);
             sl.addFreshEntity(wing);

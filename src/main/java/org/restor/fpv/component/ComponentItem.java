@@ -1,5 +1,7 @@
 package org.restor.fpv.component;
 
+import java.util.function.Consumer;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
@@ -8,13 +10,12 @@ import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
 import org.restor.fpv.assembly.ComponentCondition;
 
-import java.util.List;
 
 public class ComponentItem extends Item {
     private final ComponentStats stats;
 
-    public ComponentItem(ComponentStats stats) {
-        super(new Item.Properties().stacksTo(stackSizeFor(stats)));
+    public ComponentItem(Item.Properties props, ComponentStats stats) {
+        super(props.stacksTo(stackSizeFor(stats)));
         this.stats = stats;
     }
 
@@ -45,58 +46,59 @@ public class ComponentItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
-        tooltip.add(Component.translatable("tooltip.fpv.part.type", Component.translatable(typeKey())));
-        tooltip.add(Component.translatable("tooltip.fpv.component_condition", ComponentCondition.percent(stack)));
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display,
+                                Consumer<Component> tooltip, TooltipFlag flag) {
+        tooltip.accept(Component.translatable("tooltip.fpv.part.type", Component.translatable(typeKey())));
+        tooltip.accept(Component.translatable("tooltip.fpv.component_condition", ComponentCondition.percent(stack)));
         switch (stats.type()) {
             case FRAME -> {
-                tooltip.add(Component.translatable("tooltip.fpv.part.size", fmt(stats.frameSize())));
-                tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.size", fmt(stats.frameSize())));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
                 appendFrameTuning(stack, tooltip);
             }
             case MOTOR -> {
-                tooltip.add(Component.translatable("tooltip.fpv.part.kv", (int) stats.motorKv()));
-                tooltip.add(Component.translatable("tooltip.fpv.part.power", fmt(stats.motorPower())));
-                tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.kv", (int) stats.motorKv()));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.power", fmt(stats.motorPower())));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
             }
             case BATTERY -> {
-                tooltip.add(Component.translatable("tooltip.fpv.part.cells", stats.batteryCells(), stats.batteryCapacity()));
-                tooltip.add(Component.translatable("tooltip.fpv.part.discharge", fmt(stats.batteryMaxDischarge())));
-                tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.cells", stats.batteryCells(), stats.batteryCapacity()));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.discharge", fmt(stats.batteryMaxDischarge())));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
             }
             case PROPELLER -> {
-                tooltip.add(Component.translatable("tooltip.fpv.part.prop_size",
+                tooltip.accept(Component.translatable("tooltip.fpv.part.prop_size",
                     fmt(stats.propDiameter()), fmt(stats.propPitch()), stats.propBlades()));
-                tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
             }
             case VTX -> {
-                tooltip.add(Component.translatable("tooltip.fpv.part.vtx_power", stats.vtxPowerMw()));
-                tooltip.add(Component.translatable("tooltip.fpv.part.vtx_range", fmt(stats.vtxRangeMultiplier())));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.vtx_power", stats.vtxPowerMw()));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.vtx_range", fmt(stats.vtxRangeMultiplier())));
             }
             case CAMERA -> {
-                tooltip.add(Component.translatable("tooltip.fpv.part.fov", (int) stats.cameraFov()));
-                tooltip.add(Component.translatable("tooltip.fpv.part.tilt", (int) stats.cameraTiltAngle()));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.fov", (int) stats.cameraFov()));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.tilt", (int) stats.cameraTiltAngle()));
             }
             case FLIGHT_CONTROLLER -> {
-                if (stats.fcHasOsd()) tooltip.add(Component.translatable("tooltip.fpv.part.osd"));
-                if (stats.fcHasBlackbox()) tooltip.add(Component.translatable("tooltip.fpv.part.blackbox"));
-                tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
+                if (stats.fcHasOsd()) tooltip.accept(Component.translatable("tooltip.fpv.part.osd"));
+                if (stats.fcHasBlackbox()) tooltip.accept(Component.translatable("tooltip.fpv.part.blackbox"));
+                tooltip.accept(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
             }
-            case MODULE, FIRMWARE -> tooltip.add(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
+            case MODULE, FIRMWARE -> tooltip.accept(Component.translatable("tooltip.fpv.part.weight", fmt(stats.weight())));
         }
-        tooltip.add(Component.translatable("tooltip.fpv.component_place"));
+        tooltip.accept(Component.translatable("tooltip.fpv.component_place"));
     }
 
-    private static void appendFrameTuning(ItemStack stack, List<Component> tooltip) {
+    private static void appendFrameTuning(ItemStack stack, Consumer<Component> tooltip) {
         var spec = org.restor.fpv.assembly.FrameSpecs.byItem(stack.getItem());
         if (spec == null) return;
         var t = spec.tuning();
         if (spec.isFixedWing()) {
-            tooltip.add(Component.translatable("tooltip.fpv.part.wing", fmt(t.wingArea()), fmt(t.liftCoeff())));
-            tooltip.add(Component.translatable("tooltip.fpv.part.stall", fmt(t.stallSpeed()), Math.round(t.maxSpeed())));
+            tooltip.accept(Component.translatable("tooltip.fpv.part.wing", fmt(t.wingArea()), fmt(t.liftCoeff())));
+            tooltip.accept(Component.translatable("tooltip.fpv.part.stall", fmt(t.stallSpeed()), Math.round(t.maxSpeed())));
         }
-        tooltip.add(Component.translatable("tooltip.fpv.part.agility", fmt(t.agility()), fmt(t.dragFactor())));
-        tooltip.add(Component.translatable("tooltip.fpv.part.toughness", fmt(t.toughness()), fmt(t.liftCapacityKg())));
+        tooltip.accept(Component.translatable("tooltip.fpv.part.agility", fmt(t.agility()), fmt(t.dragFactor())));
+        tooltip.accept(Component.translatable("tooltip.fpv.part.toughness", fmt(t.toughness()), fmt(t.liftCapacityKg())));
     }
 
     private static String fmt(float v) {

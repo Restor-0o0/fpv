@@ -10,7 +10,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
-import net.neoforged.neoforge.common.util.TriState;
+import net.minecraft.util.TriState;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
@@ -24,6 +24,7 @@ import net.minecraft.server.level.ServerPlayer;
 import org.restor.fpv.block.ModBlocks;
 import org.restor.fpv.block.entity.ModBlockEntities;
 import org.restor.fpv.component.ModComponents;
+import org.restor.fpv.entity.ModDataSerializers;
 import org.restor.fpv.entity.ModEntities;
 import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.item.ModItems;
@@ -134,6 +135,7 @@ public class Fpv {
         container.registerConfig(ModConfig.Type.COMMON, org.restor.fpv.rules.ExplosivesConfig.SPEC, "fpv-explosives.toml");
         container.registerConfig(ModConfig.Type.SERVER, TrackGenerationConfig.SPEC, "fpv-track-generation.toml");
 
+        ModDataSerializers.SERIALIZERS.register(modEventBus);
         ModEntities.ENTITIES.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
         ModComponents.COMPONENTS.register(modEventBus);
@@ -177,7 +179,6 @@ public class Fpv {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
             LOGGER.info("FPV Drones client setup!");
-            event.enqueueWork(org.restor.fpv.client.ModItemProperties::register);
         }
     }
 }

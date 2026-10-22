@@ -4,7 +4,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
@@ -15,7 +15,7 @@ import org.restor.fpv.entity.DroneEntity;
 // link code and start a control session.
 public record StartRemoteControlPacket(String code) implements CustomPacketPayload {
     public static final Type<StartRemoteControlPacket> TYPE =
-        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "start_remote_control"));
+        new Type<>(Identifier.fromNamespaceAndPath(Fpv.MODID, "start_remote_control"));
 
     public static final StreamCodec<FriendlyByteBuf, StartRemoteControlPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> buf.writeUtf(pkt.code, 6),
@@ -31,7 +31,7 @@ public record StartRemoteControlPacket(String code) implements CustomPacketPaylo
             String code = pkt.code();
             if (!code.matches("\\d{6}")) return;
 
-            for (Entity e : player.serverLevel().getAllEntities()) {
+            for (Entity e : player.level().getAllEntities()) {
                 if (e instanceof DroneEntity drone && drone.isRemoteControllable()
                     && code.equals(drone.getLinkCode())
                     && drone.canPlayerAccess(player)

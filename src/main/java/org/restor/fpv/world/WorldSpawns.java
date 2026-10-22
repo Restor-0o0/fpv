@@ -6,7 +6,7 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.StructureTags;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -79,20 +79,20 @@ public final class WorldSpawns {
 
         if (level.structureManager().getStructureWithPieceAt(center, StructureTags.VILLAGE).isValid()) {
             if (random.nextInt(VILLAGE_GUARD_CHANCE) != 0) return;
-            VillageDroneEntity guard = ModEntities.VILLAGE_DRONE.get().create(level);
+            VillageDroneEntity guard = ModEntities.VILLAGE_DRONE.get().create(level, net.minecraft.world.entity.EntitySpawnReason.EVENT);
             if (guard == null) return;
             guard.setPos(surface.getX() + 0.5, surface.getY() + 7.0, surface.getZ() + 0.5);
             guard.setAnchor(surface.above(7));
             guard.finalizeSpawn(level, level.getCurrentDifficultyAt(surface),
-                MobSpawnType.CHUNK_GENERATION, null);
+                EntitySpawnReason.CHUNK_GENERATION, null);
             level.addFreshEntity(guard);
             return;
         }
 
         if (random.nextInt(NEST_CHANCE) != 0) return;
-        if (surface.getY() <= level.getMinBuildHeight() + 1) return;
+        if (surface.getY() <= level.getMinY() + 1) return;
         if (!level.getBlockState(surface).canBeReplaced()) return;
-        if (!level.getBlockState(surface.below()).isSolidRender(level, surface.below())) return;
+        if (!level.getBlockState(surface.below()).isSolidRender()) return;
         level.setBlockAndUpdate(surface, ModBlocks.DRONE_NEST.get().defaultBlockState());
     }
 }

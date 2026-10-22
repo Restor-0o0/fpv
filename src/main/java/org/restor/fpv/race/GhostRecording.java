@@ -1,5 +1,6 @@
 package org.restor.fpv.race;
 
+import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -84,7 +85,7 @@ public final class GhostRecording {
     public CompoundTag save() {
         CompoundTag tag = new CompoundTag();
         tag.putString("Player", player);
-        if (playerId != null) tag.putUUID("PlayerId", playerId);
+        if (playerId != null) tag.store("PlayerId", UUIDUtil.CODEC, playerId);
         tag.putInt("Time", timeTicks);
         tag.putInt("Model", modelType);
         int n = x.length;
@@ -109,22 +110,22 @@ public final class GhostRecording {
     }
 
     public static GhostRecording load(CompoundTag tag) {
-        ListTag pos = tag.getList("Pos", net.minecraft.nbt.Tag.TAG_DOUBLE);
-        ListTag rot = tag.getList("Rot", net.minecraft.nbt.Tag.TAG_FLOAT);
-        int n = boundedFrameCount(tag.getInt("N"), pos.size() / 3, rot.size() / 4);
+        ListTag pos = tag.getListOrEmpty("Pos");
+        ListTag rot = tag.getListOrEmpty("Rot");
+        int n = boundedFrameCount(tag.getIntOr("N", 0), pos.size() / 3, rot.size() / 4);
         double[] x = new double[n], y = new double[n], z = new double[n];
         float[] yaw = new float[n], pitch = new float[n], roll = new float[n], throttle = new float[n];
         for (int i = 0; i < n; i++) {
-            x[i] = pos.getDouble(i * 3);
-            y[i] = pos.getDouble(i * 3 + 1);
-            z[i] = pos.getDouble(i * 3 + 2);
-            yaw[i]      = rot.getFloat(i * 4);
-            pitch[i]    = rot.getFloat(i * 4 + 1);
-            roll[i]     = rot.getFloat(i * 4 + 2);
-            throttle[i] = rot.getFloat(i * 4 + 3);
+            x[i] = pos.getDoubleOr(i * 3, 0.0);
+            y[i] = pos.getDoubleOr(i * 3 + 1, 0.0);
+            z[i] = pos.getDoubleOr(i * 3 + 2, 0.0);
+            yaw[i]      = rot.getFloatOr(i * 4, 0f);
+            pitch[i]    = rot.getFloatOr(i * 4 + 1, 0f);
+            roll[i]     = rot.getFloatOr(i * 4 + 2, 0f);
+            throttle[i] = rot.getFloatOr(i * 4 + 3, 0f);
         }
-        UUID id = tag.hasUUID("PlayerId") ? tag.getUUID("PlayerId") : null;
-        return new GhostRecording(tag.getString("Player"), id, tag.getInt("Time"), tag.getInt("Model"),
+        UUID id = tag.read("PlayerId", UUIDUtil.CODEC).orElse(null);
+        return new GhostRecording(tag.getStringOr("Player", ""), id, tag.getIntOr("Time", 0), tag.getIntOr("Model", 0),
             x, y, z, yaw, pitch, roll, throttle);
     }
 

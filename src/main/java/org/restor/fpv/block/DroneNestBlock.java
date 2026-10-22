@@ -17,7 +17,7 @@ import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.level.block.Block;
@@ -52,19 +52,19 @@ public class DroneNestBlock extends BaseEntityBlock {
 
     @Override
     protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player, net.minecraft.world.phys.BlockHitResult hit) {
-        if (!level.isClientSide && level.getBlockEntity(pos) instanceof DroneNestBlockEntity nest) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof DroneNestBlockEntity nest) {
             player.displayClientMessage(nest.status(level), true);
         }
-        return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
+        return net.minecraft.world.InteractionResult.SUCCESS;
     }
 
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
-        if (level.isClientSide) return null;
+        if (level.isClientSide()) return null;
         return createTickerHelper(type, ModBlockEntities.DRONE_NEST.get(), DroneNestBlockEntity::serverTick);
     }
 
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {

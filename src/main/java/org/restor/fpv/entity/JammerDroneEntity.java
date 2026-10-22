@@ -59,7 +59,7 @@ public class JammerDroneEntity extends NpcDroneEntity {
     @Override
     public void tick() {
         super.tick();
-        if (level().isClientSide) {
+        if (level().isClientSide()) {
             if (tickCount % 3 == 0) {
                 level().addParticle(ParticleTypes.ELECTRIC_SPARK,
                     getX(), getY() + 0.25, getZ(), 0, 0.02, 0);
@@ -90,7 +90,7 @@ public class JammerDroneEntity extends NpcDroneEntity {
                                        boolean hitByPlayer) {
         super.dropCustomDeathLoot(level, source, hitByPlayer);
         if (hitByPlayer) {
-            spawnAtLocation(new net.minecraft.world.item.ItemStack(
+            spawnAtLocation(level, new net.minecraft.world.item.ItemStack(
                 net.minecraft.world.item.Items.AMETHYST_SHARD, random.nextInt(2) + 1));
         }
     }

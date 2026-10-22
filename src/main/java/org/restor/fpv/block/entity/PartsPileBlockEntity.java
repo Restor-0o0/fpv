@@ -1,5 +1,8 @@
 package org.restor.fpv.block.entity;
 
+import net.minecraft.world.Containers;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -188,6 +191,14 @@ public class PartsPileBlockEntity extends BlockEntity {
         return out;
     }
 
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        if (level == null) return;
+        for (ItemStack rest : takeAll()) {
+            Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), rest);
+        }
+    }
+
     public List<ItemStack> takeAll() {
         List<ItemStack> out = new ArrayList<>(sections);
         sections.clear();
@@ -201,20 +212,20 @@ public class PartsPileBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
         sections.clear();
-        if (tag.contains("Item")) sections.add(ItemStack.parseOptional(registries, tag.getCompound("Item")));
-        for (Tag entry : tag.getList("Items", Tag.TAG_COMPOUND)) sections.add(ItemStack.parseOptional(registries, (CompoundTag) entry));
+        input.read("Item", ItemStack.OPTIONAL_CODEC).ifPresent(sections::add);
+        input.listOrEmpty("Items", ItemStack.OPTIONAL_CODEC).forEach(sections::add);
         sections.removeIf(ItemStack::isEmpty);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        ListTag list = new ListTag();
-        for (ItemStack s : sections) list.add(s.saveOptional(registries));
-        if (!list.isEmpty()) tag.put("Items", list);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        if (sections.isEmpty()) return;
+        var list = output.list("Items", ItemStack.OPTIONAL_CODEC);
+        sections.forEach(list::add);
     }
 
     @Override

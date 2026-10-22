@@ -2,11 +2,10 @@ package org.restor.fpv.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.joml.Quaternionf;
@@ -24,16 +23,39 @@ import org.restor.fpv.entity.DroneEntity;
  * point. Give a part a 3D Blockbench model (assets/fpv/models/item/<part>.json) and
  * it is rendered assembled — no code changes needed.
  */
-public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("fpv", "textures/entity/drone.png");
+public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity, ModularDroneRenderer.State> {
+    public static class State extends net.minecraft.client.renderer.entity.state.EntityRenderState {
+        ModularDroneEntity entity;
+    }
+
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath("fpv", "textures/entity/drone.png");
 
     public ModularDroneRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
     }
 
     @Override
-    public void render(ModularDroneEntity entity, float yaw, float partialTick, PoseStack poseStack,
-                       MultiBufferSource buffer, int packedLight) {
+    public State createRenderState() {
+        return new State();
+    }
+
+    @Override
+    public void extractRenderState(ModularDroneEntity entity, State state, float partialTick) {
+        super.extractRenderState(entity, state, partialTick);
+        state.entity = entity;
+    }
+
+    @Override
+    public void submit(State state, PoseStack poseStack, net.minecraft.client.renderer.SubmitNodeCollector collector,
+                       net.minecraft.client.renderer.state.CameraRenderState camera) {
+        SubmitBuffers buffer = new SubmitBuffers(collector);
+        render(state.entity, state.partialTick, poseStack, buffer, state.lightCoords);
+        buffer.flush();
+        super.submit(state, poseStack, collector, camera);
+    }
+
+    private void render(ModularDroneEntity entity, float partialTick, PoseStack poseStack,
+                        SubmitBuffers buffer, int packedLight) {
         Minecraft mc = Minecraft.getInstance();
         boolean fpvSelf = mc.getCameraEntity() != null
             && (mc.getCameraEntity() == entity || mc.getCameraEntity().getVehicle() == entity)
@@ -56,7 +78,6 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
             return;
         }
 
-        super.render(entity, yaw, partialTick, poseStack, buffer, packedLight);
 
         poseStack.pushPose();
         poseStack.translate(0, entity.getBbHeight() / 2, 0);
@@ -74,7 +95,7 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
 
     /** Draws the assembled drone, optionally limiting FPV self-view to its front props. */
     private void renderAssembly(ModularDroneEntity entity, DroneAssembly assembly, FrameSpec spec,
-                                 PoseStack poseStack, MultiBufferSource buffer, int packedLight, float partialTick,
+                                 PoseStack poseStack, SubmitBuffers buffer, int packedLight, float partialTick,
                                  boolean propsOnly) {
         DroneVisual v = DroneVisual.of(spec);
         if (!propsOnly) FrameModels.render(assembly.frame, poseStack, buffer, packedLight, v.frameScale());
@@ -114,7 +135,7 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
         }
     }
 
-    private void renderPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+    private void renderPart(ItemStack stack, PoseStack poseStack, SubmitBuffers buffer,
                             int light, float x, float y, float z, float spinDeg, float scale) {
         if (stack.isEmpty()) return;
         poseStack.pushPose();
@@ -123,13 +144,12 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
         if (spinDeg != 0) {
             poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(spinDeg));
         }
-        Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
-            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        buffer.item(stack, poseStack, light);
         poseStack.popPose();
     }
 
     /** Lays a rotor on its side so its thrust axis runs along the fuselage. */
-    private void renderRotorPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+    private void renderRotorPart(ItemStack stack, PoseStack poseStack, SubmitBuffers buffer,
                                  int light, float x, float y, float z, float spinDeg, float scale) {
         if (stack.isEmpty()) return;
         poseStack.pushPose();
@@ -137,20 +157,18 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
         poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
         poseStack.scale(scale, scale, scale);
         if (spinDeg != 0) poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(spinDeg));
-        Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
-            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        buffer.item(stack, poseStack, light);
         poseStack.popPose();
     }
 
-    private void renderCameraPart(ItemStack stack, PoseStack poseStack, MultiBufferSource buffer,
+    private void renderCameraPart(ItemStack stack, PoseStack poseStack, SubmitBuffers buffer,
                                   int light, float x, float y, float z, float scale) {
         if (stack.isEmpty()) return;
         poseStack.pushPose();
         poseStack.translate(x, y, z);
         poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(22.5f));
         poseStack.scale(scale, scale, scale);
-        Minecraft.getInstance().getItemRenderer().renderStatic(stack, ItemDisplayContext.NONE,
-            light, OverlayTexture.NO_OVERLAY, poseStack, buffer, null, 0);
+        buffer.item(stack, poseStack, light);
         poseStack.popPose();
     }
 
@@ -162,8 +180,4 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity> {
             .rotateZ((float) Math.toRadians(-roll));
     }
 
-    @Override
-    public ResourceLocation getTextureLocation(ModularDroneEntity entity) {
-        return TEXTURE;
-    }
 }

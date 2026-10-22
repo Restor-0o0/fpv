@@ -1,7 +1,7 @@
 package org.restor.fpv.client.ui.screen.settings;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -106,8 +106,8 @@ final class KeyBindRow extends SettingRow {
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
             bind(KeyModifier.NONE, InputConstants.UNKNOWN);
         } else {
-            InputConstants.Key pressed = InputConstants.getKey(keyCode, scanCode);
-            KeyModifier modifier = KeyModifier.isKeyCodeModifier(pressed) ? KeyModifier.NONE : KeyModifier.getActiveModifier();
+            InputConstants.Key pressed = InputConstants.getKey(new net.minecraft.client.input.KeyEvent(keyCode, scanCode, 0));
+            KeyModifier modifier = KeyModifier.isKeyCodeModifier(pressed) ? KeyModifier.NONE : activeModifier();
             bind(modifier, pressed);
         }
         stopListening();
@@ -117,7 +117,7 @@ final class KeyBindRow extends SettingRow {
     @Override
     boolean listenMouse(int button) {
         if (!listening) return false;
-        bind(KeyModifier.getActiveModifier(), InputConstants.Type.MOUSE.getOrCreate(button));
+        bind(activeModifier(), InputConstants.Type.MOUSE.getOrCreate(button));
         stopListening();
         return true;
     }
@@ -129,6 +129,10 @@ final class KeyBindRow extends SettingRow {
         listenHost.accept(null);
     }
 
+    private static KeyModifier activeModifier() {
+        return KeyModifier.getActiveModifiers().stream().findFirst().orElse(KeyModifier.NONE);
+    }
+
     private void bind(KeyModifier modifier, InputConstants.Key input) {
         key.setKeyModifierAndCode(modifier, input);
         apply();
@@ -136,7 +140,6 @@ final class KeyBindRow extends SettingRow {
 
     private void apply() {
         Minecraft mc = Minecraft.getInstance();
-        mc.options.setKey(key, key.getKey());
         KeyMapping.resetMapping();
         mc.options.save();
     }

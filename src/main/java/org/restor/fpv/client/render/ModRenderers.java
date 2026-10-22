@@ -10,15 +10,6 @@ import org.restor.fpv.entity.ModEntities;
 @EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public class ModRenderers {
     @SubscribeEvent
-    public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
-        for (net.minecraft.client.resources.PlayerSkin.Model skin : event.getSkins()) {
-            if (event.getSkin(skin) instanceof net.minecraft.client.renderer.entity.player.PlayerRenderer renderer) {
-                renderer.addLayer(new GogglesLayer(renderer, event.getContext().getItemRenderer()));
-            }
-        }
-    }
-
-    @SubscribeEvent
     public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModEntities.CINEWHOOP.get(), DroneRenderer::new);
         event.registerEntityRenderer(ModEntities.RACING.get(), DroneRenderer::new);

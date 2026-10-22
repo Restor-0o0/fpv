@@ -14,7 +14,7 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.restor.fpv.warhead.WarheadType;
 
-public class DropChargeEntity extends net.minecraft.world.entity.projectile.ThrowableItemProjectile {
+public class DropChargeEntity extends net.minecraft.world.entity.projectile.throwableitemprojectile.ThrowableItemProjectile {
 
     private static final int MAX_LIFE = 400;
     // Ticks of free fall before the fuze is live. A charge that hits something inside that
@@ -56,7 +56,7 @@ public class DropChargeEntity extends net.minecraft.world.entity.projectile.Thro
     public void tick() {
         super.tick();
         setDeltaMovement(getDeltaMovement().multiply(AIR_DRAG, 1.0, AIR_DRAG));
-        if (level().isClientSide) {
+        if (level().isClientSide()) {
             level().addParticle(ParticleTypes.SMOKE, getX(), getY(), getZ(), 0, 0.01, 0);
             return;
         }
@@ -74,7 +74,7 @@ public class DropChargeEntity extends net.minecraft.world.entity.projectile.Thro
     @Override
     protected void onHit(HitResult result) {
         super.onHit(result);
-        if (level().isClientSide) return;
+        if (level().isClientSide()) return;
         if (!isArmed()) {
             dud();
             return;
@@ -86,7 +86,7 @@ public class DropChargeEntity extends net.minecraft.world.entity.projectile.Thro
     private void dud() {
         if (!isAlive()) return;
         playSound(SoundEvents.ITEM_FRAME_BREAK, 0.6f, 1.2f);
-        spawnAtLocation(new ItemStack(org.restor.fpv.item.ModItems.DROP_CHARGE.get()));
+        if (level() instanceof ServerLevel sl) spawnAtLocation(sl, new ItemStack(org.restor.fpv.item.ModItems.DROP_CHARGE.get()));
         discard();
     }
 

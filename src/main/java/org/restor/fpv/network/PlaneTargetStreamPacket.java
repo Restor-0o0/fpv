@@ -3,7 +3,7 @@ package org.restor.fpv.network;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
@@ -14,7 +14,7 @@ import org.restor.fpv.entity.PlaneEntity;
 public record PlaneTargetStreamPacket(int planeId, boolean active, double x, double y,
                                        double z) implements CustomPacketPayload {
     public static final Type<PlaneTargetStreamPacket> TYPE =
-        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "plane_target_stream"));
+        new Type<>(Identifier.fromNamespaceAndPath(Fpv.MODID, "plane_target_stream"));
 
     public static final StreamCodec<FriendlyByteBuf, PlaneTargetStreamPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

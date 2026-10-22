@@ -50,7 +50,7 @@ public final class MenuSettingsButton extends AbstractWidget {
     }
 
     @Override
-    public void onClick(double mouseX, double mouseY) {
+    public void onClick(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
         Minecraft.getInstance().setScreen(new FpvSettingsScreen(owner));
     }
 

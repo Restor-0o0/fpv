@@ -1,5 +1,6 @@
 package org.restor.fpv.client;
 
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.neoforged.fml.common.EventBusSubscriber;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.CameraType;
@@ -203,7 +204,7 @@ public class ClientEventHandler {
             boolean sneakDown = MC.options.keyShift.isDown();
             if (sneakDown && !prevSneakKey && (lineOfSight || MC.player.getVehicle() == drone)) {
                 prevSneakKey = true;
-                PacketDistributor.sendToServer(new org.restor.fpv.network.DroneDismountPacket(drone.getId()));
+                ClientPacketDistributor.sendToServer(new org.restor.fpv.network.DroneDismountPacket(drone.getId()));
                 if (lineOfSight) LineOfSightSession.clear();
                 else MC.player.stopRiding();
                 return;
@@ -222,17 +223,17 @@ public class ClientEventHandler {
             boolean heavy = drone.isHeavyLift();
             if (ModKeyBindings.CAMERA_UP.consumeClick()) {
                 if (heavy) nudgeGimbalPitch(drone, 5f);
-                else PacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), 5f));
+                else ClientPacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), 5f));
             }
             if (ModKeyBindings.CAMERA_DOWN.consumeClick()) {
                 if (heavy) nudgeGimbalPitch(drone, -5f);
-                else PacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), -5f));
+                else ClientPacketDistributor.sendToServer(new CameraAnglePacket(drone.getId(), -5f));
             }
             if (ModKeyBindings.FIRE_PAYLOAD.consumeClick()) {
-                PacketDistributor.sendToServer(new org.restor.fpv.network.FirePayloadPacket(drone.getId()));
+                ClientPacketDistributor.sendToServer(new org.restor.fpv.network.FirePayloadPacket(drone.getId()));
             }
             if (ModKeyBindings.FIRE_WEAPON.consumeClick()) {
-                PacketDistributor.sendToServer(new org.restor.fpv.network.FireWeaponPacket(drone.getId()));
+                ClientPacketDistributor.sendToServer(new org.restor.fpv.network.FireWeaponPacket(drone.getId()));
             }
 
             // The keyboard arm switch must remain available when an RC transmitter is
@@ -274,7 +275,7 @@ public class ClientEventHandler {
 
             boolean cycleDown = ModKeyBindings.CYCLE_MODE.isDown();
             if (cycleDown && !prevCycleKey) {
-                PacketDistributor.sendToServer(new CycleModePacket(drone.getId()));
+                ClientPacketDistributor.sendToServer(new CycleModePacket(drone.getId()));
             }
             prevCycleKey = cycleDown;
             return;
@@ -354,7 +355,7 @@ public class ClientEventHandler {
             if (target != null) {
                 planeLockTarget = target;
                 planeRawLockTarget = target;
-                PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneStrikePacket(
+                ClientPacketDistributor.sendToServer(new org.restor.fpv.network.PlaneStrikePacket(
                     plane.getId(), target.x, target.y, target.z));
             } else {
                 MC.player.displayClientMessage(
@@ -544,7 +545,7 @@ public class ClientEventHandler {
         boolean arm = keyboardArmSwitch;
 
         drone.setClientPredictedInputs(keyboardThrottle, filteredPitch, filteredRoll, yaw, arm);
-        PacketDistributor.sendToServer(new ControllerPacket(
+        ClientPacketDistributor.sendToServer(new ControllerPacket(
             drone.getId(), keyboardThrottle, filteredPitch, filteredRoll, yaw, arm, false, ++controlSeq
         ));
     }
@@ -653,7 +654,7 @@ public class ClientEventHandler {
         // Always send controller input to maintain controller mode
         // (prevents fallback to keyboard input which causes yaw feedback loops)
         drone.setClientPredictedInputs(throttle, pitch, roll, yaw, arm);
-        PacketDistributor.sendToServer(new ControllerPacket(
+        ClientPacketDistributor.sendToServer(new ControllerPacket(
             drone.getId(), throttle, pitch, roll, yaw, arm, mode, ++controlSeq
         ));
         return true;
@@ -735,7 +736,7 @@ public class ClientEventHandler {
         boolean arm = keyboardArmSwitch;
 
         drone.setClientPredictedInputs(keyboardThrottle, pitch, roll, yaw, arm);
-        PacketDistributor.sendToServer(new ControllerPacket(
+        ClientPacketDistributor.sendToServer(new ControllerPacket(
             drone.getId(), keyboardThrottle, pitch, roll, yaw, arm, false, ++controlSeq
         ));
     }
@@ -815,7 +816,7 @@ public class ClientEventHandler {
         }
 
         plane.setClientPredictedInputs(throttle, pitch, roll, yaw);
-        PacketDistributor.sendToServer(new PlaneControllerPacket(
+        ClientPacketDistributor.sendToServer(new PlaneControllerPacket(
             plane.getId(), throttle, pitch, roll, yaw, arm
         ));
         return true;
@@ -858,7 +859,7 @@ public class ClientEventHandler {
         planeOrbitTarget = center;
         planeOrbitSyncGrace = 10;
         plane.setOrbit(true, center, radius);
-        PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
+        ClientPacketDistributor.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
             plane.getId(), true, center.x, center.y, center.z, radius));
     }
 
@@ -869,7 +870,7 @@ public class ClientEventHandler {
         if (plane != null) {
             plane.setOrbit(false, net.minecraft.world.phys.Vec3.ZERO, 0);
             if (notifyServer) {
-                PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
+                ClientPacketDistributor.sendToServer(new org.restor.fpv.network.PlaneOrbitPacket(
                     plane.getId(), false, 0, 0, 0, 0));
             }
         }
@@ -895,7 +896,7 @@ public class ClientEventHandler {
             : planeOrbitTarget;
         if (target == null) {
             if (planeTargetStreamActive) {
-                PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
+                ClientPacketDistributor.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
                     plane.getId(), false, 0, 0, 0));
                 planeTargetStreamActive = false;
             }
@@ -903,7 +904,7 @@ public class ClientEventHandler {
             return;
         }
         if (!planeTargetStreamActive || planeTargetStreamTicks-- <= 0) {
-            PacketDistributor.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
+            ClientPacketDistributor.sendToServer(new org.restor.fpv.network.PlaneTargetStreamPacket(
                 plane.getId(), true, target.x, target.y, target.z));
             planeTargetStreamActive = true;
             planeTargetStreamTicks = 10;
@@ -986,7 +987,7 @@ public class ClientEventHandler {
 
         boolean arm = planeThrottle > 0.05f;
         plane.setClientPredictedInputs(planeThrottle, pitch, roll, yaw);
-        PacketDistributor.sendToServer(new PlaneControllerPacket(
+        ClientPacketDistributor.sendToServer(new PlaneControllerPacket(
             plane.getId(), planeThrottle, pitch, roll, yaw, arm
         ));
     }
@@ -1143,11 +1144,14 @@ public class ClientEventHandler {
     }
 
     @SubscribeEvent
-    public static void onRenderPlayer(net.neoforged.neoforge.client.event.RenderPlayerEvent.Pre event) {
+    public static void onRenderPlayer(net.neoforged.neoforge.client.event.RenderPlayerEvent.Pre<?> event) {
         // Pilots ride inside the FPV entity/camera-follow body; don't render their player
         // model clipped into the drone/plane for any client in multiplayer.
-        if (event.getEntity().getVehicle() instanceof org.restor.fpv.entity.Pilotable
-            || (MC.player != null && event.getEntity() == MC.player
+        if (MC.level == null) return;
+        net.minecraft.world.entity.Entity player = MC.level.getEntity(event.getRenderState().id);
+        if (player == null) return;
+        if (player.getVehicle() instanceof org.restor.fpv.entity.Pilotable
+            || (MC.player != null && player == MC.player
                 && MC.getCameraEntity() != MC.player
                 && MC.getCameraEntity() instanceof org.restor.fpv.entity.Pilotable)) {
             event.setCanceled(true);
@@ -1173,13 +1177,8 @@ public class ClientEventHandler {
         if (MC.player != null && !(MC.player.getVehicle() instanceof DroneEntity)
             && MC.getCameraEntity() instanceof DroneEntity) {
             var input = event.getInput();
-            input.forwardImpulse = 0;
-            input.leftImpulse = 0;
-            input.up = false;
-            input.down = false;
-            input.left = false;
-            input.right = false;
-            input.jumping = false;
+            input.keyPresses = new net.minecraft.world.entity.player.Input(false, false, false, false, false, input.keyPresses.shift(), false);
+            input.moveVector = net.minecraft.world.phys.Vec2.ZERO;
         }
     }
 

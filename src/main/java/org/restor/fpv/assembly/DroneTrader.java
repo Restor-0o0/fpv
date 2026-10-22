@@ -1,11 +1,14 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.npc.VillagerTrades;
+import net.minecraft.world.entity.npc.villager.VillagerTrades;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.Merchant;
@@ -38,12 +41,13 @@ public class DroneTrader implements Merchant {
 
     private MerchantOffers roll() {
         MerchantOffers result = new MerchantOffers();
-        RandomSource random = host.level().getRandom();
-        for (int tier : new int[]{1, 2}) {
-            VillagerTrades.ItemListing[] pool = VillagerTrades.WANDERING_TRADER_TRADES.get(tier);
+        if (!(host.level() instanceof ServerLevel level)) return result;
+        RandomSource random = level.getRandom();
+        for (var tier : VillagerTrades.WANDERING_TRADER_TRADES) {
+            VillagerTrades.ItemListing[] pool = tier.getLeft();
             if (pool == null || pool.length == 0) continue;
             for (int i = 0; i < OFFER_COUNT * 2 && result.size() < OFFER_COUNT; i++) {
-                MerchantOffer offer = pool[random.nextInt(pool.length)].getOffer(host, random);
+                MerchantOffer offer = pool[random.nextInt(pool.length)].getOffer(level, host, random);
                 if (offer == null || containsSame(result, offer)) continue;
                 result.add(new MerchantOffer(offer.getItemCostA(), offer.getItemCostB(), offer.getResult(),
                     0, USES_PER_OFFER, offer.getXp(), offer.getPriceMultiplier()));
@@ -68,27 +72,24 @@ public class DroneTrader implements Merchant {
         return true;
     }
 
-    public void save(CompoundTag tag) {
-        if (offers == null) return;
-        MerchantOffers.CODEC.encodeStart(nbtOps(), offers).result().ifPresent(t -> tag.put("Offers", t));
+    public void save(ValueOutput output) {
+        output.storeNullable("Offers", MerchantOffers.CODEC, offers);
     }
 
-    public void load(CompoundTag tag) {
-        if (!tag.contains("Offers")) return;
-        MerchantOffers.CODEC.parse(nbtOps(), tag.get("Offers")).result().ifPresent(o -> offers = o);
+    public void load(ValueInput input) {
+        input.read("Offers", MerchantOffers.CODEC).ifPresent(o -> offers = o);
     }
 
-    private net.minecraft.resources.RegistryOps<net.minecraft.nbt.Tag> nbtOps() {
-        return host.registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
-    }
+
 
     @Override public void setTradingPlayer(Player player) { this.tradingPlayer = player; }
     @Override public Player getTradingPlayer() { return tradingPlayer; }
+    @Override public boolean stillValid(Player player) { return host.isAlive() && player.distanceToSqr(host) < 64.0; }
     @Override public void overrideOffers(MerchantOffers o) { this.offers = o; }
     @Override public void overrideXp(int xp) {}
     @Override public int getVillagerXp() { return 0; }
     @Override public boolean showProgressBar() { return false; }
-    @Override public boolean isClientSide() { return host.level().isClientSide; }
+    @Override public boolean isClientSide() { return host.level().isClientSide(); }
     @Override public SoundEvent getNotifyTradeSound() { return SoundEvents.WANDERING_TRADER_YES; }
 
     @Override
@@ -100,7 +101,7 @@ public class DroneTrader implements Merchant {
 
     @Override
     public void notifyTradeUpdated(ItemStack stack) {
-        if (host.level().isClientSide || stack.isEmpty()) return;
+        if (host.level().isClientSide() || stack.isEmpty()) return;
         host.level().playSound(null, host.blockPosition(), SoundEvents.WANDERING_TRADER_YES,
             host.getSoundSource(), 0.6f, 1.6f);
     }

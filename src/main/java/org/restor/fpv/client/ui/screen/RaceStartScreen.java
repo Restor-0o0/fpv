@@ -1,5 +1,6 @@
 package org.restor.fpv.client.ui.screen;
 
+import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -91,7 +92,7 @@ public class RaceStartScreen extends Screen {
         }).bounds(lx, y, COL_W, 20).build());
 
         addRenderableWidget(Button.builder(Component.translatable("screen.fpv.race_clear"),
-            b -> PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, true)))
+            b -> ClientPacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, true)))
             .bounds(rx, top + PANEL_H - 30, COL_W, 20).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.done"), b -> onClose())
             .bounds(lx, top + PANEL_H - 30, COL_W, 20).build());
@@ -109,7 +110,7 @@ public class RaceStartScreen extends Screen {
 
     private void changeLaps(int d) {
         laps = Math.max(1, Math.min(50, laps + d));
-        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, false));
+        ClientPacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, false));
     }
 
     private void changeColor() {
@@ -120,35 +121,35 @@ public class RaceStartScreen extends Screen {
             if (RaceGateBlockEntity.PALETTE[i] == color) { idx = i; break; }
         }
         color = RaceGateBlockEntity.PALETTE[(idx + 1) % RaceGateBlockEntity.PALETTE.length];
-        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, false, true));
+        ClientPacketDistributor.sendToServer(new RaceStartConfigPacket(pos, laps, false, true));
     }
 
     private void changeSize(int value) {
         size = Math.max(2, Math.min(15, value));
         RaceStartBlockEntity be = be();
         if (be != null) be.setSize(size);
-        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_SIZE, size));
+        ClientPacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_SIZE, size));
     }
 
     private void changeYaw(int delta) {
         yaw = Math.floorMod(yaw + delta, 360);
         RaceStartBlockEntity be = be();
         if (be != null) be.adjustYaw(delta);
-        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_YAW, delta));
+        ClientPacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_YAW, delta));
     }
 
     private void changePitch(int delta) {
         pitch = Math.max(-90, Math.min(90, pitch + delta));
         RaceStartBlockEntity be = be();
         if (be != null) be.adjustPitch(delta);
-        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_PITCH, delta));
+        ClientPacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.ADJUST_PITCH, delta));
     }
 
     private void changeOffset(int value) {
         offset = Math.max(0, Math.min(12, value));
         RaceStartBlockEntity be = be();
         if (be != null) be.setOffset(offset);
-        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_OFFSET, offset));
+        ClientPacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.SET_OFFSET, offset));
     }
 
     private void flipNormal() {
@@ -156,7 +157,7 @@ public class RaceStartScreen extends Screen {
         pitch = -pitch;
         RaceStartBlockEntity be = be();
         if (be != null) be.flipNormal();
-        PacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.FLIP_NORMAL, 0));
+        ClientPacketDistributor.sendToServer(new RaceStartConfigPacket(pos, RaceStartConfigPacket.FLIP_NORMAL, 0));
     }
 
     @Override

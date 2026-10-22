@@ -54,8 +54,8 @@ public class BomberDroneEntity extends NpcDroneEntity {
                                        boolean hitByPlayer) {
         super.dropCustomDeathLoot(level, source, hitByPlayer);
         if (hitByPlayer) {
-            spawnAtLocation(new ItemStack(net.minecraft.world.item.Items.TNT, random.nextInt(2)));
-            spawnAtLocation(new ItemStack(org.restor.fpv.item.ModItems.DROP_CHARGE.get(), random.nextInt(3)));
+            spawnAtLocation(level, new ItemStack(net.minecraft.world.item.Items.TNT, random.nextInt(2)));
+            spawnAtLocation(level, new ItemStack(org.restor.fpv.item.ModItems.DROP_CHARGE.get(), random.nextInt(3)));
         }
     }
 

@@ -1,10 +1,12 @@
 package org.restor.fpv.item;
 
+import java.util.function.Consumer;
+import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -14,23 +16,22 @@ import net.minecraft.world.level.Level;
 import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.entity.PlaneEntity;
 
-import java.util.List;
 
 public class RcTransmitterItem extends Item {
     private final boolean longRange;
 
-    public RcTransmitterItem(boolean longRange) {
-        super(new Item.Properties().stacksTo(16));
+    public RcTransmitterItem(Item.Properties props, boolean longRange) {
+        super(props.stacksTo(16));
         this.longRange = longRange;
     }
 
     public boolean longRange() { return longRange; }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResult use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        if (level.isClientSide || !(player instanceof ServerPlayer sp)) {
-            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide);
+        if (level.isClientSide() || !(player instanceof ServerPlayer sp)) {
+            return InteractionResult.SUCCESS;
         }
 
         if (sp.isShiftKeyDown()) {
@@ -38,17 +39,17 @@ public class RcTransmitterItem extends Item {
             if (aimed == null) say(sp, "msg.fpv.tx_bind_no_target");
             else if (!RcLink.isBindable(aimed)) RcLink.sayNotReady(sp, aimed);
             else RcLink.toggleBinding(sp, stack, aimed);
-            return InteractionResultHolder.success(stack);
+            return InteractionResult.SUCCESS;
         }
 
-        Entity target = RcLink.resolve(sp.serverLevel(), stack);
+        Entity target = RcLink.resolve(sp.level(), stack);
         if (target == null || target.isRemoved()) {
             say(sp, "msg.fpv.tx_unbound");
-            return InteractionResultHolder.success(stack);
+            return InteractionResult.SUCCESS;
         }
         if (target.distanceTo(sp) > RcLink.range(stack)) {
             say(sp, "msg.fpv.tx_out_of_range");
-            return InteractionResultHolder.success(stack);
+            return InteractionResult.SUCCESS;
         }
 
         boolean fpv = RcLink.hasGoggles(sp);
@@ -72,7 +73,7 @@ public class RcTransmitterItem extends Item {
                 say(sp, "msg.fpv.need_goggles");
             }
         }
-        return InteractionResultHolder.success(stack);
+        return InteractionResult.SUCCESS;
     }
 
     @Override
@@ -84,17 +85,18 @@ public class RcTransmitterItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, TooltipDisplay display,
+                                Consumer<Component> tooltip, TooltipFlag flag) {
         String name = RcLink.boundName(stack);
-        tooltip.add(name.isEmpty()
+        tooltip.accept(name.isEmpty()
             ? Component.translatable("tooltip.fpv.tx.unbound").withStyle(ChatFormatting.DARK_GRAY)
             : Component.translatable("tooltip.fpv.tx.bound", Component.translatable(name))
                 .withStyle(ChatFormatting.AQUA));
-        tooltip.add(Component.translatable("tooltip.fpv.tx.range",
+        tooltip.accept(Component.translatable("tooltip.fpv.tx.range",
             (int) (double) (longRange ? org.restor.fpv.CommonConfig.TX_LR_RANGE.get()
                                       : org.restor.fpv.CommonConfig.TX_RANGE.get()))
             .withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("tooltip.fpv.tx.usage").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("tooltip.fpv.tx.usage").withStyle(ChatFormatting.DARK_GRAY));
     }
 
     private static void say(ServerPlayer player, String key, Object... args) {

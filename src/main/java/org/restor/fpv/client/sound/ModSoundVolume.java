@@ -6,7 +6,7 @@ import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.resources.sounds.TickableSoundInstance;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.client.sounds.WeighedSoundEvents;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.sound.PlaySoundEvent;
@@ -30,14 +30,14 @@ public final class ModSoundVolume {
     public static void onPlaySound(PlaySoundEvent event) {
         SoundInstance sound = event.getSound();
         if (sound == null || sound instanceof TickableSoundInstance) return;
-        if (!Fpv.MODID.equals(sound.getLocation().getNamespace())) return;
+        if (!Fpv.MODID.equals(sound.getIdentifier().getNamespace())) return;
         float scale = effects();
         if (scale >= 0.999f) return;
         event.setSound(scale <= 0.001f ? null : new Scaled(sound, scale));
     }
 
     private record Scaled(SoundInstance inner, float scale) implements SoundInstance {
-        @Override public ResourceLocation getLocation() { return inner.getLocation(); }
+        @Override public Identifier getIdentifier() { return inner.getIdentifier(); }
         @Override public WeighedSoundEvents resolve(SoundManager manager) { return inner.resolve(manager); }
         @Override public Sound getSound() { return inner.getSound(); }
         @Override public SoundSource getSource() { return inner.getSource(); }

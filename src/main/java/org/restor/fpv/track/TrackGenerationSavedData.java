@@ -1,9 +1,8 @@
 package org.restor.fpv.track;
 
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.LongTag;
-import net.minecraft.nbt.Tag;
+import java.util.List;
+import com.mojang.serialization.Codec;
+import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
 
@@ -13,11 +12,13 @@ import java.util.Set;
 public final class TrackGenerationSavedData extends SavedData {
     private static final String NAME = "fpv_track_generation";
 
-
     private final Set<Long> attemptedRegions = new HashSet<>();
 
+    private static final SavedDataType<TrackGenerationSavedData> TYPE = new SavedDataType<>(NAME, TrackGenerationSavedData::new,
+        Codec.LONG.listOf().fieldOf("AttemptedRegions").codec().xmap(TrackGenerationSavedData::load, TrackGenerationSavedData::save));
+
     public static TrackGenerationSavedData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(new SavedData.Factory<>(TrackGenerationSavedData::new, TrackGenerationSavedData::load, null), NAME);
+        return level.getDataStorage().computeIfAbsent(TYPE);
     }
 
     public boolean markAttempted(long region) {
@@ -30,18 +31,13 @@ public final class TrackGenerationSavedData extends SavedData {
         return attemptedRegions.contains(region);
     }
 
-    private static TrackGenerationSavedData load(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+    private static TrackGenerationSavedData load(List<Long> regions) {
         TrackGenerationSavedData data = new TrackGenerationSavedData();
-        ListTag regions = tag.getList("AttemptedRegions", Tag.TAG_LONG);
-        for (int i = 0; i < regions.size(); i++) data.attemptedRegions.add(((LongTag) regions.get(i)).getAsLong());
+        data.attemptedRegions.addAll(regions);
         return data;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        ListTag regions = new ListTag();
-        attemptedRegions.stream().sorted().forEach(region -> regions.add(LongTag.valueOf(region)));
-        tag.put("AttemptedRegions", regions);
-        return tag;
+    private List<Long> save() {
+        return attemptedRegions.stream().sorted().toList();
     }
 }

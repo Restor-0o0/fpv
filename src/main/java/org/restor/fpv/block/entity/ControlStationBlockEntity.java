@@ -1,5 +1,8 @@
 package org.restor.fpv.block.entity;
 
+import com.mojang.serialization.Codec;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -39,25 +42,23 @@ public class ControlStationBlockEntity extends BlockEntity {
 
     private void sync() {
         setChanged();
-        if (level != null && !level.isClientSide) {
+        if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
     }
 
     @Override
-    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.loadAdditional(tag, registries);
+    protected void loadAdditional(ValueInput input) {
+        super.loadAdditional(input);
         codes.clear();
-        ListTag list = tag.getList("Codes", Tag.TAG_STRING);
-        for (int i = 0; i < list.size(); i++) codes.add(list.getString(i));
+        input.listOrEmpty("Codes", Codec.STRING).forEach(codes::add);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
-        super.saveAdditional(tag, registries);
-        ListTag list = new ListTag();
-        for (String c : codes) list.add(StringTag.valueOf(c));
-        tag.put("Codes", list);
+    protected void saveAdditional(ValueOutput output) {
+        super.saveAdditional(output);
+        var list = output.list("Codes", Codec.STRING);
+        codes.forEach(list::add);
     }
 
     @Override
