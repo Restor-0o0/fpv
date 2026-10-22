@@ -24,6 +24,13 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class DroneJammerBlock extends BaseEntityBlock {
+    public static final com.mojang.serialization.MapCodec<DroneJammerBlock> CODEC = simpleCodec(DroneJammerBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 
     public DroneJammerBlock(Properties properties) {
@@ -50,9 +57,7 @@ public class DroneJammerBlock extends BaseEntityBlock {
     }
 
     @Override
-    public net.minecraft.world.InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                                     net.minecraft.world.InteractionHand hand,
-                                                     net.minecraft.world.phys.BlockHitResult hit) {
+    protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, net.minecraft.world.phys.BlockHitResult hit) {
         if (level.isClientSide) return net.minecraft.world.InteractionResult.SUCCESS;
         if (!(level.getBlockEntity(pos) instanceof DroneJammerBlockEntity jammer)) {
             return net.minecraft.world.InteractionResult.PASS;

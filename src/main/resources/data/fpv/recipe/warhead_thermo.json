@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " B ",
+    "MTM",
+    " R "
+  ],
+  "key": {
+    "B": {
+      "item": "minecraft:blaze_powder"
+    },
+    "M": {
+      "item": "minecraft:magma_cream"
+    },
+    "T": {
+      "item": "minecraft:tnt"
+    },
+    "R": {
+      "item": "minecraft:redstone_block"
+    }
+  },
+  "result": {
+    "id": "fpv:warhead_thermo"
+  }
+}

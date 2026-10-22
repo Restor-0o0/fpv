@@ -53,15 +53,15 @@ abstract class OwnedAntiDroneBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         ownerId = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
         ownerTeam = tag.getString("OwnerTeam");
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         if (ownerId != null) tag.putUUID("Owner", ownerId);
         if (!ownerTeam.isBlank()) tag.putString("OwnerTeam", ownerTeam);
     }

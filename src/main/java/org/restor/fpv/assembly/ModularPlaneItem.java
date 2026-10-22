@@ -1,12 +1,13 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -28,7 +29,7 @@ public class ModularPlaneItem extends Item {
         ModularPlaneEntity plane = spawn(context);
         if (plane == null) return InteractionResult.FAIL;
         ItemStack stack = context.getItemInHand();
-        CustomData data = CustomData.get(stack);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data != null) plane.readFromItemTag(data.copyTag());
         level.addFreshEntity(plane);
         var player = context.getPlayer();
@@ -52,8 +53,8 @@ public class ModularPlaneItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level context, List<Component> tooltip, TooltipFlag flag) {
-        CustomData data = CustomData.get(stack);
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data == null || !data.contains("Assembly")) return;
         DroneAssembly a = DroneAssembly.load(data.copyTag().getCompound("Assembly"));
         if (!a.isComplete()) tooltip.add(Component.translatable("tooltip.fpv.assembly_incomplete"));

@@ -170,7 +170,7 @@ public final class KamikazeExplosionEffects {
         sendForced(sl, ParticleTypes.POOF, x, ey, z, (int) (340 * f), spread * 1.65, spread * 1.15, spread * 1.65, 0.20);
         sendForced(sl, ParticleTypes.FLAME, x, ey - 0.35, z, (int) (170 * f), spread * 1.00, spread * 0.70, spread * 1.00, 0.13);
         sendForced(sl, ParticleTypes.LAVA, x, ey - 0.35, z, (int) (80 * f), spread * 0.70, spread * 0.60, spread * 0.70, 0.27);
-        org.restor.fpv.compat.PacketDistributor.sendToAllPlayers(
+        net.neoforged.neoforge.network.PacketDistributor.sendToAllPlayers(
             new org.restor.fpv.network.ExplosionParticlesPacket(x, y, z, (float) spread));
     }
 

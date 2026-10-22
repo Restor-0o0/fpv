@@ -17,7 +17,7 @@ public final class TrackGenerationSavedData extends SavedData {
     private final Set<Long> attemptedRegions = new HashSet<>();
 
     public static TrackGenerationSavedData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(TrackGenerationSavedData::load, TrackGenerationSavedData::new, NAME);
+        return level.getDataStorage().computeIfAbsent(new SavedData.Factory<>(TrackGenerationSavedData::new, TrackGenerationSavedData::load, null), NAME);
     }
 
     public boolean markAttempted(long region) {
@@ -30,7 +30,7 @@ public final class TrackGenerationSavedData extends SavedData {
         return attemptedRegions.contains(region);
     }
 
-    private static TrackGenerationSavedData load(CompoundTag tag) {
+    private static TrackGenerationSavedData load(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
         TrackGenerationSavedData data = new TrackGenerationSavedData();
         ListTag regions = tag.getList("AttemptedRegions", Tag.TAG_LONG);
         for (int i = 0; i < regions.size(); i++) data.attemptedRegions.add(((LongTag) regions.get(i)).getAsLong());
@@ -38,7 +38,7 @@ public final class TrackGenerationSavedData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
         ListTag regions = new ListTag();
         attemptedRegions.stream().sorted().forEach(region -> regions.add(LongTag.valueOf(region)));
         tag.put("AttemptedRegions", regions);

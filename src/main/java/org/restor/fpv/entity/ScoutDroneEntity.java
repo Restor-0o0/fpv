@@ -54,9 +54,9 @@ public class ScoutDroneEntity extends NpcDroneEntity {
     }
 
     @Override
-    protected void dropCustomDeathLoot(net.minecraft.world.damagesource.DamageSource source,
-                                       int looting, boolean hitByPlayer) {
-        super.dropCustomDeathLoot(source, looting, hitByPlayer);
+    protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source,
+                                       boolean hitByPlayer) {
+        super.dropCustomDeathLoot(level, source, hitByPlayer);
         if (hitByPlayer && random.nextFloat() < 0.5f) {
             spawnAtLocation(new net.minecraft.world.item.ItemStack(
                 org.restor.fpv.component.ModComponents.MODULE_TARGETING.get()));

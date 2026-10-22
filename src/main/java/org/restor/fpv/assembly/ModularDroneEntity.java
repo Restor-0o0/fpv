@@ -1,5 +1,6 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -8,7 +9,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.restor.fpv.component.ComponentItem;
@@ -56,9 +57,9 @@ public class ModularDroneEntity extends DroneEntity {
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_ASSEMBLY, new CompoundTag());
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_ASSEMBLY, new CompoundTag());
     }
 
     public DroneAssembly getAssembly() {
@@ -100,13 +101,7 @@ public class ModularDroneEntity extends DroneEntity {
             w = v.hitboxWidth() * 0.72f * s;
             h = v.hitboxWidth() * 1.45f * s;
         }
-        return net.minecraft.world.entity.EntityDimensions.scalable(w, h);
-    }
-
-    @Override
-    protected float getEyeHeight(net.minecraft.world.entity.Pose pose,
-                                 net.minecraft.world.entity.EntityDimensions dimensions) {
-        return dimensions.height * (float) org.restor.fpv.Config.FPV_CAMERA_HEIGHT.get().doubleValue();
+        return withCameraEye(net.minecraft.world.entity.EntityDimensions.scalable(w, h));
     }
 
     // Derive flight characteristics from the installed components.
@@ -337,7 +332,8 @@ public class ModularDroneEntity extends DroneEntity {
 
         dartCooldown = 18;
         net.minecraft.world.entity.projectile.Arrow dart = new net.minecraft.world.entity.projectile.Arrow(
-            level(), getX(), getY() - 0.1, getZ());
+            level(), getX(), getY() - 0.1, getZ(),
+            new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARROW), null);
         dart.setOwner(owner);
         dart.setBaseDamage(2.0);
         dart.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
@@ -363,7 +359,7 @@ public class ModularDroneEntity extends DroneEntity {
     protected boolean openStorage(net.minecraft.world.entity.player.Player player) {
         if (assembly.moduleType() != org.restor.fpv.component.ModuleType.STORAGE) return false;
         if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
-net.minecraftforge.network.NetworkHooks.openScreen(sp, new net.minecraft.world.SimpleMenuProvider(
+sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
                 (id, inv, p) -> new net.minecraft.world.inventory.ChestMenu(
                     net.minecraft.world.inventory.MenuType.GENERIC_9x1, id, inv, cargo, 1),
                 getName()));
@@ -504,7 +500,7 @@ net.minecraftforge.network.NetworkHooks.openScreen(sp, new net.minecraft.world.S
         if (tag.contains("Warhead")) warhead = org.restor.fpv.warhead.WarheadType.byId(tag.getString("Warhead"));
         super.readAdditionalSaveData(tag);
         if (tag.contains("Cargo")) {
-            cargo.fromTag(tag.getList("Cargo", net.minecraft.nbt.Tag.TAG_COMPOUND));
+            cargo.fromTag(tag.getList("Cargo", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
         }
         trader.load(tag);
     }
@@ -514,7 +510,7 @@ net.minecraftforge.network.NetworkHooks.openScreen(sp, new net.minecraft.world.S
         super.addAdditionalSaveData(tag);
         tag.put("Assembly", assembly.save());
         tag.putString("Warhead", warhead.id());
-        tag.put("Cargo", cargo.createTag());
+        tag.put("Cargo", cargo.createTag(registryAccess()));
         trader.save(tag);
     }
 
@@ -526,7 +522,7 @@ net.minecraftforge.network.NetworkHooks.openScreen(sp, new net.minecraft.world.S
     @Override
     protected ItemStack getDropStack() {
         ItemStack stack = super.getDropStack();
-        CustomData.update(stack, t -> {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, t -> {
             t.put("Assembly", assembly.save());
             if (hasWarhead()) t.putString("Warhead", warhead.id());
         });

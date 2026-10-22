@@ -1,16 +1,16 @@
 package org.restor.fpv.client;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.client.ui.screen.settings.FpvSettingsScreen;
 import org.restor.fpv.rules.ExplosiveParam;
 import org.restor.fpv.rules.ServerRule;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public final class ClientRules {
     private ClientRules() {}
 

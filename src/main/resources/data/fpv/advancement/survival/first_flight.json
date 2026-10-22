@@ -1,0 +1,30 @@
+{
+  "parent": "fpv:survival/radio",
+  "display": {
+    "icon": {
+      "id": "fpv:fpv_goggles"
+    },
+    "title": {
+      "translate": "advancement.fpv.first_flight.title"
+    },
+    "description": {
+      "translate": "advancement.fpv.first_flight.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "piloting": {
+      "trigger": "minecraft:started_riding",
+      "conditions": {
+        "player": {
+          "vehicle": {
+            "type": "#fpv:aircraft"
+          }
+        }
+      }
+    }
+  }
+}

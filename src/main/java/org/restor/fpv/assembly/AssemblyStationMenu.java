@@ -1,5 +1,6 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.nbt.CompoundTag;
@@ -15,7 +16,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import org.restor.fpv.block.ModBlocks;
 import org.restor.fpv.component.ComponentItem;
 import org.restor.fpv.component.ComponentType;
@@ -232,7 +233,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
             CompoundTag src = DroneCardItem.data(in);
             ItemStack out = new ItemStack(DroneAssembly.isPlaneFrame(a.frame)
                 ? ModItems.MODULAR_PLANE.get() : ModItems.MODULAR_DRONE.get());
-            CustomData.update(out, t -> {
+            CustomData.update(DataComponents.CUSTOM_DATA, out, t -> {
                 t.put("Assembly", src.getCompound("Assembly"));
                 if (src.contains("Warhead")) t.putString("Warhead", src.getString("Warhead"));
             });
@@ -241,7 +242,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         if (in.getItem() != ModItems.MODULAR_DRONE.get() && in.getItem() != ModItems.MODULAR_PLANE.get()) {
             return ItemStack.EMPTY;
         }
-        CustomData data = CustomData.get(in);
+        CustomData data = in.get(DataComponents.CUSTOM_DATA);
         if (data == null || !data.contains("Assembly")) return ItemStack.EMPTY;
         CompoundTag tag = data.copyTag();
         DroneAssembly a = DroneAssembly.load(tag.getCompound("Assembly"));
@@ -278,7 +279,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         if (avionicsOnly || partialWing) {
             ItemStack result = new ItemStack(DroneAssembly.isPlaneFrame(a.frame)
                 ? ModItems.MODULAR_PLANE.get() : ModItems.MODULAR_DRONE.get());
-            CustomData.update(result, t -> t.put("Assembly", a.save()));
+            CustomData.update(DataComponents.CUSTOM_DATA, result, t -> t.put("Assembly", a.save()));
             resultContainer.setItem(0, result);
         } else {
             resultContainer.setItem(0, ItemStack.EMPTY);
@@ -347,7 +348,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
     }
 
     private boolean canDisassemble(ItemStack stack) {
-        CustomData data = CustomData.get(stack);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         return (stack.getItem() == ModItems.MODULAR_DRONE.get()
                 || stack.getItem() == ModItems.MODULAR_PLANE.get())
             && data != null
@@ -358,7 +359,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
     private boolean tryDisassemble() {
         ItemStack stack = resultContainer.getItem(0);
         if (!canDisassemble(stack)) return false;
-        CompoundTag tag = CustomData.get(stack).copyTag();
+        CompoundTag tag = stack.get(DataComponents.CUSTOM_DATA).copyTag();
         DroneAssembly a = DroneAssembly.load(tag.getCompound("Assembly"));
         FrameSpec spec = a.frameSpec();
         if (spec == null) return false;

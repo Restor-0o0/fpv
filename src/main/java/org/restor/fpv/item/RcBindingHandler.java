@@ -1,15 +1,15 @@
 package org.restor.fpv.item;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import org.restor.fpv.Fpv;
 
 /** Punching an aircraft with a transmitter in hand pairs it (or drops the pairing). */
-@Mod.EventBusSubscriber(modid = Fpv.MODID)
+@EventBusSubscriber(modid = Fpv.MODID)
 public final class RcBindingHandler {
     private RcBindingHandler() {}
 

@@ -47,9 +47,9 @@ public class RocketDroneEntity extends NpcDroneEntity {
     }
 
     @Override
-    protected void dropCustomDeathLoot(net.minecraft.world.damagesource.DamageSource source,
-                                       int looting, boolean hitByPlayer) {
-        super.dropCustomDeathLoot(source, looting, hitByPlayer);
+    protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source,
+                                       boolean hitByPlayer) {
+        super.dropCustomDeathLoot(level, source, hitByPlayer);
         if (hitByPlayer) {
             spawnAtLocation(new ItemStack(org.restor.fpv.item.ModItems.MINI_ROCKET.get(), random.nextInt(3) + 1));
         }

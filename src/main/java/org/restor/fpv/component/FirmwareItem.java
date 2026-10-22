@@ -20,7 +20,7 @@ public class FirmwareItem extends ComponentItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
         tooltip.add(Component.translatable("tooltip.fpv.firmware." + firmwareType.id()));
         for (org.restor.fpv.entity.DroneMode mode : firmwareType.modes()) {

@@ -1,0 +1,32 @@
+{
+  "parent": "fpv:survival/utility",
+  "display": {
+    "icon": {
+      "id": "fpv:module_warhead"
+    },
+    "title": {
+      "translate": "advancement.fpv.combat.title"
+    },
+    "description": {
+      "translate": "advancement.fpv.combat.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_warhead": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "fpv:module_warhead"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

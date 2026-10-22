@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " IF",
+    "DCH",
+    " IF"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "F": {
+      "item": "minecraft:flint"
+    },
+    "D": {
+      "item": "minecraft:dispenser"
+    },
+    "C": {
+      "item": "minecraft:crossbow"
+    },
+    "H": {
+      "item": "fpv:fc_h7"
+    }
+  },
+  "result": {
+    "id": "fpv:module_dart_gun"
+  }
+}

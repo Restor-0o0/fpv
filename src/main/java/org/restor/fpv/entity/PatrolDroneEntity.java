@@ -57,9 +57,9 @@ public class PatrolDroneEntity extends NpcDroneEntity {
     }
 
     @Override
-    protected void dropCustomDeathLoot(net.minecraft.world.damagesource.DamageSource source,
-                                       int looting, boolean hitByPlayer) {
-        super.dropCustomDeathLoot(source, looting, hitByPlayer);
+    protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source,
+                                       boolean hitByPlayer) {
+        super.dropCustomDeathLoot(level, source, hitByPlayer);
         if (hitByPlayer && hasModule(org.restor.fpv.component.ModuleType.STORAGE)) {
             spawnAtLocation(new ItemStack(net.minecraft.world.item.Items.IRON_INGOT, random.nextInt(3) + 1));
             spawnAtLocation(new ItemStack(net.minecraft.world.item.Items.GUNPOWDER, random.nextInt(2) + 1));
@@ -149,7 +149,8 @@ public class PatrolDroneEntity extends NpcDroneEntity {
         }
 
         private void shootDart(Entity t) {
-            Arrow dart = new Arrow(level(), PatrolDroneEntity.this);
+            Arrow dart = new Arrow(level(), PatrolDroneEntity.this,
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARROW), null);
             dart.setBaseDamage(1.5);
             dart.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
             Vec3 to = new Vec3(t.getX() - getX(), t.getEyeY() - 0.4 - dart.getY(), t.getZ() - getZ());

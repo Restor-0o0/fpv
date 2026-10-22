@@ -6,7 +6,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import org.restor.fpv.compat.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.block.entity.RaceGateBlockEntity;
 import org.restor.fpv.block.entity.RaceStartBlockEntity;
 import org.restor.fpv.network.RaceStartConfigPacket;
@@ -160,16 +160,20 @@ public class RaceStartScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g);
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
         int rx = left + 24 + COL_W;
         GuiPanels.panel(g, left, top, PANEL_W, PANEL_H);
         GuiPanels.inset(g, left + 12, top + 26, COL_W, 14, 0xFF000000 | color);
         GuiPanels.inset(g, rx, top + 26, COL_W, PANEL_H - 62, 0xFF1B1B22);
         for (StepperRow row : rows) row.drawPlate(g);
+    }
 
+    @Override
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
 
+        int rx = left + 24 + COL_W;
         g.drawCenteredString(font, title, left + PANEL_W / 2, top + 10, GuiPanels.TEXT);
         for (StepperRow row : rows) row.drawText(g, font);
 

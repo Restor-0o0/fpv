@@ -1,5 +1,7 @@
 package org.restor.fpv.component;
 
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
@@ -21,12 +23,12 @@ public final class RadioChannel {
     }
 
     public static int of(ItemStack stack) {
-        var tag = stack.isEmpty() ? null : stack.getTag();
-        return tag == null ? DEFAULT : clamp(tag.getInt(KEY));
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
+        return data == null ? DEFAULT : clamp(data.copyTag().getInt(KEY));
     }
 
     public static void set(ItemStack stack, int channel) {
-        if (!stack.isEmpty()) stack.getOrCreateTag().putInt(KEY, clamp(channel));
+        if (!stack.isEmpty()) CustomData.update(DataComponents.CUSTOM_DATA, stack, t -> t.putInt(KEY, clamp(channel)));
     }
 
     public static int next(int channel) {

@@ -2,18 +2,18 @@ package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import org.restor.fpv.compat.StreamCodec;
-import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import org.restor.fpv.compat.IPayloadContext;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.DroneEntity;
 
 public record SetDroneCodePacket(int droneId, String code) implements CustomPacketPayload {
     public static final Type<SetDroneCodePacket> TYPE =
-        new Type<>(new ResourceLocation(Fpv.MODID, "set_drone_code"));
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "set_drone_code"));
 
     public static final StreamCodec<FriendlyByteBuf, SetDroneCodePacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

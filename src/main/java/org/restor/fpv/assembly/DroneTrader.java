@@ -45,7 +45,7 @@ public class DroneTrader implements Merchant {
             for (int i = 0; i < OFFER_COUNT * 2 && result.size() < OFFER_COUNT; i++) {
                 MerchantOffer offer = pool[random.nextInt(pool.length)].getOffer(host, random);
                 if (offer == null || containsSame(result, offer)) continue;
-                result.add(new MerchantOffer(offer.getBaseCostA(), offer.getCostB(), offer.getResult(),
+                result.add(new MerchantOffer(offer.getItemCostA(), offer.getItemCostB(), offer.getResult(),
                     0, USES_PER_OFFER, offer.getXp(), offer.getPriceMultiplier()));
             }
         }
@@ -54,7 +54,7 @@ public class DroneTrader implements Merchant {
 
     private static boolean containsSame(MerchantOffers list, MerchantOffer candidate) {
         for (MerchantOffer o : list) {
-            if (ItemStack.isSameItemSameTags(o.getResult(), candidate.getResult())) return true;
+            if (ItemStack.isSameItemSameComponents(o.getResult(), candidate.getResult())) return true;
         }
         return false;
     }
@@ -70,12 +70,16 @@ public class DroneTrader implements Merchant {
 
     public void save(CompoundTag tag) {
         if (offers == null) return;
-        tag.put("Offers", offers.createTag());
+        MerchantOffers.CODEC.encodeStart(nbtOps(), offers).result().ifPresent(t -> tag.put("Offers", t));
     }
 
     public void load(CompoundTag tag) {
         if (!tag.contains("Offers")) return;
-        offers = new MerchantOffers(tag.getCompound("Offers"));
+        MerchantOffers.CODEC.parse(nbtOps(), tag.get("Offers")).result().ifPresent(o -> offers = o);
+    }
+
+    private net.minecraft.resources.RegistryOps<net.minecraft.nbt.Tag> nbtOps() {
+        return host.registryAccess().createSerializationContext(net.minecraft.nbt.NbtOps.INSTANCE);
     }
 
     @Override public void setTradingPlayer(Player player) { this.tradingPlayer = player; }

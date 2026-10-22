@@ -1,5 +1,6 @@
 package org.restor.fpv.client.sound;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.client.resources.sounds.Sound;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.resources.sounds.TickableSoundInstance;
@@ -7,14 +8,13 @@ import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.client.sounds.WeighedSoundEvents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.sound.PlaySoundEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.sound.PlaySoundEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.restor.fpv.Config;
 import org.restor.fpv.Fpv;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public final class ModSoundVolume {
     private ModSoundVolume() {}
 

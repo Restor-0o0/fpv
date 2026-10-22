@@ -6,12 +6,12 @@ import net.minecraft.client.Options;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import org.lwjgl.glfw.GLFW;
 import org.restor.fpv.Config;
 import org.restor.fpv.client.LineOfSightSession;
 import org.restor.fpv.client.ModKeyBindings;
-import org.restor.fpv.compat.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.controller.RCController;
 import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.network.DroneRatesPacket;
@@ -121,14 +121,14 @@ public class FpvSettingsScreen extends Screen {
         rows.add(new SettingRow.Section(tr("section." + key), withHint ? hint("section." + key) : null));
     }
 
-    private void toggle(String key, boolean withHint, ForgeConfigSpec.BooleanValue value) {
+    private void toggle(String key, boolean withHint, ModConfigSpec.BooleanValue value) {
         rows.add(new SettingRow.Toggle(tr(key), withHint ? hint(key) : null, value::get, v -> {
             value.set(v);
             Config.save();
         }));
     }
 
-    private void slider(String key, boolean withHint, ForgeConfigSpec.DoubleValue value, double min, double max,
+    private void slider(String key, boolean withHint, ModConfigSpec.DoubleValue value, double min, double max,
                         double step, SettingRow.Slider.Format format) {
         rows.add(new SettingRow.Slider(tr(key), withHint ? hint(key) : null, min, max, step, value::get, value::set, format));
     }
@@ -194,7 +194,7 @@ public class FpvSettingsScreen extends Screen {
         }));
     }
 
-    private void rate(String key, ForgeConfigSpec.DoubleValue value, int axis, DroneEntity drone) {
+    private void rate(String key, ModConfigSpec.DoubleValue value, int axis, DroneEntity drone) {
         rows.add(new SettingRow.Slider(tr(key), null, 0.1, 3.0, 0.05, value::get, v -> {
             value.set(v);
             DroneEntity d = drone != null ? drone : controlledDrone();
@@ -207,7 +207,7 @@ public class FpvSettingsScreen extends Screen {
         PacketDistributor.sendToServer(new DroneRatesPacket(drone.getId(), axis, value));
     }
 
-    private void axis(String key, ForgeConfigSpec.IntValue axis, ForgeConfigSpec.BooleanValue invert) {
+    private void axis(String key, ModConfigSpec.IntValue axis, ModConfigSpec.BooleanValue invert) {
         rows.add(new AxisRow(tr(key), axis, invert, this::setListening));
     }
 
@@ -430,8 +430,8 @@ public class FpvSettingsScreen extends Screen {
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    private static void resetAll(ForgeConfigSpec.ConfigValue<?>... values) {
-        for (ForgeConfigSpec.ConfigValue value : values) {
+    private static void resetAll(ModConfigSpec.ConfigValue<?>... values) {
+        for (ModConfigSpec.ConfigValue value : values) {
             value.set(value.getDefault());
         }
         Config.save();
@@ -496,12 +496,12 @@ public class FpvSettingsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        float delta = minecraft.getDeltaFrameTime();
+        float delta = minecraft.getTimer().getRealtimeDeltaTicks();
         openAnim = Math.min(1f, openAnim + delta * 0.25f);
         scroll += (scrollTarget - scroll) * Math.min(1f, delta * 0.6f);
         if (Math.abs(scrollTarget - scroll) < 0.25) scroll = scrollTarget;
 
-        renderBackground(g);
+        renderBackground(g, mouseX, mouseY, partialTick);
         g.fill(0, 0, width, height, (int) (openAnim * 0x60) << 24);
 
         g.pose().pushPose();
@@ -736,7 +736,7 @@ public class FpvSettingsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mx, double my, double amount) {
+    public boolean mouseScrolled(double mx, double my, double scrollX, double amount) {
         tipRow = null;
         if (listening != null) return true;
         if (mx < wx + sidebar) {

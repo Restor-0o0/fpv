@@ -172,4 +172,9 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
     public int getViewDistance() {
         return 256;
     }
+
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(RaceStartBlockEntity be) {
+        return be.getRenderBoundingBox();
+    }
 }

@@ -80,7 +80,7 @@ public class DroneNestBlockEntity extends BlockEntity {
         drone.setPos(launch.x, launch.y, launch.z);
         drone.setAnchor(worldPosition.above(2));
         drone.setOwnerNest(worldPosition, nestId);
-        drone.finalizeSpawn(level, level.getCurrentDifficultyAt(worldPosition), MobSpawnType.SPAWNER, null, null);
+        drone.finalizeSpawn(level, level.getCurrentDifficultyAt(worldPosition), MobSpawnType.SPAWNER, null);
         drone.setPersistenceRequired();
         level.addFreshEntity(drone);
         level.playSound(null, worldPosition, org.restor.fpv.sound.ModSounds.NEST_DEPLOY.get(), SoundSource.BLOCKS, 1.0f, 0.8f);
@@ -106,15 +106,15 @@ public class DroneNestBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         if (tag.contains("Cooldown")) cooldown = tag.getInt("Cooldown");
         if (tag.hasUUID("NestId")) nestId = tag.getUUID("NestId");
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         tag.putInt("Cooldown", cooldown);
         tag.putUUID("NestId", nestId);
     }

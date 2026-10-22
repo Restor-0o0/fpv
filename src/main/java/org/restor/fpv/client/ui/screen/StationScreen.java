@@ -6,7 +6,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import org.restor.fpv.compat.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.block.entity.ControlStationBlockEntity;
 import org.restor.fpv.network.StationCodesPacket;
 import org.restor.fpv.network.StartRemoteControlPacket;
@@ -107,8 +107,8 @@ public class StationScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g);
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(g, mouseX, mouseY, partialTick);
         GuiPanels.panel(g, left, top, PANEL_W, panelH);
         List<String> codes = codes();
         int rows = Math.max(codes.size(), 1);
@@ -116,9 +116,13 @@ public class StationScreen extends Screen {
         for (int y : rowY) {
             GuiPanels.inset(g, left + 12, y, PANEL_W - 108, 20, 0xFF15151B);
         }
+    }
 
+    @Override
+    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
 
+        List<String> codes = codes();
         g.drawCenteredString(font, title, left + PANEL_W / 2, top + 12, GuiPanels.TEXT);
         g.drawCenteredString(font, Component.translatable("screen.fpv.station_hint"),
             left + PANEL_W / 2, top + 26, GuiPanels.LABEL);

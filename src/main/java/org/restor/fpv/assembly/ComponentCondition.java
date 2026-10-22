@@ -1,9 +1,10 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import org.restor.fpv.rules.ServerRule;
 
 public final class ComponentCondition {
@@ -21,13 +22,13 @@ public final class ComponentCondition {
 
     public static int get(ItemStack stack) {
         if (stack.isEmpty()) return MAX;
-        CustomData data = CustomData.get(stack);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         return data == null ? MAX : read(data.copyTag());
     }
 
     public static void set(ItemStack stack, int condition) {
         if (!stack.isEmpty()) {
-            CustomData.update(stack, tag -> write(tag, condition));
+            CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> write(tag, condition));
         }
     }
 

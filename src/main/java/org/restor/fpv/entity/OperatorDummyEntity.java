@@ -79,10 +79,10 @@ public class OperatorDummyEntity extends Entity {
     }
 
     @Override
-    protected void defineSynchedData() {
-        this.entityData.define(DATA_PILOT, "");
-        this.entityData.define(DATA_RADIO, net.minecraft.world.item.ItemStack.EMPTY);
-        this.entityData.define(DATA_HEAD, net.minecraft.world.item.ItemStack.EMPTY);
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        builder.define(DATA_PILOT, "");
+        builder.define(DATA_RADIO, net.minecraft.world.item.ItemStack.EMPTY);
+        builder.define(DATA_HEAD, net.minecraft.world.item.ItemStack.EMPTY);
     }
 
     @Override
@@ -103,8 +103,4 @@ public class OperatorDummyEntity extends Entity {
         return true;
     }
 
-    @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return new ClientboundAddEntityPacket(this);
-    }
 }

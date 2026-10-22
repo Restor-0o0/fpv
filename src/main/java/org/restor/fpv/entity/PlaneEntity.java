@@ -154,21 +154,21 @@ public class PlaneEntity extends Entity
     }
 
     @Override
-    protected void defineSynchedData() {
-        this.entityData.define(DATA_ROLL,         0f);
-        this.entityData.define(DATA_THROTTLE,     0f);
-        this.entityData.define(DATA_ARMED,        false);
-        this.entityData.define(DATA_YAW_SYNC,     0f);
-        this.entityData.define(DATA_PITCH_SYNC,   0f);
-        this.entityData.define(DATA_ANGVEL_ROLL,  0f);
-        this.entityData.define(DATA_ANGVEL_PITCH, 0f);
-        this.entityData.define(DATA_ANGVEL_YAW,   0f);
-        this.entityData.define(DATA_ORBIT,        false);
-        this.entityData.define(DATA_ORB_CX,       0f);
-        this.entityData.define(DATA_ORB_CZ,       0f);
-        this.entityData.define(DATA_ORB_R,        12f);
-        this.entityData.define(DATA_ORB_DIR,      1f);
-        this.entityData.define(DATA_ORB_Y,        0f);
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        builder.define(DATA_ROLL,         0f);
+        builder.define(DATA_THROTTLE,     0f);
+        builder.define(DATA_ARMED,        false);
+        builder.define(DATA_YAW_SYNC,     0f);
+        builder.define(DATA_PITCH_SYNC,   0f);
+        builder.define(DATA_ANGVEL_ROLL,  0f);
+        builder.define(DATA_ANGVEL_PITCH, 0f);
+        builder.define(DATA_ANGVEL_YAW,   0f);
+        builder.define(DATA_ORBIT,        false);
+        builder.define(DATA_ORB_CX,       0f);
+        builder.define(DATA_ORB_CZ,       0f);
+        builder.define(DATA_ORB_R,        12f);
+        builder.define(DATA_ORB_DIR,      1f);
+        builder.define(DATA_ORB_Y,        0f);
     }
 
     @Override
@@ -582,12 +582,12 @@ public class PlaneEntity extends Entity
     }
 
     @Override
-    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps, boolean teleport) {
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
         if (level().isClientSide && (predAge <= 5 || entityData.get(DATA_ORBIT))) {
             serverSyncPos = new Vec3(x, y, z);
             return;
         }
-        super.lerpTo(x, y, z, yRot, xRot, steps, teleport);
+        super.lerpTo(x, y, z, yRot, xRot, steps);
     }
 
     public void setClientPredictedInputs(float throttle, float pitch, float roll, float yaw) {
@@ -1114,8 +1114,4 @@ public class PlaneEntity extends Entity
         if (mountReturn != null) mountReturn.save(tag, "Return");
     }
 
-    @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return new ClientboundAddEntityPacket(this);
-    }
 }

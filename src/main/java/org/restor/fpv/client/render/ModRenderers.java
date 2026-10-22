@@ -1,17 +1,17 @@
 package org.restor.fpv.client.render;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.ModEntities;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public class ModRenderers {
     @SubscribeEvent
     public static void onAddLayers(EntityRenderersEvent.AddLayers event) {
-        for (String skin : event.getSkins()) {
+        for (net.minecraft.client.resources.PlayerSkin.Model skin : event.getSkins()) {
             if (event.getSkin(skin) instanceof net.minecraft.client.renderer.entity.player.PlayerRenderer renderer) {
                 renderer.addLayer(new GogglesLayer(renderer, event.getContext().getItemRenderer()));
             }

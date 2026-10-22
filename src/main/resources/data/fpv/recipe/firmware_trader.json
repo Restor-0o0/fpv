@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "RER",
+    "BFB",
+    "RER"
+  ],
+  "key": {
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "E": {
+      "item": "minecraft:emerald"
+    },
+    "B": {
+      "item": "minecraft:book"
+    },
+    "F": {
+      "item": "fpv:firmware_companion"
+    }
+  },
+  "result": {
+    "id": "fpv:firmware_trader"
+  }
+}

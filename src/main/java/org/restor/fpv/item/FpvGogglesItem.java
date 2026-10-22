@@ -30,7 +30,7 @@ public class FpvGogglesItem extends Item implements Equipable {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, net.minecraft.world.level.Level context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.fpv.goggles").withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.goggles.2").withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.goggles.3").withStyle(ChatFormatting.DARK_GRAY));

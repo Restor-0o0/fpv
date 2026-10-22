@@ -5,7 +5,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
 import net.minecraft.client.gui.screens.Screen;
-import org.restor.fpv.compat.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.network.SetDroneCodePacket;
 
 // Opened by right-clicking a remote-controllable drone: set its 6-digit link code.
@@ -69,11 +69,10 @@ public class DroneCodeScreen extends Screen {
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        renderBackground(graphics);
+        super.render(graphics, mouseX, mouseY, partialTick);
         graphics.drawCenteredString(font, title, width / 2, height / 2 - 45, 0xFFFFFF);
         graphics.drawCenteredString(font, Component.translatable("screen.fpv.set_code_hint"),
             width / 2, height / 2 - 33, 0xAAAAAA);
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override

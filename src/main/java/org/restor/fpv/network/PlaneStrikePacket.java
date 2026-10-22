@@ -1,14 +1,14 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import org.restor.fpv.compat.StreamCodec;
-import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import org.restor.fpv.compat.IPayloadContext;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.KamikazeWingEntity;
 import org.restor.fpv.entity.ModEntities;
@@ -16,7 +16,7 @@ import org.restor.fpv.entity.ScoutPlaneEntity;
 
 public record PlaneStrikePacket(int scoutId, double tx, double ty, double tz) implements CustomPacketPayload {
     public static final Type<PlaneStrikePacket> TYPE =
-        new Type<>(new ResourceLocation(Fpv.MODID, "plane_strike"));
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "plane_strike"));
 
     public static final StreamCodec<FriendlyByteBuf, PlaneStrikePacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

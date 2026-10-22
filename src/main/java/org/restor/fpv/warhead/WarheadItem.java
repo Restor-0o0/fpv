@@ -28,7 +28,7 @@ public class WarheadItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, net.minecraft.world.level.Level context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.fpv.warhead.power", String.format("%.1f", type.power()))
             .withStyle(net.minecraft.ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.ordnance.terrain", String.format("%.1f", type.blockPower()))

@@ -39,8 +39,8 @@ public class DropChargeEntity extends net.minecraft.world.entity.projectile.Thro
     }
 
     @Override
-    protected float getGravity() {
-        return 0.06f;
+    protected double getDefaultGravity() {
+        return 0.06;
     }
 
     @Override

@@ -1,5 +1,6 @@
 package org.restor.fpv.client.ui.screen.settings;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -11,13 +12,12 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ScreenEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.restor.fpv.Fpv;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public final class MenuSettingsButton extends AbstractWidget {
     private static final int SIZE = 20;
 

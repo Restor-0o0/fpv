@@ -45,7 +45,6 @@ public class CargoBayScreen extends AbstractContainerScreen<CargoBayMenu> {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g);
         super.render(g, mouseX, mouseY, partialTick);
         renderTooltip(g, mouseX, mouseY);
     }

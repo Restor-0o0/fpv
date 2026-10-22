@@ -1,17 +1,17 @@
 package org.restor.fpv;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class TrackGenerationConfig {
-    private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
+    private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
-    public static final ForgeConfigSpec.BooleanValue ENABLED;
-    public static final ForgeConfigSpec.DoubleValue REGION_CHANCE;
-    public static final ForgeConfigSpec.IntValue SPACING_CHUNKS;
-    public static final ForgeConfigSpec.IntValue MAX_PENDING_REGIONS;
-    public static final ForgeConfigSpec.IntValue PENDING_SCAN_PER_TICK;
-    public static final ForgeConfigSpec.IntValue PLANNER_TERRAIN_CHECK_BUDGET;
-    public static final ForgeConfigSpec SPEC;
+    public static final ModConfigSpec.BooleanValue ENABLED;
+    public static final ModConfigSpec.DoubleValue REGION_CHANCE;
+    public static final ModConfigSpec.IntValue SPACING_CHUNKS;
+    public static final ModConfigSpec.IntValue MAX_PENDING_REGIONS;
+    public static final ModConfigSpec.IntValue PENDING_SCAN_PER_TICK;
+    public static final ModConfigSpec.IntValue PLANNER_TERRAIN_CHECK_BUDGET;
+    public static final ModConfigSpec SPEC;
 
     static {
         BUILDER.push("naturalTracks");

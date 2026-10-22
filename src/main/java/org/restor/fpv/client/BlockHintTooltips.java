@@ -1,18 +1,18 @@
 package org.restor.fpv.client;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.event.entity.player.ItemTooltipEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import org.restor.fpv.Fpv;
 
 /** Adds a one-line "what is this for" hint to any mod item that declares tooltip.fpv.hint.<id>. */
-@Mod.EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public final class BlockHintTooltips {
     private BlockHintTooltips() {}
 

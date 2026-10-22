@@ -1,5 +1,6 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
@@ -7,7 +8,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import org.restor.fpv.component.ComponentCatalog;
 import org.restor.fpv.component.ComponentItem;
 import org.restor.fpv.component.ComponentStats;
@@ -73,7 +74,7 @@ public class DroneAssembly {
             if (bay[i].isEmpty()) continue;
             CompoundTag card = new CompoundTag();
             card.putByte("Count", (byte) bay[i].getCount());
-            var data = CustomData.get(bay[i]);
+            var data = bay[i].get(DataComponents.CUSTOM_DATA);
             if (data != null) card.put("Data", data.copyTag());
             tag.put("Bay" + i, card);
         }
@@ -120,7 +121,7 @@ public class DroneAssembly {
             ItemStack stack = new ItemStack(org.restor.fpv.item.ModItems.DRONE_CARD.get(),
                 Math.max(1, card.getByte("Count")));
             if (card.contains("Data", Tag.TAG_COMPOUND)) {
-                CustomData.set(stack, card.getCompound("Data"));
+                CustomData.set(DataComponents.CUSTOM_DATA, stack, card.getCompound("Data"));
             }
             a.bay[i] = stack;
         }

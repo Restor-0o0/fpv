@@ -45,7 +45,7 @@ public class ComponentItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.fpv.part.type", Component.translatable(typeKey())));
         tooltip.add(Component.translatable("tooltip.fpv.component_condition", ComponentCondition.percent(stack)));
         switch (stats.type()) {

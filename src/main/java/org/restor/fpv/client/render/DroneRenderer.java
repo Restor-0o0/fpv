@@ -24,7 +24,7 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 public class DroneRenderer extends EntityRenderer<DroneEntity> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(Fpv.MODID, "textures/entity/drone.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "textures/entity/drone.png");
     private static final double FAR_RENDER_DISTANCE_SQR = 1024.0 * 1024.0;
 
     public DroneRenderer(EntityRendererProvider.Context ctx) {
@@ -402,40 +402,40 @@ public class DroneRenderer extends EntityRenderer<DroneEntity> {
         float u1 = 0, v1 = 0, u2 = 1, v2 = 1;
 
         // Top
-        consumer.vertex(mat, x1, y2, z1).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
-        consumer.vertex(mat, x2, y2, z1).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
-        consumer.vertex(mat, x2, y2, z2).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
-        consumer.vertex(mat, x1, y2, z2).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 1, 0).endVertex();
+        consumer.addVertex(mat, x1, y2, z1).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 1, 0);
+        consumer.addVertex(mat, x2, y2, z1).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 1, 0);
+        consumer.addVertex(mat, x2, y2, z2).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 1, 0);
+        consumer.addVertex(mat, x1, y2, z2).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 1, 0);
 
         // Bottom
-        consumer.vertex(mat, x1, y1, z1).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
-        consumer.vertex(mat, x1, y1, z2).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
-        consumer.vertex(mat, x2, y1, z2).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
-        consumer.vertex(mat, x2, y1, z1).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, -1, 0).endVertex();
+        consumer.addVertex(mat, x1, y1, z1).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, -1, 0);
+        consumer.addVertex(mat, x1, y1, z2).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, -1, 0);
+        consumer.addVertex(mat, x2, y1, z2).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, -1, 0);
+        consumer.addVertex(mat, x2, y1, z1).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, -1, 0);
 
         // Front
-        consumer.vertex(mat, x1, y1, z1).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
-        consumer.vertex(mat, x2, y1, z1).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
-        consumer.vertex(mat, x2, y2, z1).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
-        consumer.vertex(mat, x1, y2, z1).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, -1).endVertex();
+        consumer.addVertex(mat, x1, y1, z1).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, -1);
+        consumer.addVertex(mat, x2, y1, z1).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, -1);
+        consumer.addVertex(mat, x2, y2, z1).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, -1);
+        consumer.addVertex(mat, x1, y2, z1).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, -1);
 
         // Back
-        consumer.vertex(mat, x1, y1, z2).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
-        consumer.vertex(mat, x1, y2, z2).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
-        consumer.vertex(mat, x2, y2, z2).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
-        consumer.vertex(mat, x2, y1, z2).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(0, 0, 1).endVertex();
+        consumer.addVertex(mat, x1, y1, z2).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, 1);
+        consumer.addVertex(mat, x1, y2, z2).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, 1);
+        consumer.addVertex(mat, x2, y2, z2).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, 1);
+        consumer.addVertex(mat, x2, y1, z2).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(0, 0, 1);
 
         // Right
-        consumer.vertex(mat, x2, y1, z1).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
-        consumer.vertex(mat, x2, y1, z2).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
-        consumer.vertex(mat, x2, y2, z2).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
-        consumer.vertex(mat, x2, y2, z1).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(1, 0, 0).endVertex();
+        consumer.addVertex(mat, x2, y1, z1).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(1, 0, 0);
+        consumer.addVertex(mat, x2, y1, z2).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(1, 0, 0);
+        consumer.addVertex(mat, x2, y2, z2).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(1, 0, 0);
+        consumer.addVertex(mat, x2, y2, z1).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(1, 0, 0);
 
         // Left
-        consumer.vertex(mat, x1, y1, z1).color(r, g, b, 1).uv(u1, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
-        consumer.vertex(mat, x1, y2, z1).color(r, g, b, 1).uv(u2, v1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
-        consumer.vertex(mat, x1, y2, z2).color(r, g, b, 1).uv(u2, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
-        consumer.vertex(mat, x1, y1, z2).color(r, g, b, 1).uv(u1, v2).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(packedLight).normal(-1, 0, 0).endVertex();
+        consumer.addVertex(mat, x1, y1, z1).setColor(r, g, b, 1).setUv(u1, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(-1, 0, 0);
+        consumer.addVertex(mat, x1, y2, z1).setColor(r, g, b, 1).setUv(u2, v1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(-1, 0, 0);
+        consumer.addVertex(mat, x1, y2, z2).setColor(r, g, b, 1).setUv(u2, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(-1, 0, 0);
+        consumer.addVertex(mat, x1, y1, z2).setColor(r, g, b, 1).setUv(u1, v2).setOverlay(OverlayTexture.NO_OVERLAY).setLight(packedLight).setNormal(-1, 0, 0);
     }
 
     @Override

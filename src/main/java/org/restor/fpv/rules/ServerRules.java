@@ -1,5 +1,6 @@
 package org.restor.fpv.rules;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
@@ -13,21 +14,20 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.event.config.ModConfigEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.restor.fpv.CommonConfig;
 import org.restor.fpv.Fpv;
-import org.restor.fpv.compat.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.network.ServerRulesPacket;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID)
+@EventBusSubscriber(modid = Fpv.MODID)
 public final class ServerRules {
     private ServerRules() {}
 
@@ -238,7 +238,7 @@ public final class ServerRules {
         return rule.flag() ? "true / false" : rule.format(rule.min) + " .. " + rule.format(rule.max);
     }
 
-    @Mod.EventBusSubscriber(modid = Fpv.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+    @EventBusSubscriber(modid = Fpv.MODID)
     public static final class ConfigListener {
         @SubscribeEvent
         public static void onReload(ModConfigEvent.Reloading event) {

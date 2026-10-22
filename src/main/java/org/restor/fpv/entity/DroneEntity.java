@@ -1,5 +1,6 @@
 package org.restor.fpv.entity;
 
+import net.minecraft.core.component.DataComponents;
 import com.mojang.logging.LogUtils;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.Packet;
@@ -17,7 +18,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.levelgen.Heightmap;
@@ -232,32 +233,32 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     @Override
-    protected void defineSynchedData() {
-        this.entityData.define(DATA_ROLL,        0f);
-        this.entityData.define(DATA_VISUAL_THR,  0f);
-        this.entityData.define(DATA_FLIGHT_MODE, 0);
-        this.entityData.define(DATA_ARMED,       false);
-        this.entityData.define(DATA_BATTERY,     1f);
-        this.entityData.define(DATA_RSSI,        1f);
-        this.entityData.define(DATA_RADIO_STATE, RadioFailsafe.State.DISARMED.ordinal());
-        this.entityData.define(DATA_VEL_X,       0f);
-        this.entityData.define(DATA_VEL_Y,       0f);
-        this.entityData.define(DATA_VEL_Z,       0f);
-        this.entityData.define(DATA_YAW_SYNC,    0f);
-        this.entityData.define(DATA_PITCH_SYNC,  0f);
-        this.entityData.define(DATA_CAMERA_ANGLE, 0f);
-        this.entityData.define(DATA_ANGVEL_ROLL,  0f);
-        this.entityData.define(DATA_ANGVEL_PITCH, 0f);
-        this.entityData.define(DATA_ANGVEL_YAW,   0f);
-        this.entityData.define(DATA_RATE_PITCH,   1f);
-        this.entityData.define(DATA_RATE_ROLL,    1f);
-        this.entityData.define(DATA_RATE_YAW,     1f);
-        this.entityData.define(DATA_LINK_CODE,    "");
-        this.entityData.define(DATA_PAYLOAD_AMMO, 0);
-        this.entityData.define(DATA_ROCKET_AMMO, 0);
-        this.entityData.define(DATA_ACK_SEQ, 0);
-        this.entityData.define(DATA_SRV_MSPT, 0);
-        this.entityData.define(DATA_POSE_LOCK, false);
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        builder.define(DATA_ROLL,        0f);
+        builder.define(DATA_VISUAL_THR,  0f);
+        builder.define(DATA_FLIGHT_MODE, 0);
+        builder.define(DATA_ARMED,       false);
+        builder.define(DATA_BATTERY,     1f);
+        builder.define(DATA_RSSI,        1f);
+        builder.define(DATA_RADIO_STATE, RadioFailsafe.State.DISARMED.ordinal());
+        builder.define(DATA_VEL_X,       0f);
+        builder.define(DATA_VEL_Y,       0f);
+        builder.define(DATA_VEL_Z,       0f);
+        builder.define(DATA_YAW_SYNC,    0f);
+        builder.define(DATA_PITCH_SYNC,  0f);
+        builder.define(DATA_CAMERA_ANGLE, 0f);
+        builder.define(DATA_ANGVEL_ROLL,  0f);
+        builder.define(DATA_ANGVEL_PITCH, 0f);
+        builder.define(DATA_ANGVEL_YAW,   0f);
+        builder.define(DATA_RATE_PITCH,   1f);
+        builder.define(DATA_RATE_ROLL,    1f);
+        builder.define(DATA_RATE_YAW,     1f);
+        builder.define(DATA_LINK_CODE,    "");
+        builder.define(DATA_PAYLOAD_AMMO, 0);
+        builder.define(DATA_ROCKET_AMMO, 0);
+        builder.define(DATA_ACK_SEQ, 0);
+        builder.define(DATA_SRV_MSPT, 0);
+        builder.define(DATA_POSE_LOCK, false);
     }
 
     // ---- Payload (drop charge) ----
@@ -702,7 +703,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     private void sendClientPose() {
         Vec3 pos = position();
         Vec3 vel = getDeltaMovement();
-        org.restor.fpv.compat.PacketDistributor.sendToServer(
+        net.neoforged.neoforge.network.PacketDistributor.sendToServer(
             new org.restor.fpv.network.DronePosePacket(getId(), pos.x, pos.y, pos.z,
                 getYRot(), getXRot(), displayRoll,
                 (float) vel.x, (float) vel.y, (float) vel.z,
@@ -1328,13 +1329,11 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     public net.minecraft.world.entity.EntityDimensions getDimensions(net.minecraft.world.entity.Pose pose) {
         net.minecraft.world.entity.EntityDimensions d = super.getDimensions(pose);
         float s = (float) org.restor.fpv.Config.DEV_HITBOX_SCALE.get().doubleValue();
-        return net.minecraft.world.entity.EntityDimensions.scalable(d.width * s, d.height * s);
+        return withCameraEye(net.minecraft.world.entity.EntityDimensions.scalable(d.width() * s, d.height() * s));
     }
 
-    @Override
-    protected float getEyeHeight(net.minecraft.world.entity.Pose pose,
-                                 net.minecraft.world.entity.EntityDimensions dimensions) {
-        return dimensions.height * (float) org.restor.fpv.Config.FPV_CAMERA_HEIGHT.get().doubleValue();
+    protected static net.minecraft.world.entity.EntityDimensions withCameraEye(net.minecraft.world.entity.EntityDimensions d) {
+        return d.withEyeHeight(d.height() * (float) org.restor.fpv.Config.FPV_CAMERA_HEIGHT.get().doubleValue());
     }
 
     @Override
@@ -1346,10 +1345,6 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     @Override
     public boolean isPushable() { return false; }
 
-    @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return new ClientboundAddEntityPacket(this);
-    }
 
     @Override
     public Vec3 getDismountLocationForPassenger(LivingEntity passenger) {
@@ -1389,7 +1384,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         battery.save(batteryTag);
         persistent.put("Battery", batteryTag);
         if (companionOwnerId != null) persistent.putUUID("CompanionOwner", companionOwnerId);
-        CustomData.update(stack, tag -> tag.merge(persistent));
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.merge(persistent));
         return stack;
     }
 
@@ -1952,7 +1947,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             if (!consumeCompanionWeaponEnergy(DART_SHOT_POWER)) return;
             weaponCooldown = WEAPON_COOLDOWN;
             net.minecraft.world.entity.projectile.Arrow dart =
-                new net.minecraft.world.entity.projectile.Arrow(level(), getX(), getY(), getZ());
+                new net.minecraft.world.entity.projectile.Arrow(level(), getX(), getY(), getZ(),
+                    new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.ARROW), null);
             dart.setBaseDamage(2.0);
             dart.pickup = net.minecraft.world.entity.projectile.AbstractArrow.Pickup.DISALLOWED;
             launchProjectile(pilot, dart, 2.6f, 0.6f);
@@ -2276,7 +2272,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (!fpv) {
             // Line of sight: the pilot keeps their own body and camera and just watches
             // the drone fly, so none of the projection machinery applies.
-            org.restor.fpv.compat.PacketDistributor.sendToPlayer(player,
+            net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
                 new org.restor.fpv.network.LineOfSightPacket(getId()));
             return;
         }
@@ -2341,7 +2337,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
                 if (home != null) home.send(p);
                 else if (p.getCamera() == this) p.setCamera(p);
             } else {
-                org.restor.fpv.compat.PacketDistributor.sendToPlayer(p,
+                net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p,
                     new org.restor.fpv.network.LineOfSightPacket(-1));
             }
         }
@@ -2561,12 +2557,12 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     @Override
-    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps, boolean teleport) {
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
         if (level().isClientSide && (predAge <= 5 || entityData.get(DATA_POSE_LOCK))) {
             serverSyncPos = new Vec3(x, y, z);
             return;
         }
-        super.lerpTo(x, y, z, yRot, xRot, steps, teleport);
+        super.lerpTo(x, y, z, yRot, xRot, steps);
     }
 
     // Called client-side by ClientEventHandler with the same values it sends to the

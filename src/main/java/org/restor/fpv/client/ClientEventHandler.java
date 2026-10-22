@@ -1,15 +1,15 @@
 package org.restor.fpv.client;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
-import net.minecraftforge.client.event.ViewportEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import org.restor.fpv.compat.PacketDistributor;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
+import net.neoforged.neoforge.client.event.ViewportEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.Config;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.client.ui.screen.settings.FpvSettingsScreen;
@@ -24,7 +24,7 @@ import org.restor.fpv.client.render.FpvCamera;
 import org.restor.fpv.client.ui.hud.FpvHud;
 import org.slf4j.Logger;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public class ClientEventHandler {
     private static final Minecraft MC = Minecraft.getInstance();
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -106,16 +106,14 @@ public class ClientEventHandler {
     // handleKeybinds() runs later in the same tick, so the yaw keys have to be drained here
     // or Q drops the held item and E opens the inventory every time the drone yaws.
     @SubscribeEvent
-    public static void onClientTickPre(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.START) return;
+    public static void onClientTickPre(ClientTickEvent.Pre event) {
         if (!heavyDroneActive || MC.player == null || MC.screen != null) return;
         while (MC.options.keyDrop.consumeClick()) { }
         while (MC.options.keyInventory.consumeClick()) { }
     }
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(ClientTickEvent.Post event) {
         if (MC.player == null || MC.level == null) return;
 
         // Scan for controller periodically (always, even while riding)
@@ -1057,9 +1055,9 @@ public class ClientEventHandler {
     }
 
     @SubscribeEvent
-    public static void onMouseScroll(net.minecraftforge.client.event.InputEvent.MouseScrollingEvent event) {
+    public static void onMouseScroll(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent event) {
         if (MC.screen != null || !fpvActive()) return;
-        fpvZoom = (float) Math.max(1.0, Math.min(8.0, fpvZoom + event.getScrollDelta() * 0.5));
+        fpvZoom = (float) Math.max(1.0, Math.min(8.0, fpvZoom + event.getScrollDeltaY() * 0.5));
         event.setCanceled(true); // don't also scroll the hotbar
     }
 
@@ -1145,7 +1143,7 @@ public class ClientEventHandler {
     }
 
     @SubscribeEvent
-    public static void onRenderPlayer(net.minecraftforge.client.event.RenderPlayerEvent.Pre event) {
+    public static void onRenderPlayer(net.neoforged.neoforge.client.event.RenderPlayerEvent.Pre event) {
         // Pilots ride inside the FPV entity/camera-follow body; don't render their player
         // model clipped into the drone/plane for any client in multiplayer.
         if (event.getEntity().getVehicle() instanceof org.restor.fpv.entity.Pilotable
@@ -1157,7 +1155,7 @@ public class ClientEventHandler {
     }
 
     @SubscribeEvent
-    public static void onRenderHand(net.minecraftforge.client.event.RenderHandEvent event) {
+    public static void onRenderHand(net.neoforged.neoforge.client.event.RenderHandEvent event) {
         // Piloting a drone (riding or remote) shows the drone's own FPV camera feed —
         // the player's held item/arm should never appear in front of it.
         if (MC.player != null
@@ -1168,7 +1166,7 @@ public class ClientEventHandler {
     }
 
     @SubscribeEvent
-    public static void onMovementInput(net.minecraftforge.client.event.MovementInputUpdateEvent event) {
+    public static void onMovementInput(net.neoforged.neoforge.client.event.MovementInputUpdateEvent event) {
         // While remote-controlling (camera on a drone, not riding), the player's body
         // stands at the station — WASD must fly the drone, not walk the body.
         // shiftKeyDown is deliberately kept: vanilla uses it to exit the camera.
@@ -1186,16 +1184,16 @@ public class ClientEventHandler {
     }
 
     @SubscribeEvent
-    public static void onRenderOverlay(RenderGuiOverlayEvent.Pre event) {
+    public static void onRenderOverlay(RenderGuiLayerEvent.Pre event) {
         FpvHud.hideVanillaOverlays(event);
     }
 
     @SubscribeEvent
-    public static void onRenderGui(net.minecraftforge.client.event.RenderGuiEvent.Post event) {
+    public static void onRenderGui(net.neoforged.neoforge.client.event.RenderGuiEvent.Post event) {
         // Render FPV OSD once per frame after the whole GUI pass. This event fires
-        // unconditionally — hanging the OSD on RenderGuiOverlayEvent.Post(HOTBAR) never
+        // unconditionally — hanging the OSD on RenderGuiLayerEvent.Post(HOTBAR) never
         // fired because our own Pre handler cancels the hotbar overlay (canceled Pre
         // suppresses Post), so the OSD was invisible.
-        FpvHud.render(event.getGuiGraphics(), event.getPartialTick());
+        FpvHud.render(event.getGuiGraphics(), event.getPartialTick().getGameTimeDeltaPartialTick(false));
     }
 }

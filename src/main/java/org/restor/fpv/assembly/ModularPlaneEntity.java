@@ -1,5 +1,6 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -11,7 +12,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import org.restor.fpv.component.ModuleType;
 import org.restor.fpv.entity.PlaneEntity;
@@ -49,9 +50,9 @@ public class ModularPlaneEntity extends PlaneEntity {
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_ASSEMBLY, new CompoundTag());
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_ASSEMBLY, new CompoundTag());
     }
 
     @Override
@@ -261,7 +262,7 @@ public class ModularPlaneEntity extends PlaneEntity {
         }
         if (player.isSecondaryUseActive() && assembly.moduleType() == ModuleType.STORAGE) {
             if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
-net.minecraftforge.network.NetworkHooks.openScreen(sp, new net.minecraft.world.SimpleMenuProvider(
+sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
                     (id, inv, p) -> new net.minecraft.world.inventory.ChestMenu(
                         net.minecraft.world.inventory.MenuType.GENERIC_9x1, id, inv, cargo, 1),
                     getName()));
@@ -363,7 +364,7 @@ net.minecraftforge.network.NetworkHooks.openScreen(sp, new net.minecraft.world.S
     protected ItemStack getDropStack() {
         if (assembly.isBareFrame()) return assembly.frame.copy();
         ItemStack stack = super.getDropStack();
-        CustomData.update(stack, t -> {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, t -> {
             t.put("Assembly", assembly.save());
             if (hasWarhead()) t.putString("Warhead", warhead.id());
         });
@@ -381,7 +382,7 @@ net.minecraftforge.network.NetworkHooks.openScreen(sp, new net.minecraft.world.S
         if (tag.contains("Assembly")) setAssembly(DroneAssembly.load(tag.getCompound("Assembly")));
         if (tag.contains("Warhead")) warhead = WarheadType.byId(tag.getString("Warhead"));
         if (tag.contains("Cargo")) {
-            cargo.fromTag(tag.getList("Cargo", net.minecraft.nbt.Tag.TAG_COMPOUND));
+            cargo.fromTag(tag.getList("Cargo", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
         }
     }
 
@@ -390,6 +391,6 @@ net.minecraftforge.network.NetworkHooks.openScreen(sp, new net.minecraft.world.S
         super.addAdditionalSaveData(tag);
         tag.put("Assembly", assembly.save());
         tag.putString("Warhead", warhead.id());
-        tag.put("Cargo", cargo.createTag());
+        tag.put("Cargo", cargo.createTag(registryAccess()));
     }
 }

@@ -1,8 +1,9 @@
 package org.restor.fpv.item;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import org.restor.fpv.assembly.ModularDroneItem;
 import org.restor.fpv.component.BatteryItem;
 
@@ -20,7 +21,7 @@ public final class BatteryCharge {
     /** 0..1 charge, or -1 when the stack does not hold a pack. */
     public static float get(ItemStack stack) {
         if (!isChargeable(stack)) return -1f;
-        CustomData data = CustomData.get(stack);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         CompoundTag tag = data == null ? null : data.copyTag();
         if (stack.getItem() instanceof BatteryItem) {
             return tag != null && tag.contains("Charge") ? clamp(tag.getFloat("Charge")) : 1f;
@@ -45,13 +46,13 @@ public final class BatteryCharge {
     public static void set(ItemStack stack, float fraction) {
         float value = clamp(fraction);
         if (stack.getItem() instanceof BatteryItem battery) {
-            CustomData.update(stack, tag -> {
+            CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
                 tag.putFloat("Charge", value);
                 tag.putInt("Capacity", battery.getCapacity());
             });
             return;
         }
-        CustomData.update(stack, tag -> {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
             CompoundTag pack = tag.getCompound("Battery");
             float capacity = pack.getFloat("capacity");
             if (capacity <= 0) {

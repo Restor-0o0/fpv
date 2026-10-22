@@ -1,12 +1,13 @@
 package org.restor.fpv.item;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import org.restor.fpv.CommonConfig;
 
 import net.minecraft.core.particles.ParticleTypes;
@@ -51,27 +52,27 @@ public final class RcLink {
     }
 
     public static UUID boundId(ItemStack stack) {
-        CustomData data = CustomData.get(stack);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data == null) return null;
         CompoundTag tag = data.copyTag();
         return tag.hasUUID("BoundEntity") ? tag.getUUID("BoundEntity") : null;
     }
 
     public static String boundName(ItemStack stack) {
-        CustomData data = CustomData.get(stack);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data == null) return "";
         return data.copyTag().getString("BoundName");
     }
 
     public static void bind(ItemStack stack, Entity target) {
-        CustomData.update(stack, tag -> {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
             tag.putUUID("BoundEntity", target.getUUID());
             tag.putString("BoundName", target.getType().getDescriptionId());
         });
     }
 
     public static void unbind(ItemStack stack) {
-        CustomData.update(stack, tag -> {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> {
             tag.remove("BoundEntity");
             tag.remove("BoundName");
         });

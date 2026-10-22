@@ -2,11 +2,11 @@ package org.restor.fpv.network;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
-import org.restor.fpv.compat.StreamCodec;
-import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import org.restor.fpv.compat.IPayloadContext;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.block.entity.RaceStartBlockEntity;
 
@@ -34,7 +34,7 @@ public record RaceStartConfigPacket(BlockPos pos, int laps, boolean clearResults
     }
 
     public static final Type<RaceStartConfigPacket> TYPE =
-        new Type<>(new ResourceLocation(Fpv.MODID, "race_start_config"));
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "race_start_config"));
 
     public static final StreamCodec<FriendlyByteBuf, RaceStartConfigPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

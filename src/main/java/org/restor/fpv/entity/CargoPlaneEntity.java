@@ -43,9 +43,9 @@ public class CargoPlaneEntity extends PlaneEntity implements MenuProvider {
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_CARGO, 0f);
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_CARGO, 0f);
     }
 
     public SimpleContainer bay() { return bay; }
@@ -69,7 +69,7 @@ public class CargoPlaneEntity extends PlaneEntity implements MenuProvider {
     public InteractionResult interact(Player player, InteractionHand hand) {
         if (player.isSecondaryUseActive()) {
             if (!level().isClientSide && player instanceof ServerPlayer sp) {
-net.minecraftforge.network.NetworkHooks.openScreen(sp, this, buf -> buf.writeInt(getId()));
+sp.openMenu(this, buf -> buf.writeInt(getId()));
             }
             return InteractionResult.SUCCESS;
         }
@@ -87,14 +87,14 @@ net.minecraftforge.network.NetworkHooks.openScreen(sp, this, buf -> buf.writeInt
     @Override
     protected void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        bay.fromTag(tag.getList("Cargo", net.minecraft.nbt.Tag.TAG_COMPOUND));
+        bay.fromTag(tag.getList("Cargo", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
         refreshCargo();
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        tag.put("Cargo", bay.createTag());
+        tag.put("Cargo", bay.createTag(registryAccess()));
     }
 
     @Override

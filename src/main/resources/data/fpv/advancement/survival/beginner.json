@@ -1,0 +1,50 @@
+{
+  "parent": "fpv:survival/root",
+  "display": {
+    "icon": {
+      "id": "fpv:modular_drone"
+    },
+    "title": {
+      "translate": "advancement.fpv.beginner.title"
+    },
+    "description": {
+      "translate": "advancement.fpv.beginner.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_modular_drone": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "fpv:modular_drone"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "rewards": {
+    "recipes": [
+      "fpv:frame_cinewhoop",
+      "fpv:frame_5inch",
+      "fpv:motor_1404_4500kv",
+      "fpv:motor_2207_2450kv",
+      "fpv:prop_3x2x3",
+      "fpv:prop_5x4x2",
+      "fpv:prop_5x4x3",
+      "fpv:battery_4s_650",
+      "fpv:battery_4s_1300",
+      "fpv:camera_wide",
+      "fpv:vtx_200mw",
+      "fpv:race_start",
+      "fpv:race_finish",
+      "fpv:race_gate"
+    ]
+  }
+}

@@ -1,12 +1,12 @@
 package org.restor.fpv.rules;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 public final class ExplosivesConfig {
-    public static final ForgeConfigSpec SPEC;
+    public static final ModConfigSpec SPEC;
 
     static {
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         builder.comment("Per-explosive tuning. Change in game with /fpv explosives <id> <param> <value>.")
             .push("explosives");
         for (Explosive e : Explosive.values()) {

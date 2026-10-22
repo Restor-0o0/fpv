@@ -1,5 +1,6 @@
 package org.restor.fpv.client.render;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -8,11 +9,10 @@ import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.ModelEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.ModelEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.minecraft.core.registries.BuiltInRegistries;
 import org.restor.fpv.Config;
 import org.restor.fpv.Fpv;
 
@@ -20,12 +20,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public final class FrameModels {
-    private static final Map<ResourceLocation, ResourceLocation> SLIM = Stream.of(
+    private static final Map<ResourceLocation, net.minecraft.client.resources.model.ModelResourceLocation> SLIM = Stream.of(
             "frame_tiny_whoop", "frame_cinewhoop", "frame_5inch", "frame_7inch")
-        .collect(Collectors.toMap(n -> new ResourceLocation(Fpv.MODID, n),
-            n -> new ResourceLocation(Fpv.MODID, "drone/" + n + "_slim")));
+        .collect(Collectors.toMap(n -> ResourceLocation.fromNamespaceAndPath(Fpv.MODID, n),
+            n -> net.minecraft.client.resources.model.ModelResourceLocation.standalone(
+                ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "drone/" + n + "_slim"))));
 
     private FrameModels() {}
 
@@ -52,7 +53,7 @@ public final class FrameModels {
 
     private static BakedModel slimModel(ItemStack frame) {
         if (!Config.SLIM_FRAMES.get()) return null;
-        ResourceLocation id = SLIM.get(ForgeRegistries.ITEMS.getKey(frame.getItem()));
+        var id = SLIM.get(BuiltInRegistries.ITEM.getKey(frame.getItem()));
         if (id == null) return null;
         var models = Minecraft.getInstance().getModelManager();
         BakedModel baked = models.getModel(id);

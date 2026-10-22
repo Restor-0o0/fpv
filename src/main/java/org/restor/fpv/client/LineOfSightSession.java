@@ -1,16 +1,16 @@
 package org.restor.fpv.client;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.client.event.MovementInputUpdateEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.MovementInputUpdateEvent;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.DroneEntity;
 
 /** Flying by eye: the pilot keeps their own body and camera, so the sticks live on the
  *  same keys as the FPV view and the player must not walk off while using them. */
-@Mod.EventBusSubscriber(modid = Fpv.MODID, value = net.minecraftforge.api.distmarker.Dist.CLIENT)
+@EventBusSubscriber(modid = Fpv.MODID, value = net.neoforged.api.distmarker.Dist.CLIENT)
 public final class LineOfSightSession {
     private static int entityId = -1;
 

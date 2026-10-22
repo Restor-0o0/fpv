@@ -54,9 +54,9 @@ public class CarrierPlaneEntity extends PlaneEntity implements MenuProvider {
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_LOAD, 0f);
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_LOAD, 0f);
     }
 
     public static float massOf(ItemStack stack) {
@@ -179,14 +179,14 @@ public class CarrierPlaneEntity extends PlaneEntity implements MenuProvider {
     @Override
     protected void readAdditionalSaveData(CompoundTag tag) {
         super.readAdditionalSaveData(tag);
-        hardpoints.fromTag(tag.getList("Hardpoints", net.minecraft.nbt.Tag.TAG_COMPOUND));
+        hardpoints.fromTag(tag.getList("Hardpoints", net.minecraft.nbt.Tag.TAG_COMPOUND), registryAccess());
         refreshLoad();
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);
-        tag.put("Hardpoints", hardpoints.createTag());
+        tag.put("Hardpoints", hardpoints.createTag(registryAccess()));
     }
 
     @Override
@@ -195,7 +195,7 @@ public class CarrierPlaneEntity extends PlaneEntity implements MenuProvider {
     }
 
     public void openHardpoints(ServerPlayer player) {
-net.minecraftforge.network.NetworkHooks.openScreen(player, this, buf -> buf.writeInt(getId()));
+player.openMenu(this, buf -> buf.writeInt(getId()));
     }
 
     @Override

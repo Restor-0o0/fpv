@@ -1,10 +1,11 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import org.restor.fpv.entity.ModEntities;
 import org.restor.fpv.item.DroneItem;
 
@@ -17,8 +18,8 @@ public class ModularDroneItem extends DroneItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level context, List<Component> tooltip, TooltipFlag flag) {
-        CustomData data = CustomData.get(stack);
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data != null && data.contains("Assembly")) {
             DroneAssembly a = DroneAssembly.load(data.copyTag().getCompound("Assembly"));
             FrameSpec spec = a.frameSpec();

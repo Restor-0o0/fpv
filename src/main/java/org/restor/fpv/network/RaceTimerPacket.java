@@ -1,10 +1,10 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import org.restor.fpv.compat.StreamCodec;
-import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import org.restor.fpv.compat.IPayloadContext;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
 
 // Server -> client race HUD state for the piloting player. lap == 0 means "not racing"
@@ -12,7 +12,7 @@ import org.restor.fpv.Fpv;
 public record RaceTimerPacket(int lap, int laps, long startTime, int gatesHit, int gatesTotal,
                                int finishTicks) implements CustomPacketPayload {
     public static final Type<RaceTimerPacket> TYPE =
-        new Type<>(new ResourceLocation(Fpv.MODID, "race_timer"));
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "race_timer"));
 
     public static final StreamCodec<FriendlyByteBuf, RaceTimerPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

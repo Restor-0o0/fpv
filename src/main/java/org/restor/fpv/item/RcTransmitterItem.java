@@ -84,7 +84,7 @@ public class RcTransmitterItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, net.minecraft.world.level.Level context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         String name = RcLink.boundName(stack);
         tooltip.add(name.isEmpty()
             ? Component.translatable("tooltip.fpv.tx.unbound").withStyle(ChatFormatting.DARK_GRAY)

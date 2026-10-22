@@ -124,10 +124,10 @@ public class GuardStationBlockEntity extends BlockEntity implements Container, M
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         items.clear();
-        ContainerHelper.loadAllItems(tag, items);
+        ContainerHelper.loadAllItems(tag, items, registries);
         ownerId = tag.hasUUID("Owner") ? tag.getUUID("Owner") : null;
         ListTag flying = tag.getList("Flying", Tag.TAG_COMPOUND);
         for (int i = 0; i < SLOTS; i++) launched[i] = null;
@@ -139,9 +139,9 @@ public class GuardStationBlockEntity extends BlockEntity implements Container, M
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        ContainerHelper.saveAllItems(tag, items);
+    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        ContainerHelper.saveAllItems(tag, items, registries);
         if (ownerId != null) tag.putUUID("Owner", ownerId);
         ListTag flying = new ListTag();
         for (int i = 0; i < SLOTS; i++) {
@@ -192,6 +192,6 @@ public class GuardStationBlockEntity extends BlockEntity implements Container, M
     }
 
     public void openFor(ServerPlayer player) {
-        net.minecraftforge.network.NetworkHooks.openScreen(player, this, buf -> buf.writeBlockPos(worldPosition));
+        player.openMenu(this, buf -> buf.writeBlockPos(worldPosition));
     }
 }

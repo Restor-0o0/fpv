@@ -1,9 +1,10 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import org.restor.fpv.component.ComponentStats;
 import org.restor.fpv.component.ModComponents;
 import org.restor.fpv.item.ModItems;
@@ -34,7 +35,7 @@ public final class DronePresets {
         List<ItemStack> out = new ArrayList<>();
         for (DronePresetSpecs.Build build : DronePresetSpecs.ALL) {
             ItemStack card = DroneCardItem.of(assemble(build), build.warhead());
-            card.setHoverName(name(build));
+            card.set(DataComponents.CUSTOM_NAME, name(build));
             out.add(card);
         }
         return out;
@@ -67,11 +68,11 @@ public final class DronePresets {
         WarheadType warhead = build.warhead();
         ItemStack stack = new ItemStack(build.wing()
             ? ModItems.MODULAR_PLANE.get() : ModItems.MODULAR_DRONE.get());
-        CustomData.update(stack, t -> {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, t -> {
             t.put("Assembly", a.save());
             if (warhead != null) t.putString("Warhead", warhead.id());
         });
-        stack.setHoverName(name(build));
+        stack.set(DataComponents.CUSTOM_NAME, name(build));
         return stack;
     }
 

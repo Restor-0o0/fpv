@@ -16,7 +16,7 @@ import org.restor.fpv.item.ModItems;
 import org.joml.Quaternionf;
 
 public class PlaneRenderer extends EntityRenderer<PlaneEntity> {
-    private static final ResourceLocation TEXTURE = new ResourceLocation(Fpv.MODID, "textures/entity/plane.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "textures/entity/plane.png");
     private static final double FAR_RENDER_DISTANCE_SQR = 2048.0 * 2048.0;
     private static final float MODEL_SCALE = 1.95f;
 

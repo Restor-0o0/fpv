@@ -79,7 +79,7 @@ abstract class SettingRow {
     static void click() {
         Minecraft.getInstance().getSoundManager().play(
             net.minecraft.client.resources.sounds.SimpleSoundInstance.forUI(
-                net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.get(), 1.0f, 0.6f));
+                net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 1.0f, 0.6f));
     }
 
     static final class Section extends SettingRow {

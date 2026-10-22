@@ -4,9 +4,9 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import org.restor.fpv.Fpv;
-import org.restor.fpv.compat.CustomPacketPayload;
-import org.restor.fpv.compat.IPayloadContext;
-import org.restor.fpv.compat.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.network.codec.StreamCodec;
 import org.restor.fpv.rules.ExplosiveParam;
 import org.restor.fpv.rules.ServerRule;
 import org.restor.fpv.rules.ServerRules;
@@ -17,7 +17,7 @@ import java.util.Map;
 
 public record SetServerRulesPacket(Map<String, Double> changes) implements CustomPacketPayload {
     public static final Type<SetServerRulesPacket> TYPE =
-        new Type<>(new ResourceLocation(Fpv.MODID, "set_server_rules"));
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "set_server_rules"));
 
     public static final StreamCodec<FriendlyByteBuf, SetServerRulesPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

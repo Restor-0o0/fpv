@@ -16,7 +16,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.restor.fpv.compat.PacketDistributor;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.restor.fpv.entity.DroneEntity;
 import org.restor.fpv.entity.PlaneEntity;
 import org.restor.fpv.network.GhostDataPacket;
@@ -171,7 +171,6 @@ public class RaceStartBlockEntity extends BlockEntity {
         return results.stream().filter(r -> Objects.equals(activeCourseKey, r.courseKey())).toList();
     }
 
-    @Override
     public AABB getRenderBoundingBox() {
         return renderBoundingBox();
     }
@@ -758,8 +757,8 @@ public class RaceStartBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         laps = Math.max(1, tag.getInt("Laps"));
         if (tag.contains("Color")) color = tag.getInt("Color");
         if (tag.contains("Size")) size = Math.max(2, Math.min(15, tag.getInt("Size")));
@@ -783,8 +782,8 @@ public class RaceStartBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         tag.putInt("Laps", laps);
         tag.putInt("Color", color);
         tag.putInt("Size", size);
@@ -811,8 +810,8 @@ public class RaceStartBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag() {
-        return saveWithoutMetadata();
+    public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        return saveWithoutMetadata(registries);
     }
 
     @Override

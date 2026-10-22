@@ -24,7 +24,7 @@ public class MiniRocketItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Level context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.translatable("tooltip.fpv.mini_rocket.impact",
             DropChargeItem.fmt(MiniRocketEntity.impactDamage())).withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("tooltip.fpv.mini_rocket.blast",

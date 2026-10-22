@@ -29,6 +29,13 @@ import net.minecraft.world.level.block.Block;
 // Drone assembly station: frame in the center, battery above, camera below,
 // motors at the corners with a prop slot next to each motor.
 public class AssemblyStationBlock extends BaseEntityBlock {
+    public static final com.mojang.serialization.MapCodec<AssemblyStationBlock> CODEC = simpleCodec(AssemblyStationBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
 
     public AssemblyStationBlock(Properties props) {
         super(props);
@@ -39,10 +46,9 @@ public class AssemblyStationBlock extends BaseEntityBlock {
 
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof AssemblyStationBlockEntity be) {
-net.minecraftforge.network.NetworkHooks.openScreen(((ServerPlayer) player), be, buf -> buf.writeBlockPos(pos));
+((ServerPlayer) player).openMenu(be, buf -> buf.writeBlockPos(pos));
         }
         return InteractionResult.SUCCESS;
     }

@@ -1,5 +1,6 @@
 package org.restor.fpv.client.render;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
@@ -9,10 +10,9 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.restor.fpv.Fpv;
@@ -26,10 +26,10 @@ import org.restor.fpv.replay.ReplayRecording;
 // no collisions, no physics, no chunk loading — just a translucent model drawn each frame by
 // interpolating between two recorded telemetry frames. Playback is tick-synced to the live run
 // via the run's startTime, so the ghost and the pilot leave the gate together.
-@Mod.EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public final class GhostRenderer {
     private static final Minecraft MC = Minecraft.getInstance();
-    private static final ResourceLocation TEXTURE = new ResourceLocation(Fpv.MODID, "textures/entity/drone.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "textures/entity/drone.png");
     private static final float ALPHA = 0.42f;
 
     // A ghost queued for playback and the colour that identifies which record it is.
@@ -62,7 +62,7 @@ public final class GhostRenderer {
         ReplayRecording replay = ReplayManager.playback();
         if (!renderRaceGhosts && replay == null) return;
 
-        float partial = event.getPartialTick();
+        float partial = event.getPartialTick().getGameTimeDeltaPartialTick(false);
         float elapsed = (MC.level.getGameTime() - startTime) + partial;
         if (elapsed < 0) elapsed = 0;
 
@@ -186,9 +186,9 @@ public final class GhostRenderer {
                           float ax, float ay, float az, float bx, float by, float bz,
                           float cx, float cy, float cz, float dx, float dy, float dz,
                           float r, float g, float b, float a, float nx, float ny, float nz) {
-        c.vertex(mat, ax, ay, az).color(r, g, b, a).uv(0, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(nx, ny, nz).endVertex();
-        c.vertex(mat, bx, by, bz).color(r, g, b, a).uv(1, 0).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(nx, ny, nz).endVertex();
-        c.vertex(mat, cx, cy, cz).color(r, g, b, a).uv(1, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(nx, ny, nz).endVertex();
-        c.vertex(mat, dx, dy, dz).color(r, g, b, a).uv(0, 1).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light).normal(nx, ny, nz).endVertex();
+        c.addVertex(mat, ax, ay, az).setColor(r, g, b, a).setUv(0, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(nx, ny, nz);
+        c.addVertex(mat, bx, by, bz).setColor(r, g, b, a).setUv(1, 0).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(nx, ny, nz);
+        c.addVertex(mat, cx, cy, cz).setColor(r, g, b, a).setUv(1, 1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(nx, ny, nz);
+        c.addVertex(mat, dx, dy, dz).setColor(r, g, b, a).setUv(0, 1).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(nx, ny, nz);
     }
 }

@@ -1,7 +1,7 @@
 package org.restor.fpv.client.ui.hud;
 
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import org.restor.fpv.client.LineOfSightSession;
 import org.restor.fpv.client.PilotView;
 import org.restor.fpv.entity.DroneEntity;
@@ -16,13 +16,12 @@ public final class FpvHud {
         visible = !visible;
     }
 
-    public static void hideVanillaOverlays(RenderGuiOverlayEvent.Pre event) {
+    public static void hideVanillaOverlays(RenderGuiLayerEvent.Pre event) {
         if (!PilotView.isFpvActive()) return;
-        if (event.getOverlay() == null) return;
 
-        String id = event.getOverlay().id().toString();
-        if (id.contains("player_list") || id.contains("chat_panel")
-            || id.contains("debug_overlay") || id.contains("subtitles")) {
+        String id = event.getName().getPath();
+        if (id.equals("tab_list") || id.equals("chat")
+            || id.equals("debug_overlay") || id.equals("subtitle_overlay")) {
             return;
         }
         event.setCanceled(true);

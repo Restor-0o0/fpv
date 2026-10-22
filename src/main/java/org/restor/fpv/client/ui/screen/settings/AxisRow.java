@@ -4,7 +4,7 @@ import net.minecraft.Util;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import org.lwjgl.glfw.GLFW;
 import org.restor.fpv.Config;
 import org.restor.fpv.controller.RCController;
@@ -16,13 +16,13 @@ final class AxisRow extends SettingRow {
     private static final int CHIP_WIDTH = 46;
     private static final int INVERT_WIDTH = 28;
 
-    private final ForgeConfigSpec.IntValue axis;
-    private final ForgeConfigSpec.BooleanValue invert;
+    private final ModConfigSpec.IntValue axis;
+    private final ModConfigSpec.BooleanValue invert;
     private final Consumer<SettingRow> listenHost;
     private boolean listening;
     private float[] baseline;
 
-    AxisRow(Component label, ForgeConfigSpec.IntValue axis, ForgeConfigSpec.BooleanValue invert, Consumer<SettingRow> listenHost) {
+    AxisRow(Component label, ModConfigSpec.IntValue axis, ModConfigSpec.BooleanValue invert, Consumer<SettingRow> listenHost) {
         super(label, null);
         this.axis = axis;
         this.invert = invert;

@@ -170,4 +170,9 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
     public int getViewDistance() {
         return 256;
     }
+
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(RaceGateBlockEntity be) {
+        return be.getRenderBoundingBox();
+    }
 }

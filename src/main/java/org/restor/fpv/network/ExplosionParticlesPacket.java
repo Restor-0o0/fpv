@@ -1,15 +1,15 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import org.restor.fpv.compat.StreamCodec;
-import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import org.restor.fpv.compat.IPayloadContext;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
 
 public record ExplosionParticlesPacket(double x, double y, double z, float spread) implements CustomPacketPayload {
     public static final Type<ExplosionParticlesPacket> TYPE =
-        new Type<>(new ResourceLocation(Fpv.MODID, "explosion_particles"));
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "explosion_particles"));
 
     public static final StreamCodec<FriendlyByteBuf, ExplosionParticlesPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

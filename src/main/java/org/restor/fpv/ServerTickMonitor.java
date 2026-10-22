@@ -1,10 +1,10 @@
 package org.restor.fpv;
 
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.event.TickEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID)
+@EventBusSubscriber(modid = Fpv.MODID)
 public final class ServerTickMonitor {
     private static long tickStart;
     private static double msptAvg;
@@ -12,14 +12,12 @@ public final class ServerTickMonitor {
     private ServerTickMonitor() {}
 
     @SubscribeEvent
-    public static void pre(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.START) return;
+    public static void pre(ServerTickEvent.Pre event) {
         tickStart = System.nanoTime();
     }
 
     @SubscribeEvent
-    public static void post(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void post(ServerTickEvent.Post event) {
         if (tickStart == 0L) return;
         double ms = (System.nanoTime() - tickStart) / 1_000_000.0;
         msptAvg = msptAvg <= 0 ? ms : msptAvg * 0.9 + ms * 0.1;

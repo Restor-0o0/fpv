@@ -1,5 +1,6 @@
 package org.restor.fpv.track;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -9,12 +10,11 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.event.AddReloadListenerEvent;
-import net.minecraftforge.event.level.ChunkEvent;
-import net.minecraftforge.event.level.LevelEvent;
-import net.minecraftforge.event.TickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.AddReloadListenerEvent;
+import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.TrackGenerationConfig;
 import org.restor.fpv.block.ModBlocks;
@@ -33,7 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID)
+@EventBusSubscriber(modid = Fpv.MODID)
 public final class NaturalTrackGenerator {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<ResourceKey<Level>, PendingRegions> PENDING = new ConcurrentHashMap<>();
@@ -64,8 +64,7 @@ public final class NaturalTrackGenerator {
     }
 
     @SubscribeEvent
-    public static void serverTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void serverTick(ServerTickEvent.Post event) {
         if (!TrackGenerationConfig.ENABLED.get()) return;
         for (ServerLevel level : event.getServer().getAllLevels()) processOne(level);
     }

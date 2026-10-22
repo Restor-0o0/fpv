@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "WWW",
+    "SPS",
+    "WFW"
+  ],
+  "key": {
+    "W": {
+      "item": "minecraft:white_wool"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    },
+    "P": {
+      "item": "fpv:plane"
+    },
+    "F": {
+      "item": "fpv:fc_f411"
+    }
+  },
+  "result": {
+    "id": "fpv:plane_glider"
+  }
+}

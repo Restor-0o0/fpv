@@ -1,27 +1,25 @@
 package org.restor.fpv.entity;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.world.Difficulty;
-import net.minecraft.world.entity.SpawnPlacements;
+import net.minecraft.world.entity.SpawnPlacementTypes;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent;
 import org.restor.fpv.Fpv;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Fpv.MODID)
 public final class ModSpawnPlacements {
     private ModSpawnPlacements() {}
 
     @SubscribeEvent
-    public static void register(FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
-            SpawnPlacements.register(ModEntities.HOSTILE_DRONE.get(), SpawnPlacements.Type.NO_RESTRICTIONS,
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModSpawnPlacements::canSpawn);
-            SpawnPlacements.register(ModEntities.PATROL_DRONE.get(), SpawnPlacements.Type.NO_RESTRICTIONS,
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModSpawnPlacements::canSpawn);
-            SpawnPlacements.register(ModEntities.INTERCEPTOR_DRONE.get(), SpawnPlacements.Type.NO_RESTRICTIONS,
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModSpawnPlacements::canSpawn);
-        });
+    public static void register(RegisterSpawnPlacementsEvent event) {
+        event.register(ModEntities.HOSTILE_DRONE.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+            Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModSpawnPlacements::canSpawn, RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.PATROL_DRONE.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+            Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModSpawnPlacements::canSpawn, RegisterSpawnPlacementsEvent.Operation.REPLACE);
+        event.register(ModEntities.INTERCEPTOR_DRONE.get(), SpawnPlacementTypes.NO_RESTRICTIONS,
+            Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModSpawnPlacements::canSpawn, RegisterSpawnPlacementsEvent.Operation.REPLACE);
     }
 
     private static <T extends net.minecraft.world.entity.Mob> boolean canSpawn(

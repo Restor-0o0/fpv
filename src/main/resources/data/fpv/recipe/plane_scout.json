@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "AVA",
+    "SPS",
+    "AHA"
+  ],
+  "key": {
+    "A": {
+      "item": "minecraft:amethyst_shard"
+    },
+    "V": {
+      "item": "fpv:vtx_800mw"
+    },
+    "S": {
+      "item": "minecraft:spyglass"
+    },
+    "P": {
+      "item": "fpv:plane"
+    },
+    "H": {
+      "item": "fpv:fc_h7"
+    }
+  },
+  "result": {
+    "id": "fpv:plane_scout"
+  }
+}

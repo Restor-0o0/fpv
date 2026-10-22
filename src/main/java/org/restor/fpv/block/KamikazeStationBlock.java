@@ -31,6 +31,13 @@ import net.minecraft.world.level.block.Block;
 // Right-click: spawn a kamikaze drone on top and take control; a new one launches
 // automatically after each detonation. Sneak exits the loop.
 public class KamikazeStationBlock extends BaseEntityBlock {
+    public static final com.mojang.serialization.MapCodec<KamikazeStationBlock> CODEC = simpleCodec(KamikazeStationBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
 
     public KamikazeStationBlock(Properties props) {
         super(props);
@@ -39,8 +46,7 @@ public class KamikazeStationBlock extends BaseEntityBlock {
 
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide && player instanceof ServerPlayer sp
             && level.getBlockEntity(pos) instanceof KamikazeStationBlockEntity be) {
             be.startSession(sp);

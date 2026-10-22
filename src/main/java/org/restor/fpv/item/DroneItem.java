@@ -1,11 +1,12 @@
 package org.restor.fpv.item;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -55,7 +56,7 @@ public class DroneItem extends Item {
         if (drone == null) return null;
         drone.setPos(pos);
         drone.setYRot(yRot);
-        CustomData data = CustomData.get(stack);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data != null && (usesNbt || data.contains("Battery"))) {
             drone.readFromItemTag(data.copyTag());
         }
@@ -72,7 +73,7 @@ public class DroneItem extends Item {
     public static boolean isArmed(ItemStack stack) {
         if (!(stack.getItem() instanceof DroneItem)) return false;
         if (stack.is(ModItems.KAMIKAZE_DRONE.get())) return true;
-        CustomData data = CustomData.get(stack);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data == null || !data.contains("Assembly")) return false;
         return org.restor.fpv.assembly.DroneAssembly.load(data.copyTag().getCompound("Assembly"))
             .moduleType() == org.restor.fpv.component.ModuleType.WARHEAD;

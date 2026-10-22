@@ -261,7 +261,6 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g);
         super.render(g, mouseX, mouseY, partialTick);
         if (hoveredSlot != null && !hoveredSlot.hasItem() && hoveredSlot.index < AssemblyStationMenu.SLOT_COUNT) {
             Component name = slotName(hoveredSlot.index);

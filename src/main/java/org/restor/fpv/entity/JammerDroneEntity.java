@@ -86,9 +86,9 @@ public class JammerDroneEntity extends NpcDroneEntity {
     }
 
     @Override
-    protected void dropCustomDeathLoot(net.minecraft.world.damagesource.DamageSource source,
-                                       int looting, boolean hitByPlayer) {
-        super.dropCustomDeathLoot(source, looting, hitByPlayer);
+    protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, net.minecraft.world.damagesource.DamageSource source,
+                                       boolean hitByPlayer) {
+        super.dropCustomDeathLoot(level, source, hitByPlayer);
         if (hitByPlayer) {
             spawnAtLocation(new net.minecraft.world.item.ItemStack(
                 net.minecraft.world.item.Items.AMETHYST_SHARD, random.nextInt(2) + 1));

@@ -1,5 +1,6 @@
 package org.restor.fpv.client;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -9,12 +10,11 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.client.event.RenderGuiEvent;
-import net.minecraftforge.event.level.LevelEvent;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RenderGuiEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.CinewhoopDroneEntity;
 import org.restor.fpv.entity.DroneEntity;
@@ -27,7 +27,7 @@ import org.restor.fpv.replay.ReplayTimeline;
 
 import java.util.Locale;
 
-@Mod.EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
+@EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public final class ReplayManager {
     private static final Minecraft MC = Minecraft.getInstance();
     private static final ReplayRingBuffer<GhostFrame> RECENT =
@@ -47,8 +47,7 @@ public final class ReplayManager {
     private ReplayManager() {}
 
     @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onClientTick(ClientTickEvent.Post event) {
         if (MC.level != observedLevel) {
             clearWorldState();
             observedLevel = MC.level;
@@ -77,7 +76,7 @@ public final class ReplayManager {
     @SubscribeEvent
     public static void onRenderGui(RenderGuiEvent.Post event) {
         if (playback == null || timeline == null) return;
-        renderHud(event.getGuiGraphics(), event.getPartialTick());
+        renderHud(event.getGuiGraphics(), event.getPartialTick().getGameTimeDeltaPartialTick(false));
     }
 
     public static ReplayRecording playback() {

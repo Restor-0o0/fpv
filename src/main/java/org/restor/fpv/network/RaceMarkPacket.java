@@ -3,11 +3,11 @@ package org.restor.fpv.network;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import org.restor.fpv.compat.StreamCodec;
-import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import org.restor.fpv.compat.IPayloadContext;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.block.ModBlocks;
 import org.restor.fpv.block.entity.RaceGateBlockEntity;
@@ -39,7 +39,7 @@ public record RaceMarkPacket(BlockPos startPos, int action, BlockPos gatePos) im
     }
 
     public static final Type<RaceMarkPacket> TYPE =
-        new Type<>(new ResourceLocation(Fpv.MODID, "race_mark"));
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "race_mark"));
 
     public static final StreamCodec<FriendlyByteBuf, RaceMarkPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

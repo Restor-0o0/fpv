@@ -29,6 +29,13 @@ import org.restor.fpv.block.entity.ModBlockEntities;
 import org.restor.fpv.block.entity.PartsPileBlockEntity;
 
 public class PartsPileBlock extends BaseEntityBlock {
+    public static final com.mojang.serialization.MapCodec<PartsPileBlock> CODEC = simpleCodec(PartsPileBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
 
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
@@ -82,18 +89,21 @@ public class PartsPileBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
-        if (!(level.getBlockEntity(pos) instanceof PartsPileBlockEntity pile)) return InteractionResult.PASS;
-        ItemStack held = player.getItemInHand(hand);
-        if (PartsPileBlockEntity.isStorable(held)) {
-            if (!pile.accepts(held)) return InteractionResult.PASS;
-            if (level.isClientSide) return InteractionResult.SUCCESS;
-            pile.insert(player.getAbilities().instabuild ? held.copy() : held);
-            level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 0.7f, 1.4f);
-            return InteractionResult.CONSUME;
+    protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack held, BlockState state, Level level, BlockPos pos,
+                                                                  Player player, InteractionHand hand, BlockHitResult hit) {
+        if (!PartsPileBlockEntity.isStorable(held)) return net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (!(level.getBlockEntity(pos) instanceof PartsPileBlockEntity pile) || !pile.accepts(held)) {
+            return net.minecraft.world.ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
         }
-        if (pile.isEmpty()) return InteractionResult.PASS;
+        if (level.isClientSide) return net.minecraft.world.ItemInteractionResult.SUCCESS;
+        pile.insert(player.getAbilities().instabuild ? held.copy() : held);
+        level.playSound(null, pos, SoundEvents.ITEM_FRAME_ADD_ITEM, SoundSource.BLOCKS, 0.7f, 1.4f);
+        return net.minecraft.world.ItemInteractionResult.CONSUME;
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+        if (!(level.getBlockEntity(pos) instanceof PartsPileBlockEntity pile) || pile.isEmpty()) return InteractionResult.PASS;
         if (level.isClientSide) return InteractionResult.SUCCESS;
         ItemStack out = pile.extract(player.isShiftKeyDown() ? PartsPileBlockEntity.MAX_CAPACITY : 1);
         if (!player.addItem(out)) player.drop(out, false);

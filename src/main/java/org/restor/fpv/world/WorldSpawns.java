@@ -1,5 +1,6 @@
 package org.restor.fpv.world;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -9,11 +10,10 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.level.ChunkEvent;
-import net.minecraftforge.event.level.LevelEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.block.ModBlocks;
 import org.restor.fpv.entity.ModEntities;
@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Worldgen-time drone presence: villages get air defence of their own, and the wilderness
  * gets the occasional hostile nest to fly into.
  */
-@Mod.EventBusSubscriber(modid = Fpv.MODID)
+@EventBusSubscriber(modid = Fpv.MODID)
 public final class WorldSpawns {
     private static final int NEST_CHANCE = 700;
     private static final int VILLAGE_GUARD_CHANCE = 4;
@@ -51,8 +51,7 @@ public final class WorldSpawns {
     }
 
     @SubscribeEvent
-    public static void onServerTick(TickEvent.ServerTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+    public static void onServerTick(ServerTickEvent.Post event) {
         for (ServerLevel level : event.getServer().getAllLevels()) {
             ArrayDeque<ChunkPos> queue = PENDING.get(level.dimension());
             if (queue == null) continue;
@@ -85,7 +84,7 @@ public final class WorldSpawns {
             guard.setPos(surface.getX() + 0.5, surface.getY() + 7.0, surface.getZ() + 0.5);
             guard.setAnchor(surface.above(7));
             guard.finalizeSpawn(level, level.getCurrentDifficultyAt(surface),
-                MobSpawnType.CHUNK_GENERATION, null, null);
+                MobSpawnType.CHUNK_GENERATION, null);
             level.addFreshEntity(guard);
             return;
         }

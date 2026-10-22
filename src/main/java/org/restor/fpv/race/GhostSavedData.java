@@ -24,11 +24,8 @@ public class GhostSavedData extends SavedData {
 
     private final Map<String, Course> courses = new HashMap<>();
 
-
-
-
     public static GhostSavedData get(ServerLevel level) {
-        return level.getDataStorage().computeIfAbsent(GhostSavedData::load, GhostSavedData::new, NAME);
+        return level.getDataStorage().computeIfAbsent(new SavedData.Factory<>(GhostSavedData::new, GhostSavedData::load, null), NAME);
     }
 
     /** The personal best for this player on this course, or null. */
@@ -65,7 +62,7 @@ public class GhostSavedData extends SavedData {
     //  Persistence
     // -----------------------------------------------------------------
 
-    public static GhostSavedData load(CompoundTag tag) {
+    public static GhostSavedData load(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
         GhostSavedData data = new GhostSavedData();
         ListTag list = tag.getList("Courses", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
@@ -85,7 +82,7 @@ public class GhostSavedData extends SavedData {
     }
 
     @Override
-    public CompoundTag save(CompoundTag tag) {
+    public CompoundTag save(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
         ListTag list = new ListTag();
         for (Map.Entry<String, Course> e : courses.entrySet()) {
             Course c = e.getValue();

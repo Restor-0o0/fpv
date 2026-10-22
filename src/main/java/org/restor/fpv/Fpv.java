@@ -1,24 +1,25 @@
 package org.restor.fpv;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.server.ServerStartingEvent;
-import net.minecraftforge.event.entity.player.EntityItemPickupEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.RegistryObject;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.entity.player.ItemEntityPickupEvent;
+import net.neoforged.neoforge.common.util.TriState;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.minecraft.server.level.ServerPlayer;
 import org.restor.fpv.block.ModBlocks;
 import org.restor.fpv.block.entity.ModBlockEntities;
@@ -37,7 +38,7 @@ public class Fpv {
 
     public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, MODID);
 
-    public static final RegistryObject<CreativeModeTab> FPV_TAB = CREATIVE_TABS.register("fpv_tab",
+    public static final DeferredHolder<CreativeModeTab, CreativeModeTab> FPV_TAB = CREATIVE_TABS.register("fpv_tab",
         () -> CreativeModeTab.builder()
             .title(Component.translatable("itemGroup.fpv"))
             .icon(() -> new ItemStack(ModComponents.FRAME_5INCH.get()))
@@ -127,13 +128,11 @@ public class Fpv {
             })
             .build());
 
-    public Fpv() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-        ModLoadingContext context = ModLoadingContext.get();
-        context.registerConfig(ModConfig.Type.CLIENT, Config.SPEC);
-        context.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
-        context.registerConfig(ModConfig.Type.COMMON, org.restor.fpv.rules.ExplosivesConfig.SPEC, "fpv-explosives.toml");
-        context.registerConfig(ModConfig.Type.SERVER, TrackGenerationConfig.SPEC, "fpv-track-generation.toml");
+    public Fpv(IEventBus modEventBus, ModContainer container) {
+        container.registerConfig(ModConfig.Type.CLIENT, Config.SPEC);
+        container.registerConfig(ModConfig.Type.COMMON, CommonConfig.SPEC);
+        container.registerConfig(ModConfig.Type.COMMON, org.restor.fpv.rules.ExplosivesConfig.SPEC, "fpv-explosives.toml");
+        container.registerConfig(ModConfig.Type.SERVER, TrackGenerationConfig.SPEC, "fpv-track-generation.toml");
 
         ModEntities.ENTITIES.register(modEventBus);
         ModItems.ITEMS.register(modEventBus);
@@ -146,14 +145,14 @@ public class Fpv {
         CREATIVE_TABS.register(modEventBus);
 
         modEventBus.addListener(this::commonSetup);
-        modEventBus.addListener((net.minecraftforge.fml.event.config.ModConfigEvent.Loading e) -> LogQuieter.apply());
+        modEventBus.addListener(ModNetworking::register);
+        modEventBus.addListener((net.neoforged.fml.event.config.ModConfigEvent.Loading e) -> LogQuieter.apply());
 
-        MinecraftForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.register(this);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         LogQuieter.apply();
-        event.enqueueWork(ModNetworking::register);
         LOGGER.info("FPV Drones mod initialized!");
     }
 
@@ -165,15 +164,15 @@ public class Fpv {
     // The pilot's real (invisible) body follows the drone via riding or the server-side
     // camera-follow teleport, so it physically overlaps ground items along the flight path.
     @SubscribeEvent
-    public void onItemPickup(EntityItemPickupEvent event) {
-        if (event.getEntity().getVehicle() instanceof DroneEntity
-            || event.getEntity().getVehicle() instanceof org.restor.fpv.entity.PlaneEntity
-            || (event.getEntity() instanceof ServerPlayer sp && sp.getCamera() instanceof DroneEntity)) {
-            event.setCanceled(true);
+    public void onItemPickup(ItemEntityPickupEvent.Pre event) {
+        if (event.getPlayer().getVehicle() instanceof DroneEntity
+            || event.getPlayer().getVehicle() instanceof org.restor.fpv.entity.PlaneEntity
+            || (event.getPlayer() instanceof ServerPlayer sp && sp.getCamera() instanceof DroneEntity)) {
+            event.setCanPickup(TriState.FALSE);
         }
     }
 
-    @Mod.EventBusSubscriber(modid = MODID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = MODID, value = Dist.CLIENT)
     public static class ClientModEvents {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {

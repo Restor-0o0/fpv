@@ -32,6 +32,13 @@ import org.restor.fpv.block.entity.GuardStationBlockEntity;
 import org.restor.fpv.block.entity.ModBlockEntities;
 
 public class GuardStationBlock extends BaseEntityBlock {
+    public static final com.mojang.serialization.MapCodec<GuardStationBlock> CODEC = simpleCodec(GuardStationBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public GuardStationBlock(Properties props) {
@@ -65,8 +72,7 @@ public class GuardStationBlock extends BaseEntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (!level.isClientSide && level.getBlockEntity(pos) instanceof GuardStationBlockEntity be) {
             be.openFor((ServerPlayer) player);
         }

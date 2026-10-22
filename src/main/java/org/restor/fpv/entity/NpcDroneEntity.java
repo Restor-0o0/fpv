@@ -72,9 +72,9 @@ public abstract class NpcDroneEntity extends Monster
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        this.entityData.define(DATA_ASSEMBLY, new CompoundTag());
+    protected void defineSynchedData(net.minecraft.network.syncher.SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(DATA_ASSEMBLY, new CompoundTag());
     }
 
     @Override
@@ -98,9 +98,9 @@ public abstract class NpcDroneEntity extends Monster
     }
 
     @Override
-    public net.minecraft.world.entity.EntityDimensions getDimensions(net.minecraft.world.entity.Pose pose) {
+    protected net.minecraft.world.entity.EntityDimensions getDefaultDimensions(net.minecraft.world.entity.Pose pose) {
         org.restor.fpv.assembly.FrameSpec spec = getAssembly().frameSpec();
-        if (spec == null) return super.getDimensions(pose);
+        if (spec == null) return super.getDefaultDimensions(pose);
         org.restor.fpv.assembly.DroneVisual v = org.restor.fpv.assembly.DroneVisual.of(spec);
         return net.minecraft.world.entity.EntityDimensions.scalable(v.hitboxWidth(), v.hitboxHeight());
     }
@@ -154,10 +154,9 @@ public abstract class NpcDroneEntity extends Monster
             net.minecraft.world.level.ServerLevelAccessor level,
             net.minecraft.world.DifficultyInstance difficulty,
             net.minecraft.world.entity.MobSpawnType reason,
-            net.minecraft.world.entity.SpawnGroupData data,
-            net.minecraft.nbt.CompoundTag nbt) {
+            net.minecraft.world.entity.SpawnGroupData data) {
         if (entityData.get(DATA_ASSEMBLY).isEmpty()) setAssembly(NpcDroneBuilds.roll(random, buildRole()));
-        return super.finalizeSpawn(level, difficulty, reason, data, nbt);
+        return super.finalizeSpawn(level, difficulty, reason, data);
     }
 
     /** Pin the patrol center (e.g. a drone nest) instead of the first-tick position. */
@@ -228,8 +227,8 @@ public abstract class NpcDroneEntity extends Monster
 
     // Shot down: drop scrap electronics (copper/redstone per the §6 material logic).
     @Override
-    protected void dropCustomDeathLoot(DamageSource source, int looting, boolean hitByPlayer) {
-        super.dropCustomDeathLoot(source, looting, hitByPlayer);
+    protected void dropCustomDeathLoot(net.minecraft.server.level.ServerLevel level, DamageSource source, boolean hitByPlayer) {
+        super.dropCustomDeathLoot(level, source, hitByPlayer);
         if (hitByPlayer) {
             spawnAtLocation(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.REDSTONE,
                 random.nextInt(2) + 1));

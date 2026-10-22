@@ -1,10 +1,11 @@
 package org.restor.fpv.client;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.assembly.DroneAssembly;
 import org.restor.fpv.component.ModComponents;
@@ -15,10 +16,10 @@ public final class ModItemProperties {
 
     public static void register() {
         ItemProperties.register(ModItems.MODULAR_DRONE.get(),
-            new ResourceLocation(Fpv.MODID, "frame"),
+            ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "frame"),
             (stack, level, entity, seed) -> frameIndex(stack));
         ItemProperties.register(ModItems.MODULAR_PLANE.get(),
-            new ResourceLocation(Fpv.MODID, "frame"),
+            ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "frame"),
             (stack, level, entity, seed) -> planeFrameIndex(stack));
     }
 
@@ -37,13 +38,13 @@ public final class ModItemProperties {
     }
 
     private static Item frameItem(ItemStack stack) {
-        CustomData data = CustomData.get(stack);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data == null || !data.contains("Assembly")) return null;
         return DroneAssembly.load(data.copyTag().getCompound("Assembly")).frame.getItem();
     }
 
     private static float frameIndex(ItemStack stack) {
-        CustomData data = CustomData.get(stack);
+        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data == null || !data.contains("Assembly")) return 0f;
         Item frame = DroneAssembly.load(data.copyTag().getCompound("Assembly")).frame.getItem();
         if (frame == ModComponents.FRAME_TINY_WHOOP.get()) return 1f;

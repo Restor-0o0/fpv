@@ -116,7 +116,7 @@ public final class RaceFrames {
 
     private static void vertex(VertexConsumer vc, Matrix4f m, Vector3f o, Vector3f u, Vector3f v,
                                float su, float sv, float r, float g, float b, float a) {
-        vc.vertex(m, o.x + u.x * su + v.x * sv, o.y + u.y * su + v.y * sv, o.z + u.z * su + v.z * sv)
-            .color(r, g, b, a).endVertex();
+        vc.addVertex(m, o.x + u.x * su + v.x * sv, o.y + u.y * su + v.y * sv, o.z + u.z * su + v.z * sv)
+            .setColor(r, g, b, a);
     }
 }

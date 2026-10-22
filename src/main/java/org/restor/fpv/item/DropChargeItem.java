@@ -24,7 +24,7 @@ public class DropChargeItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Level context, List<Component> tooltip, TooltipFlag flag) {
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         WarheadType blast = WarheadType.DROP;
         tooltip.add(Component.translatable("tooltip.fpv.warhead.power", fmt(blast.power()))
             .withStyle(ChatFormatting.GRAY));

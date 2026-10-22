@@ -2,12 +2,12 @@ package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import org.restor.fpv.compat.StreamCodec;
-import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import org.restor.fpv.compat.IPayloadContext;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.DroneEntity;
 
@@ -15,7 +15,7 @@ import org.restor.fpv.entity.DroneEntity;
 // link code and start a control session.
 public record StartRemoteControlPacket(String code) implements CustomPacketPayload {
     public static final Type<StartRemoteControlPacket> TYPE =
-        new Type<>(new ResourceLocation(Fpv.MODID, "start_remote_control"));
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "start_remote_control"));
 
     public static final StreamCodec<FriendlyByteBuf, StartRemoteControlPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> buf.writeUtf(pkt.code, 6),

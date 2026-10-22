@@ -154,7 +154,7 @@ public class PartsPileBlockEntity extends BlockEntity {
     private int target(ItemStack stack) {
         if (!isStorable(stack)) return -1;
         for (int i = 0; i < sections.size(); i++) {
-            if (ItemStack.isSameItemSameTags(sections.get(i), stack) && roomIn(i, stack) > 0) return i;
+            if (ItemStack.isSameItemSameComponents(sections.get(i), stack) && roomIn(i, stack) > 0) return i;
         }
         return roomIn(sections.size(), stack) > 0 ? sections.size() : -1;
     }
@@ -201,25 +201,25 @@ public class PartsPileBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         sections.clear();
-        if (tag.contains("Item")) sections.add(ItemStack.of(tag.getCompound("Item")));
-        for (Tag entry : tag.getList("Items", Tag.TAG_COMPOUND)) sections.add(ItemStack.of((CompoundTag) entry));
+        if (tag.contains("Item")) sections.add(ItemStack.parseOptional(registries, tag.getCompound("Item")));
+        for (Tag entry : tag.getList("Items", Tag.TAG_COMPOUND)) sections.add(ItemStack.parseOptional(registries, (CompoundTag) entry));
         sections.removeIf(ItemStack::isEmpty);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
+    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         ListTag list = new ListTag();
-        for (ItemStack s : sections) list.add(s.save(new CompoundTag()));
+        for (ItemStack s : sections) list.add(s.saveOptional(registries));
         if (!list.isEmpty()) tag.put("Items", list);
     }
 
     @Override
-    public CompoundTag getUpdateTag() {
-        return saveWithoutMetadata();
+    public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        return saveWithoutMetadata(registries);
     }
 
     @Override
@@ -227,7 +227,6 @@ public class PartsPileBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    @Override
     public net.minecraft.world.phys.AABB getRenderBoundingBox() {
         return new net.minecraft.world.phys.AABB(getBlockPos()).inflate(0, 1, 0);
     }

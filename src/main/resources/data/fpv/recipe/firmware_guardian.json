@@ -1,0 +1,28 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "RGR",
+    "AFA",
+    "RQR"
+  ],
+  "key": {
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "G": {
+      "item": "minecraft:gold_ingot"
+    },
+    "A": {
+      "item": "minecraft:arrow"
+    },
+    "Q": {
+      "item": "minecraft:quartz"
+    },
+    "F": {
+      "item": "fpv:firmware_companion"
+    }
+  },
+  "result": {
+    "id": "fpv:firmware_guardian"
+  }
+}

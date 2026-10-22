@@ -1,6 +1,6 @@
 package org.restor.fpv.rules;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.util.List;
 import java.util.Locale;
@@ -17,7 +17,7 @@ public final class ExplosiveParam {
     private final double def;
     Explosive owner;
     int index;
-    ForgeConfigSpec.ConfigValue<?> config;
+    ModConfigSpec.ConfigValue<?> config;
 
     ExplosiveParam(Explosive.Stat stat, Kind kind, double def, double min, double max) {
         this.stat = stat;
@@ -81,8 +81,8 @@ public final class ExplosiveParam {
     @SuppressWarnings("unchecked")
     public void setLocal(double v) {
         double clamped = clamp(v);
-        if (config instanceof ForgeConfigSpec.BooleanValue b) b.set(clamped >= 0.5);
-        else if (config != null) ((ForgeConfigSpec.ConfigValue<Double>) config).set(clamped);
+        if (config instanceof ModConfigSpec.BooleanValue b) b.set(clamped >= 0.5);
+        else if (config != null) ((ModConfigSpec.ConfigValue<Double>) config).set(clamped);
     }
 
     public String format(double v) {

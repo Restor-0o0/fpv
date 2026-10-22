@@ -1,13 +1,13 @@
 package org.restor.fpv.network;
 
 import net.minecraft.network.FriendlyByteBuf;
-import org.restor.fpv.compat.StreamCodec;
-import org.restor.fpv.compat.CustomPacketPayload;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import org.restor.fpv.compat.IPayloadContext;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.restor.fpv.Fpv;
 import org.restor.fpv.entity.PlaneEntity;
 
@@ -15,7 +15,7 @@ import org.restor.fpv.entity.PlaneEntity;
 public record PlaneOrbitPacket(int planeId, boolean active, double cx, double cy, double cz,
                                 double radius) implements CustomPacketPayload {
     public static final Type<PlaneOrbitPacket> TYPE =
-        new Type<>(new ResourceLocation(Fpv.MODID, "plane_orbit"));
+        new Type<>(ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "plane_orbit"));
 
     public static final StreamCodec<FriendlyByteBuf, PlaneOrbitPacket> STREAM_CODEC = StreamCodec.of(
         (buf, pkt) -> {

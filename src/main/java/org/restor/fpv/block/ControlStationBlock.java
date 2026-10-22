@@ -27,6 +27,13 @@ import net.minecraft.world.level.block.Block;
 // Drone control station: keeps a list of drone link codes; right-click to open the
 // list, pick a drone and fly it remotely. Sneak exits control back to the station.
 public class ControlStationBlock extends BaseEntityBlock {
+    public static final com.mojang.serialization.MapCodec<ControlStationBlock> CODEC = simpleCodec(ControlStationBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
 
     public ControlStationBlock(Properties props) {
         super(props);
@@ -35,8 +42,7 @@ public class ControlStationBlock extends BaseEntityBlock {
 
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         if (level.isClientSide) {
             org.restor.fpv.client.ui.screen.ClientScreens.openStation(pos);
         }

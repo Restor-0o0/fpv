@@ -208,4 +208,9 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
         }
         return box;
     }
+
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(PartsPileBlockEntity be) {
+        return be.getRenderBoundingBox();
+    }
 }

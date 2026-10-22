@@ -1,12 +1,13 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import org.restor.fpv.compat.CustomData;
+import net.minecraft.world.item.component.CustomData;
 import org.restor.fpv.component.ComponentItem;
 import org.restor.fpv.component.ComponentStats;
 import org.restor.fpv.component.ComponentType;
@@ -27,7 +28,7 @@ public class DroneCardItem extends Item {
 
     public static ItemStack of(DroneAssembly assembly, WarheadType warhead) {
         ItemStack card = new ItemStack(ModItems.DRONE_CARD.get());
-        CustomData.update(card, t -> {
+        CustomData.update(DataComponents.CUSTOM_DATA, card, t -> {
             t.put("Assembly", assembly.save());
             if (warhead != null) t.putString("Warhead", warhead.id());
         });
@@ -39,7 +40,7 @@ public class DroneCardItem extends Item {
     }
 
     public static CompoundTag data(ItemStack stack) {
-        CustomData d = CustomData.get(stack);
+        CustomData d = stack.get(DataComponents.CUSTOM_DATA);
         if (d == null || !d.contains("Assembly")) return null;
         return d.copyTag();
     }
@@ -81,7 +82,7 @@ public class DroneCardItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @org.jetbrains.annotations.Nullable net.minecraft.world.level.Level context,
+    public void appendHoverText(ItemStack stack, net.minecraft.world.item.Item.TooltipContext context,
                                 List<Component> tooltip, TooltipFlag flag) {
         DroneAssembly a = assembly(stack);
         if (a == null) {

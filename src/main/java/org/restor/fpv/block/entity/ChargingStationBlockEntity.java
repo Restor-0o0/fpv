@@ -69,16 +69,16 @@ public class ChargingStationBlockEntity extends BlockEntity implements Container
     }
 
     @Override
-    public void load(CompoundTag tag) {
-        super.load(tag);
+    protected void loadAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
         items.clear();
-        ContainerHelper.loadAllItems(tag, items);
+        ContainerHelper.loadAllItems(tag, items, registries);
     }
 
     @Override
-    protected void saveAdditional(CompoundTag tag) {
-        super.saveAdditional(tag);
-        ContainerHelper.saveAllItems(tag, items);
+    protected void saveAdditional(CompoundTag tag, net.minecraft.core.HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        ContainerHelper.saveAllItems(tag, items, registries);
     }
 
     @Override public int getContainerSize() { return SLOTS; }
@@ -115,6 +115,6 @@ public class ChargingStationBlockEntity extends BlockEntity implements Container
     }
 
     public void openFor(ServerPlayer player) {
-net.minecraftforge.network.NetworkHooks.openScreen(player, this, buf -> buf.writeBlockPos(worldPosition));
+player.openMenu(this, buf -> buf.writeBlockPos(worldPosition));
     }
 }

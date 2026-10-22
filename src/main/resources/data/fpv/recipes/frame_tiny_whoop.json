@@ -1,6 +1,0 @@
-{
-  "type": "minecraft:crafting_shaped",
-  "pattern": ["SIS", "I I", "SIS"],
-  "key": { "S": { "item": "minecraft:slime_ball" }, "I": { "item": "minecraft:iron_nugget" } },
-  "result": { "item": "fpv:frame_tiny_whoop" }
-}

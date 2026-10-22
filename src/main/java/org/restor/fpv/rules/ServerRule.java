@@ -1,6 +1,6 @@
 package org.restor.fpv.rules;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import org.restor.fpv.CommonConfig;
 
 import java.util.Locale;
@@ -25,9 +25,9 @@ public enum ServerRule {
     public final String id;
     public final double min;
     public final double max;
-    private final ForgeConfigSpec.ConfigValue<?> config;
+    private final ModConfigSpec.ConfigValue<?> config;
 
-    ServerRule(String id, ForgeConfigSpec.ConfigValue<?> config, double min, double max) {
+    ServerRule(String id, ModConfigSpec.ConfigValue<?> config, double min, double max) {
         this.id = id;
         this.config = config;
         this.min = min;
@@ -35,7 +35,7 @@ public enum ServerRule {
     }
 
     public boolean flag() {
-        return config instanceof ForgeConfigSpec.BooleanValue;
+        return config instanceof ModConfigSpec.BooleanValue;
     }
 
     public boolean on() {
@@ -63,8 +63,8 @@ public enum ServerRule {
     @SuppressWarnings("unchecked")
     public void setLocal(double v) {
         double clamped = clamp(v);
-        if (config instanceof ForgeConfigSpec.BooleanValue b) b.set(clamped >= 0.5);
-        else ((ForgeConfigSpec.ConfigValue<Double>) config).set(clamped);
+        if (config instanceof ModConfigSpec.BooleanValue b) b.set(clamped >= 0.5);
+        else ((ModConfigSpec.ConfigValue<Double>) config).set(clamped);
     }
 
     public String format(double v) {

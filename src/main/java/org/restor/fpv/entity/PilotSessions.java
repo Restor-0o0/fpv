@@ -1,13 +1,13 @@
 package org.restor.fpv.entity;
 
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import org.restor.fpv.Fpv;
 
 import java.util.Map;
@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * is tracked here and force-closed on every one of those paths. The persistent flag is the
  * last resort: a world saved mid-session is repaired on the next login.
  */
-@Mod.EventBusSubscriber(modid = Fpv.MODID)
+@EventBusSubscriber(modid = Fpv.MODID)
 public final class PilotSessions {
     private static final String FLAG = "fpv_pilot_session";
     private static final String WAS_INVULNERABLE = "fpv_was_invulnerable";

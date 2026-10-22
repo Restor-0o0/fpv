@@ -21,7 +21,7 @@ import org.restor.fpv.entity.NpcDroneEntity;
 /** NPC drones are real builds, so they render from the same part models as a player drone. */
 public class NpcDroneRenderer extends EntityRenderer<NpcDroneEntity> {
     private static final ResourceLocation TEXTURE =
-        new ResourceLocation(Fpv.MODID, "textures/entity/drone.png");
+        ResourceLocation.fromNamespaceAndPath(Fpv.MODID, "textures/entity/drone.png");
 
     public NpcDroneRenderer(EntityRendererProvider.Context ctx) {
         super(ctx);
