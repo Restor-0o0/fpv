@@ -786,7 +786,7 @@ public class FpvSettingsScreen extends Screen {
         stopListening();
         sendRules();
         Config.save();
-        minecraft.gui.setScreen(parent);
+        minecraft.setScreen(parent);
     }
 
     private enum Tab {

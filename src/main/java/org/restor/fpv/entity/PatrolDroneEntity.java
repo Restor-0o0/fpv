@@ -119,7 +119,7 @@ public class PatrolDroneEntity extends NpcDroneEntity {
                     cooldown = RAM_COOLDOWN;
                     t.hurt(damageSources().mobAttack(PatrolDroneEntity.this), RAM_DAMAGE);
                     if (t instanceof LivingEntity living) {
-                        living.knockback(0.4, getX() - t.getX(), getZ() - t.getZ(), damageSources().mobAttack(PatrolDroneEntity.this), RAM_DAMAGE);
+                        living.knockback(0.4, getX() - t.getX(), getZ() - t.getZ());
                     }
                     playSound(SoundEvents.PLAYER_ATTACK_STRONG, 0.7f, 1.4f);
                     setDeltaMovement(getDeltaMovement().add(

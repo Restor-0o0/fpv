@@ -43,7 +43,7 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
     private static final float BOARD = 1.1f / 16f;
     private static final float BOARD_PITCH = 1.6f / 16f;
     private static final float LIP = 1.0f / 16f;
-    private static final BlockState SLAT_STATE = Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.BLACK).defaultBlockState();
+    private static final BlockState SLAT_STATE = Blocks.BLACK_CONCRETE.defaultBlockState();
     private static final net.minecraft.client.renderer.block.model.BlockDisplayContext SLAT_CONTEXT =
         net.minecraft.client.renderer.block.model.BlockDisplayContext.create();
     private static final net.minecraft.client.renderer.block.BlockModelRenderState SLAT_MODEL =

@@ -108,7 +108,7 @@ public class ClientEventHandler {
     // or Q drops the held item and E opens the inventory every time the drone yaws.
     @SubscribeEvent
     public static void onClientTickPre(ClientTickEvent.Pre event) {
-        if (!heavyDroneActive || MC.player == null || MC.gui.screen() != null) return;
+        if (!heavyDroneActive || MC.player == null || MC.screen != null) return;
         while (MC.options.keyDrop.consumeClick()) { }
         while (MC.options.keyInventory.consumeClick()) { }
     }
@@ -212,7 +212,7 @@ public class ClientEventHandler {
             prevSneakKey = sneakDown;
 
             if (ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
-                MC.gui.setScreen(new FpvSettingsScreen(null));
+                MC.setScreen(new FpvSettingsScreen(null));
                 return;
             }
 
@@ -290,8 +290,8 @@ public class ClientEventHandler {
         // Planes are riding-only (no remote control station).
         PlaneEntity plane = MC.player.getVehicle() instanceof PlaneEntity p ? p : null;
         if (plane == null) {
-            if (MC.gui.screen() == null && ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
-                MC.gui.setScreen(new FpvSettingsScreen(null));
+            if (MC.screen == null && ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
+                MC.setScreen(new FpvSettingsScreen(null));
             }
             planeInitialized = false;
             planeTargetStreamActive = false;
@@ -305,7 +305,7 @@ public class ClientEventHandler {
         }
 
         if (ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
-            MC.gui.setScreen(new FpvSettingsScreen(null));
+            MC.setScreen(new FpvSettingsScreen(null));
             return;
         }
         if (ModKeyBindings.TOGGLE_HUD.consumeClick()) {
@@ -1057,7 +1057,7 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public static void onMouseScroll(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent event) {
-        if (MC.gui.screen() != null || !fpvActive()) return;
+        if (MC.screen != null || !fpvActive()) return;
         fpvZoom = (float) Math.max(1.0, Math.min(8.0, fpvZoom + event.getScrollDeltaY() * 0.5));
         event.setCanceled(true); // don't also scroll the hotbar
     }

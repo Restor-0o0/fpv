@@ -166,6 +166,6 @@ public class RaceGateScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.gui.setScreen(null);
+        minecraft.setScreen(null);
     }
 }

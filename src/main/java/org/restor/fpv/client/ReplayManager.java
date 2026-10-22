@@ -58,7 +58,7 @@ public final class ReplayManager {
         updateRecording(vehicle);
 
         boolean started = false;
-        if (MC.gui.screen() == null) {
+        if (MC.screen == null) {
             if (ModKeyBindings.SAVE_REPLAY.consumeClick()) saveReplay(false);
             started = handlePlaybackKeys(vehicle);
         }

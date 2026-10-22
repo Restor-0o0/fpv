@@ -209,6 +209,6 @@ public class RaceStartScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.gui.setScreen(null);
+        minecraft.setScreen(null);
     }
 }

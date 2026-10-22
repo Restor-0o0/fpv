@@ -23,7 +23,7 @@ public final class ClientRules {
             ServerRule.setRemote(values);
             ExplosiveParam.setRemote(explosives);
         }
-        if (mc.gui.screen() instanceof FpvSettingsScreen screen) screen.rulesChanged();
+        if (mc.screen instanceof FpvSettingsScreen screen) screen.rulesChanged();
     }
 
     @SubscribeEvent

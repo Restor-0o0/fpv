@@ -117,7 +117,7 @@ public class DroneRenderer extends EntityRenderer<DroneEntity, DroneRenderer.Sta
      */
     public static void applyFpvViewmodelPose(PoseStack ps, DroneEntity e, float partialTick) {
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
-        Vec3 camPos = mc.gameRenderer.mainCamera().position();
+        Vec3 camPos = mc.gameRenderer.getMainCamera().position();
         double ex = Mth.lerp(partialTick, e.xOld, e.getX());
         double ey = Mth.lerp(partialTick, e.yOld, e.getY());
         double ez = Mth.lerp(partialTick, e.zOld, e.getZ());

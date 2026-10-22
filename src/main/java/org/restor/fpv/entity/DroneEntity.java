@@ -1780,7 +1780,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         double reach = ENGAGE_STANDOFF + target.getBbWidth() + getBbWidth();
         if (distanceToSqr(target) > reach * reach || !consumeCompanionWeaponEnergy(1.5f)) return;
         target.hurt(damageSources().mobAttack(owner), RAM_DAMAGE);
-        target.knockback(0.4, position().x - target.getX(), position().z - target.getZ(), damageSources().mobAttack(owner), RAM_DAMAGE);
+        target.knockback(0.4, position().x - target.getX(), position().z - target.getZ());
         ramCooldown = 20;
         playSound(net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_SWEEP, 0.6f, 1.6f);
     }
