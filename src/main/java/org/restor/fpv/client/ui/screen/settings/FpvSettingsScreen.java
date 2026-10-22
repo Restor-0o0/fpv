@@ -502,7 +502,6 @@ public class FpvSettingsScreen extends Screen {
         scroll += (scrollTarget - scroll) * Math.min(1f, delta * 0.6f);
         if (Math.abs(scrollTarget - scroll) < 0.25) scroll = scrollTarget;
 
-        renderBackground(g, mouseX, mouseY, partialTick);
         g.fill(0, 0, width, height, (int) (openAnim * 0x60) << 24);
 
         g.pose().pushMatrix();
