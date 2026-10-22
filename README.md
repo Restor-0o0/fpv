@@ -2,7 +2,7 @@
 
 **Real FPV quads and fixed-wing aircraft for Minecraft.** Build a drone from parts, bind a transmitter, put on the goggles and fly in full acro, with a real RC radio or with mouse and keyboard. Race through gates, run strike missions, defend your base with jammers, or let a drone with companion firmware follow you around.
 
-> Minecraft **1.20.1** · Forge **47.4+** · Java 17 · install on **both client and server**
+> Minecraft **26.2** · NeoForge **26.2+** · Java 25 · install on **both client and server**
 
 [Русская версия](README.ru.md)
 
