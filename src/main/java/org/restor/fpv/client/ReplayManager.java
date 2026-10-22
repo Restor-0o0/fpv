@@ -29,7 +29,7 @@ import java.util.Locale;
 
 @EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
 public final class ReplayManager {
-    private static final Minecraft MC = Minecraft.getInstance();
+    private static Minecraft mc() { return Minecraft.getInstance(); }
     private static final ReplayRingBuffer<GhostFrame> RECENT =
         new ReplayRingBuffer<>(ReplayRecording.MAX_FRAMES);
 
@@ -48,17 +48,17 @@ public final class ReplayManager {
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
-        if (MC.level != observedLevel) {
+        if (mc().level != observedLevel) {
             clearWorldState();
-            observedLevel = MC.level;
+            observedLevel = mc().level;
         }
-        if (MC.level == null || MC.player == null) return;
+        if (mc().level == null || mc().player == null) return;
 
         Entity vehicle = currentVehicle();
         updateRecording(vehicle);
 
         boolean started = false;
-        if (MC.screen == null) {
+        if (mc().screen == null) {
             if (ModKeyBindings.SAVE_REPLAY.consumeClick()) saveReplay(false);
             started = handlePlaybackKeys(vehicle);
         }
@@ -88,9 +88,9 @@ public final class ReplayManager {
     }
 
     private static Entity currentVehicle() {
-        if (MC.player.getVehicle() instanceof DroneEntity drone && !drone.isRemoved()) return drone;
-        if (MC.player.getVehicle() instanceof PlaneEntity plane && !plane.isRemoved()) return plane;
-        if (MC.getCameraEntity() instanceof DroneEntity drone && !drone.isRemoved()) return drone;
+        if (mc().player.getVehicle() instanceof DroneEntity drone && !drone.isRemoved()) return drone;
+        if (mc().player.getVehicle() instanceof PlaneEntity plane && !plane.isRemoved()) return plane;
+        if (mc().getCameraEntity() instanceof DroneEntity drone && !drone.isRemoved()) return drone;
         return null;
     }
 
@@ -196,13 +196,13 @@ public final class ReplayManager {
     }
 
     private static void startReplayCamera() {
-        previousCameraEntity = MC.getCameraEntity();
-        previousCameraType = MC.options.getCameraType();
-        replayCamera = new ArmorStand(MC.level, 0.0, 0.0, 0.0);
+        previousCameraEntity = mc().getCameraEntity();
+        previousCameraType = mc().options.getCameraType();
+        replayCamera = new ArmorStand(mc().level, 0.0, 0.0, 0.0);
         replayCamera.setInvisible(true);
         replayCamera.setNoGravity(true);
-        MC.options.setCameraType(CameraType.FIRST_PERSON);
-        MC.setCameraEntity(replayCamera);
+        mc().options.setCameraType(CameraType.FIRST_PERSON);
+        mc().setCameraEntity(replayCamera);
     }
 
     private static void updateReplayCamera(boolean initialize) {
@@ -250,19 +250,19 @@ public final class ReplayManager {
             replayCamera.yRotO = cameraYaw;
             replayCamera.xRotO = cameraPitch;
         }
-        if (MC.options.getCameraType() != CameraType.FIRST_PERSON) {
-            MC.options.setCameraType(CameraType.FIRST_PERSON);
+        if (mc().options.getCameraType() != CameraType.FIRST_PERSON) {
+            mc().options.setCameraType(CameraType.FIRST_PERSON);
         }
     }
 
     private static void restoreCamera() {
         if (replayCamera == null) return;
-        if (MC.getCameraEntity() == replayCamera) {
+        if (mc().getCameraEntity() == replayCamera) {
             Entity restore = previousCameraEntity != null && !previousCameraEntity.isRemoved()
-                ? previousCameraEntity : MC.player;
-            if (restore != null) MC.setCameraEntity(restore);
+                ? previousCameraEntity : mc().player;
+            if (restore != null) mc().setCameraEntity(restore);
         }
-        if (previousCameraType != null) MC.options.setCameraType(previousCameraType);
+        if (previousCameraType != null) mc().options.setCameraType(previousCameraType);
         replayCamera = null;
         previousCameraEntity = null;
         previousCameraType = null;
@@ -291,7 +291,7 @@ public final class ReplayManager {
             ? "hud.fpv.replay.paused" : "hud.fpv.replay.playing");
         Component line = Component.translatable("hud.fpv.replay.line", state,
             formatSeconds(frame), formatSeconds(timeline.lastFrame()), formatSpeed(timeline.speed()));
-        graphics.centeredText(MC.font, line, width / 2, y - 11, 0xFFE8F6FF);
+        graphics.centeredText(mc().font, line, width / 2, y - 11, 0xFFE8F6FF);
 
         graphics.fill(x, y, x + barWidth, y + 5, 0xFF25323A);
         graphics.fill(x, y, x + (int) Math.round(barWidth * progress), y + 5, 0xFF44D7FF);
@@ -302,11 +302,11 @@ public final class ReplayManager {
             ModKeyBindings.REPLAY_PAUSE.getTranslatedKeyMessage(),
             ModKeyBindings.REPLAY_SPEED.getTranslatedKeyMessage(),
             ModKeyBindings.PLAY_REPLAY.getTranslatedKeyMessage());
-        graphics.centeredText(MC.font, controls, width / 2, y + 12, 0xFF9EB2BD);
+        graphics.centeredText(mc().font, controls, width / 2, y + 12, 0xFF9EB2BD);
         Component scrub = Component.translatable("hud.fpv.replay.scrub",
             ModKeyBindings.REPLAY_BACK.getTranslatedKeyMessage(),
             ModKeyBindings.REPLAY_FORWARD.getTranslatedKeyMessage());
-        graphics.centeredText(MC.font, scrub, width / 2, y + 22, 0xFF9EB2BD);
+        graphics.centeredText(mc().font, scrub, width / 2, y + 22, 0xFF9EB2BD);
     }
 
     private static String formatSeconds(double frames) {
@@ -322,6 +322,6 @@ public final class ReplayManager {
     }
 
     private static void showMessage(String key, Object... args) {
-        if (MC.player != null) MC.player.sendOverlayMessage(Component.translatable(key, args));
+        if (mc().player != null) mc().player.sendOverlayMessage(Component.translatable(key, args));
     }
 }

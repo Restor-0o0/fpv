@@ -2,7 +2,7 @@
   "parent": "minecraft:block/block",
   "ambientocclusion": false,
   "textures": {
-    "shell": "fpv:item/camera_standard",
+    "shell": "fpv:block/item/camera_standard",
     "dark": "minecraft:block/black_concrete",
     "lens": "minecraft:block/blue_stained_glass",
     "metal": "minecraft:block/iron_block",

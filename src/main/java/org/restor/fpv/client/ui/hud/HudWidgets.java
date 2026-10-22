@@ -13,7 +13,7 @@ import org.restor.fpv.controller.RCController;
 import org.restor.fpv.entity.DroneEntity;
 
 final class HudWidgets {
-    static final Minecraft MC = Minecraft.getInstance();
+    static Minecraft mc() { return Minecraft.getInstance(); }
     static final int GREEN = 0xFF00FF00;
     static final int RED = 0xFFFF0000;
     static final int MARGIN = 10;
@@ -21,13 +21,13 @@ final class HudWidgets {
     private HudWidgets() {}
 
     static int lineHeight() {
-        return MC.font.lineHeight + 2;
+        return mc().font.lineHeight + 2;
     }
 
     // Built from the live keybindings so labels localize and follow rebinds.
     // Returns the Y just below the block so telemetry can stack underneath.
     static int keyHints(GuiGraphicsExtractor graphics, int startY, KeyMapping[] keys, String... extra) {
-        Font font = MC.font;
+        Font font = mc().font;
         int color = 0xC0FFFF55;
         int y = startY;
         for (KeyMapping k : keys) {
@@ -54,25 +54,25 @@ final class HudWidgets {
     }
 
     static double altitude(Entity e) {
-        int surfaceY = MC.level.getHeight(Heightmap.Types.MOTION_BLOCKING,
+        int surfaceY = mc().level.getHeight(Heightmap.Types.MOTION_BLOCKING,
             e.blockPosition().getX(), e.blockPosition().getZ());
         return Math.max(0, e.getY() - surfaceY);
     }
 
     static void controllerAndSpeed(GuiGraphicsExtractor graphics, int height, double speed) {
         String ctrl = RCController.isConnected() ? "TX: " + RCController.getControllerName() : "TX: NONE";
-        graphics.text(MC.font, ctrl, MARGIN, height - MARGIN - lineHeight() * 2, GREEN);
-        graphics.text(MC.font, String.format("SPD: %.1f m/s", speed), MARGIN, height - MARGIN - lineHeight(), GREEN);
+        graphics.text(mc().font, ctrl, MARGIN, height - MARGIN - lineHeight() * 2, GREEN);
+        graphics.text(mc().font, String.format("SPD: %.1f m/s", speed), MARGIN, height - MARGIN - lineHeight(), GREEN);
     }
 
     static void heading(GuiGraphicsExtractor graphics, int width, int height, float yaw) {
         int hdg = Math.floorMod(Math.round(yaw) + 180, 360);
         String s = String.format("HDG %03d", hdg);
-        graphics.text(MC.font, s, width / 2 - MC.font.width(s) / 2, (int) (height * 0.06f), GREEN);
+        graphics.text(mc().font, s, width / 2 - mc().font.width(s) / 2, (int) (height * 0.06f), GREEN);
     }
 
     static void throttleBar(GuiGraphicsExtractor graphics, int width, int height, float throttle) {
-        Font font = MC.font;
+        Font font = mc().font;
         int barWidth = 6;
         int barHeight = (int) (height * 0.3);
         int barX = width - MARGIN - barWidth;
@@ -88,7 +88,7 @@ final class HudWidgets {
     }
 
     static void verticalSpeedBar(GuiGraphicsExtractor graphics, int width, int height, float throttle, float verticalSpeed) {
-        Font font = MC.font;
+        Font font = mc().font;
         int barWidth = 6;
         int barHeight = (int) (height * 0.3);
         int barX = width - MARGIN - barWidth;
@@ -153,7 +153,7 @@ final class HudWidgets {
 
     // Tick + label every 10°, window ±32°. Displayed value is -xRot so positive = nose up.
     static void pitchLadder(GuiGraphicsExtractor graphics, int width, int height, float pitch) {
-        Font font = MC.font;
+        Font font = mc().font;
         int cx = width / 2;
         int cy = height / 2;
         int x = cx + (int) (width * 0.13f);

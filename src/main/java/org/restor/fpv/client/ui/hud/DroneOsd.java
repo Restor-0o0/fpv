@@ -20,7 +20,7 @@ final class DroneOsd {
     private DroneOsd() {}
 
     static void render(GuiGraphicsExtractor graphics, int width, int height, DroneEntity drone, float partialTick) {
-        Font font = MC.font;
+        Font font = mc().font;
         int lh = lineHeight();
         int y = MARGIN;
         boolean heavy = drone.isHeavyLift();
@@ -40,7 +40,7 @@ final class DroneOsd {
                 hints.add(ModKeyBindings.PLANE_RESET_CAM);
             }
             y = keyHints(graphics, y, hints.toArray(new KeyMapping[0]),
-                bindHint(MC.options.keyShift, "hud.fpv.hint_exit"));
+                bindHint(mc().options.keyShift, "hud.fpv.hint_exit"));
         }
 
         if (Config.HUD_TELEMETRY.get()) {
@@ -125,12 +125,12 @@ final class DroneOsd {
     private static void armWarning(GuiGraphicsExtractor graphics, int width, int height) {
         String key = ModKeyBindings.ARM_SWITCH.getTranslatedKeyMessage().getString();
         String message = Component.translatable("hud.fpv.arm_warning", key).getString();
-        boolean bright = MC.level == null || (MC.level.getGameTime() / 8L & 1L) == 0L;
-        int textWidth = MC.font.width(message);
+        boolean bright = mc().level == null || (mc().level.getGameTime() / 8L & 1L) == 0L;
+        int textWidth = mc().font.width(message);
         int x = width / 2;
         int y = height / 2 - 34;
         graphics.fill(x - textWidth / 2 - 6, y - 4, x + textWidth / 2 + 6,
-            y + MC.font.lineHeight + 4, bright ? 0xB0000000 : 0x60000000);
-        graphics.centeredText(MC.font, message, x, y, bright ? 0xFFFF3030 : 0x88FF3030);
+            y + mc().font.lineHeight + 4, bright ? 0xB0000000 : 0x60000000);
+        graphics.centeredText(mc().font, message, x, y, bright ? 0xFFFF3030 : 0x88FF3030);
     }
 }
