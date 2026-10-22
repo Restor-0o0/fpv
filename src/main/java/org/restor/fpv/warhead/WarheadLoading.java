@@ -23,9 +23,9 @@ public final class WarheadLoading {
         WarheadType type = WarheadItem.typeOf(held);
         if (type == null) return false;
         if (type.mass() > capacityKg) {
-            player.displayClientMessage(Component.translatable("msg.fpv.warhead_too_heavy",
+            player.sendOverlayMessage(Component.translatable("msg.fpv.warhead_too_heavy",
                 Component.translatable("item.fpv." + type.itemName()),
-                String.format("%.1f", type.mass()), String.format("%.1f", capacityKg)), true);
+                String.format("%.1f", type.mass()), String.format("%.1f", capacityKg)));
             return true;
         }
         if (type != current) {
@@ -33,11 +33,11 @@ public final class WarheadLoading {
             if (!player.getAbilities().instabuild) {
                 held.shrink(1);
                 ItemStack removed = new ItemStack(ModItems.WARHEADS.get(current).get());
-                if (!player.addItem(removed)) player.drop(removed, false);
+                if (!player.addItem(removed)) player.drop(removed, false, net.minecraft.util.Prediction.SERVER_ONLY);
             }
         }
-        player.displayClientMessage(Component.translatable("msg.fpv.warhead_loaded",
-            Component.translatable("item.fpv." + type.itemName())), true);
+        player.sendOverlayMessage(Component.translatable("msg.fpv.warhead_loaded",
+            Component.translatable("item.fpv." + type.itemName())));
         return true;
     }
 }

@@ -2,14 +2,12 @@ package org.restor.fpv.client.ui.screen.settings;
 
 import net.minecraft.util.Util;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.common.ModConfigSpec;
-import org.lwjgl.glfw.GLFW;
 import org.restor.fpv.Config;
 import org.restor.fpv.controller.RCController;
 
-import java.nio.FloatBuffer;
 import java.util.function.Consumer;
 
 final class AxisRow extends SettingRow {
@@ -33,15 +31,11 @@ final class AxisRow extends SettingRow {
         if (!RCController.isConnected()) return null;
         int joystick = RCController.getCurrentJoystick();
         if (joystick < 0) return null;
-        FloatBuffer buffer = GLFW.glfwGetJoystickAxes(joystick);
-        if (buffer == null) return null;
-        float[] values = new float[buffer.remaining()];
-        buffer.get(values);
-        return values;
+        return org.restor.fpv.controller.Joysticks.axes(joystick);
     }
 
     @Override
-    void renderControl(GuiGraphics g, Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {
+    void renderControl(GuiGraphicsExtractor g, Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {
         float[] axes = liveAxes();
         if (listening) detect(axes);
 
@@ -61,7 +55,7 @@ final class AxisRow extends SettingRow {
             text = current < 0 ? Component.translatable("settings.fpv.axis_off").getString() : "AX " + current;
             color = current < 0 ? SettingsUi.FAINT : SettingsUi.TEXT;
         }
-        g.drawString(font, text, x + (CHIP_WIDTH - font.width(text)) / 2, by + 4, color, false);
+        g.text(font, text, x + (CHIP_WIDTH - font.width(text)) / 2, by + 4, color, false);
 
         int barX = x + CHIP_WIDTH + 6;
         int barW = w - CHIP_WIDTH - INVERT_WIDTH - 12;
@@ -83,7 +77,7 @@ final class AxisRow extends SettingRow {
         SettingsUi.rect(g, ix, by, INVERT_WIDTH, 16, inv ? 0x44FFB733 : invHot ? SettingsUi.CHIP_HOVER : SettingsUi.CHIP);
         SettingsUi.outline(g, ix, by, INVERT_WIDTH, 16, inv ? SettingsUi.ACCENT : SettingsUi.WINDOW_EDGE);
         String invText = "INV";
-        g.drawString(font, invText, ix + (INVERT_WIDTH - font.width(invText)) / 2, by + 4,
+        g.text(font, invText, ix + (INVERT_WIDTH - font.width(invText)) / 2, by + 4,
             inv ? SettingsUi.ACCENT : SettingsUi.MUTED, false);
     }
 

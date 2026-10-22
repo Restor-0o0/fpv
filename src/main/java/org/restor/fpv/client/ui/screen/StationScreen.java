@@ -1,7 +1,7 @@
 package org.restor.fpv.client.ui.screen;
 
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -65,7 +65,7 @@ public class StationScreen extends Screen {
         y += 12;
         codeBox = new EditBox(font, left + 12, y, PANEL_W - 88, 20, Component.empty());
         codeBox.setMaxLength(6);
-        codeBox.setFilter(s -> s.matches("[0-9]*"));
+        codeBox.setResponder(s -> { if (!s.matches("\\d*")) codeBox.setValue(s.replaceAll("\\D", "")); });
         codeBox.setHint(Component.translatable("screen.fpv.station_code_hint"));
         addRenderableWidget(codeBox);
         addRenderableWidget(Button.builder(Component.translatable("screen.fpv.station_add"), b -> addCode())
@@ -101,7 +101,7 @@ public class StationScreen extends Screen {
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
         int keyCode = event.key();
-        if ((keyCode == 257 || keyCode == 335) && codeBox.isFocused()) {
+        if ((keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_RETURN || keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_NUMPADENTER) && codeBox.isFocused()) {
             addCode();
             return true;
         }
@@ -109,8 +109,8 @@ public class StationScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(g, mouseX, mouseY, partialTick);
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(g, mouseX, mouseY, partialTick);
         GuiPanels.panel(g, left, top, PANEL_W, panelH);
         List<String> codes = codes();
         int rows = Math.max(codes.size(), 1);
@@ -121,18 +121,18 @@ public class StationScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
 
         List<String> codes = codes();
-        g.drawCenteredString(font, title, left + PANEL_W / 2, top + 12, GuiPanels.TEXT);
-        g.drawCenteredString(font, Component.translatable("screen.fpv.station_hint"),
+        g.centeredText(font, title, left + PANEL_W / 2, top + 12, GuiPanels.TEXT);
+        g.centeredText(font, Component.translatable("screen.fpv.station_hint"),
             left + PANEL_W / 2, top + 26, GuiPanels.LABEL);
         for (int i = 0; i < rowY.size(); i++) {
-            g.drawString(font, codes.get(i), left + 20, rowY.get(i) + 6, GuiPanels.ACCENT, false);
+            g.text(font, codes.get(i), left + 20, rowY.get(i) + 6, GuiPanels.ACCENT, false);
         }
         if (codes.isEmpty()) {
-            g.drawCenteredString(font, Component.translatable("screen.fpv.station_empty"),
+            g.centeredText(font, Component.translatable("screen.fpv.station_empty"),
                 left + PANEL_W / 2, listY + 6, GuiPanels.LABEL);
         }
     }

@@ -1,6 +1,6 @@
 package org.restor.fpv.client.ui.hud;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
 import org.restor.fpv.client.LineOfSightSession;
 import org.restor.fpv.client.PilotView;
@@ -27,7 +27,7 @@ public final class FpvHud {
         event.setCanceled(true);
     }
 
-    public static void render(GuiGraphics graphics, float partialTick) {
+    public static void render(GuiGraphicsExtractor graphics, float partialTick) {
         if (!visible) return;
         int width = graphics.guiWidth();
         int height = graphics.guiHeight();

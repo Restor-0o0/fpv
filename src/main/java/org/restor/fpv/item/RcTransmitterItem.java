@@ -100,6 +100,6 @@ public class RcTransmitterItem extends Item {
     }
 
     private static void say(ServerPlayer player, String key, Object... args) {
-        player.displayClientMessage(Component.translatable(key, args), true);
+        player.sendOverlayMessage(Component.translatable(key, args));
     }
 }

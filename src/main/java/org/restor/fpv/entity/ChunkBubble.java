@@ -37,7 +37,7 @@ public final class ChunkBubble {
         int cx = ((int) Math.floor(pos.x)) >> 4;
         int cz = ((int) Math.floor(pos.z)) >> 4;
         for (int dx = -radius; dx <= radius; dx++) {
-            for (int dz = -radius; dz <= radius; dz++) out.add(ChunkPos.asLong(cx + dx, cz + dz));
+            for (int dz = -radius; dz <= radius; dz++) out.add(ChunkPos.pack(cx + dx, cz + dz));
         }
     }
 }

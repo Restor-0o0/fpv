@@ -6,7 +6,6 @@ import net.minecraft.client.KeyMapping;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.bus.api.SubscribeEvent;
-import org.lwjgl.glfw.GLFW;
 import org.restor.fpv.Fpv;
 
 @EventBusSubscriber(modid = Fpv.MODID, value = Dist.CLIENT)
@@ -16,75 +15,75 @@ public class ModKeyBindings {
 
     public static final KeyMapping CYCLE_MODE = new KeyMapping(
         "key.fpv.cycle_mode",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_R,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_R,
         CATEGORY
     );
 
     public static final KeyMapping OPEN_SETTINGS = new KeyMapping(
         "key.fpv.open_settings",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_O,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_O,
         CATEGORY
     );
 
     public static final KeyMapping CAMERA_UP = new KeyMapping(
         "key.fpv.camera_up",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_PAGE_UP,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_PAGEUP,
         CATEGORY
     );
 
     public static final KeyMapping CAMERA_DOWN = new KeyMapping(
         "key.fpv.camera_down",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_PAGE_DOWN,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_PAGEDOWN,
         CATEGORY
     );
 
     public static final KeyMapping TOGGLE_HUD = new KeyMapping(
         "key.fpv.toggle_hud",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_H,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_H,
         CATEGORY
     );
 
     public static final KeyMapping ARM_SWITCH = new KeyMapping(
         "key.fpv.arm_switch",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_Z,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_Z,
         CATEGORY
     );
 
     // Swaps the mouse between flying and aiming the belly camera, on planes and heavy drones.
     public static final KeyMapping MOUSE_MODE = new KeyMapping(
         "key.fpv.mouse_mode",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_C,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_C,
         CATEGORY
     );
 
     // Recenters the belly-camera gimbal (yaw/pitch back to 0) on a plane or a heavy drone.
     public static final KeyMapping PLANE_RESET_CAM = new KeyMapping(
         "key.fpv.plane_reset_cam",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_V,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_V,
         CATEGORY
     );
 
     // Plane-only: toggle orbit autopilot — circle the locked/crosshair point.
     public static final KeyMapping PLANE_ORBIT = new KeyMapping(
         "key.fpv.plane_orbit",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_G,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_G,
         CATEGORY
     );
 
     // Scout plane only: call in a kamikaze wing strike onto the locked/crosshair point.
     public static final KeyMapping PLANE_CALL_STRIKE = new KeyMapping(
         "key.fpv.plane_call_strike",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_B,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_B,
         CATEGORY
     );
 
@@ -93,46 +92,46 @@ public class ModKeyBindings {
     // the inventory.
     public static final KeyMapping DRONE_YAW_LEFT = new KeyMapping(
         "key.fpv.drone_yaw_left",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_Q,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_Q,
         CATEGORY
     );
 
     public static final KeyMapping DRONE_YAW_RIGHT = new KeyMapping(
         "key.fpv.drone_yaw_right",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_E,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_E,
         CATEGORY
     );
 
     // Drone-only: drop one loaded payload charge (FPV_IDEAS §4 FIRE_PAYLOAD).
     public static final KeyMapping FIRE_PAYLOAD = new KeyMapping(
         "key.fpv.fire_payload",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_X,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_X,
         CATEGORY
     );
 
     // Drone-only: fire the installed weapon module (rocket pod rails or dart gun).
     public static final KeyMapping FIRE_WEAPON = new KeyMapping(
         "key.fpv.fire_weapon",
-        InputConstants.Type.KEYSYM,
-        GLFW.GLFW_KEY_F,
+        InputConstants.Type.KEYBOARD,
+        InputConstants.KEY_F,
         CATEGORY
     );
 
     public static final KeyMapping SAVE_REPLAY = new KeyMapping(
-        "key.fpv.save_replay", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F6, CATEGORY);
+        "key.fpv.save_replay", InputConstants.Type.KEYBOARD, InputConstants.KEY_F6, CATEGORY);
     public static final KeyMapping PLAY_REPLAY = new KeyMapping(
-        "key.fpv.play_replay", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F7, CATEGORY);
+        "key.fpv.play_replay", InputConstants.Type.KEYBOARD, InputConstants.KEY_F7, CATEGORY);
     public static final KeyMapping REPLAY_PAUSE = new KeyMapping(
-        "key.fpv.replay_pause", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F8, CATEGORY);
+        "key.fpv.replay_pause", InputConstants.Type.KEYBOARD, InputConstants.KEY_F8, CATEGORY);
     public static final KeyMapping REPLAY_SPEED = new KeyMapping(
-        "key.fpv.replay_speed", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F9, CATEGORY);
+        "key.fpv.replay_speed", InputConstants.Type.KEYBOARD, InputConstants.KEY_F9, CATEGORY);
     public static final KeyMapping REPLAY_BACK = new KeyMapping(
-        "key.fpv.replay_back", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_LEFT_BRACKET, CATEGORY);
+        "key.fpv.replay_back", InputConstants.Type.KEYBOARD, InputConstants.KEY_LBRACKET, CATEGORY);
     public static final KeyMapping REPLAY_FORWARD = new KeyMapping(
-        "key.fpv.replay_forward", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_BRACKET, CATEGORY);
+        "key.fpv.replay_forward", InputConstants.Type.KEYBOARD, InputConstants.KEY_RBRACKET, CATEGORY);
 
     @SubscribeEvent
     public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {

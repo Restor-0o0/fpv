@@ -240,13 +240,13 @@ public class ModularPlaneEntity extends PlaneEntity {
     }
 
     @Override
-    public InteractionResult interact(Player player, InteractionHand hand) {
+    public InteractionResult interact(Player player, InteractionHand hand, net.minecraft.world.phys.Vec3 location) {
         ItemStack held = player.getItemInHand(hand);
         if (org.restor.fpv.warhead.WarheadLoading.isWarhead(held)) {
             if (!level().isClientSide()) {
                 if (!hasWarhead()) {
-                    player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                        "msg.fpv.warhead_no_module"), true);
+                    player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+                        "msg.fpv.warhead_no_module"));
                 } else {
                     org.restor.fpv.warhead.WarheadLoading.swap(player, held, warhead,
                         warheadCapacityKg(), this::setWarhead);
@@ -273,12 +273,12 @@ sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
         }
         if (!flightReady) {
             if (!level().isClientSide()) {
-                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                    "msg.fpv.airframe_incomplete"), true);
+                player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+                    "msg.fpv.airframe_incomplete"));
             }
             return InteractionResult.SUCCESS;
         }
-        return super.interact(player, hand);
+        return super.interact(player, hand, location);
     }
 
     private void loadCard(Player player, ItemStack held) {
@@ -301,8 +301,8 @@ sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
         assembly.bay[slot] = held.copyWithCount(1);
         if (!player.getAbilities().instabuild) held.shrink(1);
         setAssembly(assembly);
-        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-            "msg.fpv.bay_loaded", assembly.bayCount(), DroneAssembly.BAY_SIZE), true);
+        player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+            "msg.fpv.bay_loaded", assembly.bayCount(), DroneAssembly.BAY_SIZE));
     }
 
     private void unloadCard(Player player) {
@@ -318,12 +318,12 @@ sp.openMenu(new net.minecraft.world.SimpleMenuProvider(
         assembly.bay[slot] = ItemStack.EMPTY;
         setAssembly(assembly);
         org.restor.fpv.util.CraftPickup.giveTo(player, card);
-        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-            "msg.fpv.bay_loaded", assembly.bayCount(), DroneAssembly.BAY_SIZE), true);
+        player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+            "msg.fpv.bay_loaded", assembly.bayCount(), DroneAssembly.BAY_SIZE));
     }
 
     private static void msg(Player player, String key) {
-        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(key), true);
+        player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(key));
     }
 
     @Override

@@ -63,15 +63,15 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
     private static final int DATA_COUNT = 8;
 
     private final Container container;
-    private final SimpleContainer resultContainer = new SimpleContainer(1);
+    private final org.restor.fpv.util.ListenableContainer resultContainer = new org.restor.fpv.util.ListenableContainer(1);
     private final SimpleContainer cardContainer = new SimpleContainer(1);
     private final ContainerLevelAccess access;
     private final ContainerData diagnosticData;
-    private final net.minecraft.world.ContainerListener refresh = this::slotsChanged;
+    private final java.util.function.Consumer<Container> refresh = this::slotsChanged;
     private boolean refreshing;
 
     public AssemblyStationMenu(int id, Inventory inv, FriendlyByteBuf buf) {
-        this(id, inv, new SimpleContainer(INPUT_SLOT_COUNT), buf.readBlockPos(), new SimpleContainerData(DATA_COUNT));
+        this(id, inv, new org.restor.fpv.util.ListenableContainer(INPUT_SLOT_COUNT), buf.readBlockPos(), new SimpleContainerData(DATA_COUNT));
     }
 
     public AssemblyStationMenu(int id, Inventory inv, Container container, BlockPos pos) {
@@ -159,7 +159,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
             addSlot(new Slot(inv, c, 8 + c * 18, 201));
         }
 
-        if (container instanceof SimpleContainer sc) sc.addListener(refresh);
+        if (container instanceof org.restor.fpv.util.ListenableContainer sc) sc.addListener(refresh);
         resultContainer.addListener(refresh);
         refresh();
     }
@@ -185,7 +185,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
     @Override
     public void removed(Player player) {
         super.removed(player);
-        if (container instanceof SimpleContainer sc) sc.removeListener(refresh);
+        if (container instanceof org.restor.fpv.util.ListenableContainer sc) sc.removeListener(refresh);
         resultContainer.removeListener(refresh);
         cardContainer.setItem(0, ItemStack.EMPTY);
         ItemStack left = resultContainer.getItem(0);
@@ -193,7 +193,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         // A drone parked in the output was brought in by the player; a generated result is
         // rebuilt from the parts that stay in the bench, so only the former is handed back.
         if (!left.isEmpty() && areComponentSlotsEmpty() && !player.level().isClientSide()) {
-            if (!player.getInventory().add(left)) player.drop(left, false);
+            if (!player.getInventory().add(left)) player.drop(left, false, net.minecraft.util.Prediction.SERVER_ONLY);
         }
     }
 

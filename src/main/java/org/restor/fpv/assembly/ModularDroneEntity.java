@@ -257,14 +257,14 @@ public class ModularDroneEntity extends DroneEntity {
     // whatever lift the build has left over.
     @Override
     public net.minecraft.world.InteractionResult interact(Player player,
-                                                          net.minecraft.world.InteractionHand hand) {
+                                                          net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.Vec3 location) {
         ItemStack held = player.getItemInHand(hand);
         if (player.isSecondaryUseActive() && org.restor.fpv.warhead.WarheadLoading.isWarhead(held)) {
             if (!canPlayerAccess(player)) return net.minecraft.world.InteractionResult.FAIL;
             if (!level().isClientSide()) {
                 if (!hasWarhead()) {
-                    player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                        "msg.fpv.warhead_no_module"), true);
+                    player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+                        "msg.fpv.warhead_no_module"));
                 } else {
                     org.restor.fpv.warhead.WarheadLoading.swap(player, held, warhead,
                         warheadCapacityKg(), this::setWarhead);
@@ -272,7 +272,7 @@ public class ModularDroneEntity extends DroneEntity {
             }
             return net.minecraft.world.InteractionResult.SUCCESS;
         }
-        return super.interact(player, hand);
+        return super.interact(player, hand, location);
     }
 
     // Drop charges only fit when a Payload Bay module is installed.

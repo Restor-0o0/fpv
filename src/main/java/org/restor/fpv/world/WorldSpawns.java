@@ -72,7 +72,7 @@ public final class WorldSpawns {
     }
 
     private static void populate(ServerLevel level, ChunkPos chunkPos) {
-        if (!level.hasChunk(chunkPos.x, chunkPos.z)) return;
+        if (!level.hasChunk(chunkPos.x(), chunkPos.z())) return;
         RandomSource random = level.getRandom();
         BlockPos center = chunkPos.getMiddleBlockPosition(level.getSeaLevel());
         BlockPos surface = level.getHeightmapPos(Heightmap.Types.WORLD_SURFACE, center);

@@ -3,7 +3,7 @@ package org.restor.fpv.client;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -58,7 +58,7 @@ public final class ReplayManager {
         updateRecording(vehicle);
 
         boolean started = false;
-        if (MC.screen == null) {
+        if (MC.gui.screen() == null) {
             if (ModKeyBindings.SAVE_REPLAY.consumeClick()) saveReplay(false);
             started = handlePlaybackKeys(vehicle);
         }
@@ -277,7 +277,7 @@ public final class ReplayManager {
         stopPlayback();
     }
 
-    private static void renderHud(GuiGraphics graphics, float partialTick) {
+    private static void renderHud(GuiGraphicsExtractor graphics, float partialTick) {
         int width = graphics.guiWidth();
         int height = graphics.guiHeight();
         int barWidth = Math.min(420, Math.max(160, width - 80));
@@ -291,7 +291,7 @@ public final class ReplayManager {
             ? "hud.fpv.replay.paused" : "hud.fpv.replay.playing");
         Component line = Component.translatable("hud.fpv.replay.line", state,
             formatSeconds(frame), formatSeconds(timeline.lastFrame()), formatSpeed(timeline.speed()));
-        graphics.drawCenteredString(MC.font, line, width / 2, y - 11, 0xFFE8F6FF);
+        graphics.centeredText(MC.font, line, width / 2, y - 11, 0xFFE8F6FF);
 
         graphics.fill(x, y, x + barWidth, y + 5, 0xFF25323A);
         graphics.fill(x, y, x + (int) Math.round(barWidth * progress), y + 5, 0xFF44D7FF);
@@ -302,11 +302,11 @@ public final class ReplayManager {
             ModKeyBindings.REPLAY_PAUSE.getTranslatedKeyMessage(),
             ModKeyBindings.REPLAY_SPEED.getTranslatedKeyMessage(),
             ModKeyBindings.PLAY_REPLAY.getTranslatedKeyMessage());
-        graphics.drawCenteredString(MC.font, controls, width / 2, y + 12, 0xFF9EB2BD);
+        graphics.centeredText(MC.font, controls, width / 2, y + 12, 0xFF9EB2BD);
         Component scrub = Component.translatable("hud.fpv.replay.scrub",
             ModKeyBindings.REPLAY_BACK.getTranslatedKeyMessage(),
             ModKeyBindings.REPLAY_FORWARD.getTranslatedKeyMessage());
-        graphics.drawCenteredString(MC.font, scrub, width / 2, y + 22, 0xFF9EB2BD);
+        graphics.centeredText(MC.font, scrub, width / 2, y + 22, 0xFF9EB2BD);
     }
 
     private static String formatSeconds(double frames) {
@@ -322,6 +322,6 @@ public final class ReplayManager {
     }
 
     private static void showMessage(String key, Object... args) {
-        if (MC.player != null) MC.player.displayClientMessage(Component.translatable(key, args), true);
+        if (MC.player != null) MC.player.sendOverlayMessage(Component.translatable(key, args));
     }
 }

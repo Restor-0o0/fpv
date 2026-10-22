@@ -29,13 +29,6 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 // Race start / finish line. Right-click opens the course screen (lap count + leaderboard).
 public class RaceStartBlock extends BaseEntityBlock {
-    public static final com.mojang.serialization.MapCodec<RaceStartBlock> CODEC = simpleCodec(RaceStartBlock::new);
-
-    @Override
-    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
-
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
 
     public RaceStartBlock(Properties props) {

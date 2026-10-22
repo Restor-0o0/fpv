@@ -1,6 +1,6 @@
 package org.restor.fpv.client.ui.screen;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -9,9 +9,7 @@ import org.restor.fpv.menu.CargoBayMenu;
 
 public class CargoBayScreen extends AbstractContainerScreen<CargoBayMenu> {
     public CargoBayScreen(CargoBayMenu menu, Inventory inv, Component title) {
-        super(menu, inv, title);
-        this.imageWidth = 176;
-        this.imageHeight = 186;
+        super(menu, inv, title, 176, 186);
     }
 
     @Override
@@ -24,7 +22,8 @@ public class CargoBayScreen extends AbstractContainerScreen<CargoBayMenu> {
     }
 
     @Override
-    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(g, mouseX, mouseY, partialTick);
         int x = leftPos;
         int y = topPos;
         GuiPanels.panel(g, x, y, imageWidth, imageHeight);
@@ -37,15 +36,9 @@ public class CargoBayScreen extends AbstractContainerScreen<CargoBayMenu> {
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        super.renderLabels(g, mouseX, mouseY);
-        g.drawString(font, Component.translatable("screen.fpv.cargo_bay.mass",
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        super.extractLabels(g, mouseX, mouseY);
+        g.text(font, Component.translatable("screen.fpv.cargo_bay.mass",
             String.format("%.1f", menu.cargoMass())), 8, 20, GuiPanels.LABEL, false);
-    }
-
-    @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
-        renderTooltip(g, mouseX, mouseY);
     }
 }

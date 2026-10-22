@@ -41,16 +41,16 @@ public record PlaneStrikePacket(int scoutId, double tx, double ty, double tz) im
             if (e instanceof org.restor.fpv.entity.CarrierPlaneEntity carrier && carrier.hasPassenger(player)) {
                 if (point.distanceToSqr(carrier.position()) > 1024.0 * 1024.0) return;
                 String released = carrier.releaseAt(point);
-                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                    released == null ? "msg.fpv.carrier_empty" : "msg.fpv.carrier_release_" + released), true);
+                player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+                    released == null ? "msg.fpv.carrier_empty" : "msg.fpv.carrier_release_" + released));
                 return;
             }
 
             if (e instanceof org.restor.fpv.assembly.ModularPlaneEntity built && built.hasPassenger(player)) {
                 if (point.distanceToSqr(built.position()) > 1024.0 * 1024.0) return;
                 String released = built.releaseAt(point);
-                player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                    released == null ? "msg.fpv.carrier_empty" : "msg.fpv.carrier_release_" + released), true);
+                player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+                    released == null ? "msg.fpv.carrier_empty" : "msg.fpv.carrier_release_" + released));
                 return;
             }
 

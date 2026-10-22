@@ -102,7 +102,7 @@ public class MiniRocketEntity extends net.minecraft.world.entity.projectile.thro
         if (budget <= 0) return;
         float maxHardness = Explosive.MINI_ROCKET.param(Explosive.Stat.HARDNESS).f();
         Vec3 dir = heading.lengthSqr() > 1.0e-6 ? heading.normalize() : Vec3.ZERO;
-        Vec3 start = first.getCenter();
+        Vec3 start = Vec3.atCenterOf(first);
         BlockPos last = null;
         double reach = budget * 2.0 + 1.0;
         for (double t = 0; budget > 0 && t <= reach; t += 0.25) {

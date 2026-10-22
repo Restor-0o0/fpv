@@ -93,7 +93,7 @@ public class KamikazeDroneEntity extends RemoteDroneEntity {
 
     @Override
     public net.minecraft.world.InteractionResult interact(net.minecraft.world.entity.player.Player player,
-                                                          net.minecraft.world.InteractionHand hand) {
+                                                          net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.Vec3 location) {
         net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
         if (player.isSecondaryUseActive() && org.restor.fpv.warhead.WarheadLoading.isWarhead(held)) {
             if (!canPlayerAccess(player)) return net.minecraft.world.InteractionResult.FAIL;
@@ -103,7 +103,7 @@ public class KamikazeDroneEntity extends RemoteDroneEntity {
             }
             return net.minecraft.world.InteractionResult.SUCCESS;
         }
-        return super.interact(player, hand);
+        return super.interact(player, hand, location);
     }
 
     public org.restor.fpv.warhead.WarheadType getWarhead() { return warhead; }

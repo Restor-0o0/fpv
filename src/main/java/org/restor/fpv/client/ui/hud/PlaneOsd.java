@@ -2,7 +2,7 @@ package org.restor.fpv.client.ui.hud;
 
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.restor.fpv.Config;
 import org.restor.fpv.client.ClientEventHandler;
 import org.restor.fpv.client.ModKeyBindings;
@@ -13,7 +13,7 @@ import static org.restor.fpv.client.ui.hud.HudWidgets.*;
 final class PlaneOsd {
     private PlaneOsd() {}
 
-    static void render(GuiGraphics graphics, int width, int height, PlaneEntity plane, float partialTick) {
+    static void render(GuiGraphicsExtractor graphics, int width, int height, PlaneEntity plane, float partialTick) {
         Font font = MC.font;
         int lh = lineHeight();
         int y = MARGIN;
@@ -31,14 +31,14 @@ final class PlaneOsd {
         }
 
         if (Config.HUD_TELEMETRY.get()) {
-            graphics.drawString(font, "ARM: " + (plane.isArmed() ? "ARMED" : "DISARMED"),
+            graphics.text(font, "ARM: " + (plane.isArmed() ? "ARMED" : "DISARMED"),
                 MARGIN, y, plane.isArmed() ? GREEN : RED);
-            graphics.drawString(font, String.format("ALT: %.0f m", altitude(plane)), MARGIN, y + lh, GREEN);
-            graphics.drawString(font, String.format("CAM: %.0f°", plane.getGimbalPitch()), MARGIN, y + lh * 2, GREEN);
+            graphics.text(font, String.format("ALT: %.0f m", altitude(plane)), MARGIN, y + lh, GREEN);
+            graphics.text(font, String.format("CAM: %.0f°", plane.getGimbalPitch()), MARGIN, y + lh * 2, GREEN);
 
             boolean locked = ClientEventHandler.hasPlaneLock();
             String trk = plane.isOrbiting() ? "TRK: ORBIT" : locked ? "TRK: LOCK" : "TRK: FREE";
-            graphics.drawString(font, trk, MARGIN, y + lh * 3,
+            graphics.text(font, trk, MARGIN, y + lh * 3,
                 plane.isOrbiting() ? 0xFF55FFFF : locked ? 0xFFFFFF55 : GREEN);
 
             controllerAndSpeed(graphics, height, plane.getDeltaMovement().length() * 20);

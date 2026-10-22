@@ -31,13 +31,6 @@ import org.restor.fpv.block.entity.ChargingStationBlockEntity;
 import org.restor.fpv.block.entity.ModBlockEntities;
 
 public class ChargingStationBlock extends BaseEntityBlock {
-    public static final com.mojang.serialization.MapCodec<ChargingStationBlock> CODEC = simpleCodec(ChargingStationBlock::new);
-
-    @Override
-    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
-
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final BooleanProperty CHARGING = BooleanProperty.create("charging");
 

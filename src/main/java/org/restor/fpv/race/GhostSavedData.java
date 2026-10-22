@@ -25,7 +25,7 @@ public class GhostSavedData extends SavedData {
 
     private final Map<String, Course> courses = new HashMap<>();
 
-    private static final SavedDataType<GhostSavedData> TYPE = new SavedDataType<>(NAME, GhostSavedData::new,
+    private static final SavedDataType<GhostSavedData> TYPE = new SavedDataType<>(net.minecraft.resources.Identifier.fromNamespaceAndPath(org.restor.fpv.Fpv.MODID, NAME), GhostSavedData::new,
         CompoundTag.CODEC.xmap(GhostSavedData::load, GhostSavedData::save));
 
     public static GhostSavedData get(ServerLevel level) {

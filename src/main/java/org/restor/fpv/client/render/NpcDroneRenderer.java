@@ -43,7 +43,7 @@ public class NpcDroneRenderer extends EntityRenderer<NpcDroneEntity, NpcDroneRen
 
     @Override
     public void submit(State state, PoseStack poseStack, net.minecraft.client.renderer.SubmitNodeCollector collector,
-                       net.minecraft.client.renderer.state.CameraRenderState camera) {
+                       net.minecraft.client.renderer.state.level.CameraRenderState camera) {
         SubmitBuffers buffer = new SubmitBuffers(collector);
         render(state.entity, state.partialTick, poseStack, buffer, state.lightCoords);
         buffer.flush();
@@ -60,10 +60,10 @@ public class NpcDroneRenderer extends EntityRenderer<NpcDroneEntity, NpcDroneRen
         pose.pushPose();
         pose.translate(0, e.getBbHeight() * 0.5, 0);
         float yaw = Mth.rotLerp(partialTick, e.yBodyRotO, e.yBodyRot);
-        pose.mulPose(Axis.YP.rotationDegrees(180f - yaw));
+        pose.rotate(Axis.YP.rotationDegrees(180f - yaw));
         // Bank into the turn a little so the AI flight doesn't read as a sliding brick.
         float bank = Mth.clamp((float) e.getDeltaMovement().horizontalDistance() * 55f, 0f, 18f);
-        pose.mulPose(Axis.XP.rotationDegrees(-bank));
+        pose.rotate(Axis.XP.rotationDegrees(-bank));
         pose.scale(v.scale(), v.scale(), v.scale());
 
         part(assembly.frame, pose, buffer, packedLight, 0, 0, 0, 0, v.frameScale());
@@ -94,7 +94,7 @@ public class NpcDroneRenderer extends EntityRenderer<NpcDroneEntity, NpcDroneRen
         pose.pushPose();
         pose.translate(x, y, z);
         pose.scale(scale, scale, scale);
-        if (spinDeg != 0) pose.mulPose(Axis.YP.rotationDegrees(spinDeg));
+        if (spinDeg != 0) pose.rotate(Axis.YP.rotationDegrees(spinDeg));
         buffer.item(stack, pose, light);
         pose.popPose();
     }

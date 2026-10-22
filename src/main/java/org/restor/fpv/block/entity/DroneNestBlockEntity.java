@@ -58,7 +58,7 @@ public class DroneNestBlockEntity extends BlockEntity {
             cooldown--;
             return;
         }
-        cooldown = MIN_DELAY + level.random.nextInt(MAX_DELAY - MIN_DELAY);
+        cooldown = MIN_DELAY + level.getRandom().nextInt(MAX_DELAY - MIN_DELAY);
 
         // Needs a (non-creative-flying-away…) survival/adventure player near to activate.
         if (level.getNearestPlayer(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5,
@@ -73,7 +73,7 @@ public class DroneNestBlockEntity extends BlockEntity {
     }
 
     private void spawnDrone(ServerLevel level) {
-        NpcDroneEntity drone = level.random.nextFloat() < 0.7f
+        NpcDroneEntity drone = level.getRandom().nextFloat() < 0.7f
             ? ModEntities.HOSTILE_DRONE.get().create(level, net.minecraft.world.entity.EntitySpawnReason.EVENT)
             : ModEntities.PATROL_DRONE.get().create(level, net.minecraft.world.entity.EntitySpawnReason.EVENT);
         if (drone == null) return;
@@ -93,9 +93,9 @@ public class DroneNestBlockEntity extends BlockEntity {
         Vec3 origin = Vec3.atCenterOf(worldPosition.above(2));
         for (int i = 0; i < 16; i++) {
             Vec3 candidate = origin.add(
-                (level.random.nextDouble() * 2 - 1) * 3.0,
-                level.random.nextDouble() * 2.5,
-                (level.random.nextDouble() * 2 - 1) * 3.0);
+                (level.getRandom().nextDouble() * 2 - 1) * 3.0,
+                level.getRandom().nextDouble() * 2.5,
+                (level.getRandom().nextDouble() * 2 - 1) * 3.0);
             drone.setPos(candidate.x, candidate.y, candidate.z);
             if (level.noCollision(drone, drone.getBoundingBox())
                 && level.clip(new net.minecraft.world.level.ClipContext(origin, candidate,

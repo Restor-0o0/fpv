@@ -5,7 +5,6 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -17,7 +16,7 @@ import net.minecraft.world.level.Level;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public final class SubmitBuffers implements MultiBufferSource {
+public final class SubmitBuffers {
     private static final PoseStack IDENTITY = new PoseStack();
 
     private final SubmitNodeCollector collector;
@@ -31,7 +30,6 @@ public final class SubmitBuffers implements MultiBufferSource {
         return collector;
     }
 
-    @Override
     public VertexConsumer getBuffer(RenderType type) {
         return recorders.computeIfAbsent(type, t -> new Recorder());
     }
@@ -103,6 +101,11 @@ public final class SubmitBuffers implements MultiBufferSource {
         @Override
         public VertexConsumer setUv2(int u, int v) {
             ints.set(iBase() + 2, (u & 0xFFFF) | (v & 0xFFFF) << 16);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv3(float u, float v) {
             return this;
         }
 

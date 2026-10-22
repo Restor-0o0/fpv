@@ -30,13 +30,6 @@ import org.restor.fpv.block.entity.RaceGateBlockEntity;
 // Checkpoint gate: a coloured frame the racer flies through. FACING (6-way) is the face it
 // was placed on and seeds the frame orientation; fine yaw/pitch angle is set in the screen.
 public class RaceGateBlock extends BaseEntityBlock {
-    public static final com.mojang.serialization.MapCodec<RaceGateBlock> CODEC = simpleCodec(RaceGateBlock::new);
-
-    @Override
-    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
-
     public static final float FRAME_RADIUS = 0.32f;
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
 

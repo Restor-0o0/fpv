@@ -1,7 +1,7 @@
 package org.restor.fpv.client.ui.hud;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.item.ItemStack;
 import org.restor.fpv.assembly.ComponentCondition;
 import org.restor.fpv.assembly.DroneAssembly;
@@ -26,7 +26,7 @@ final class DamageHud {
 
     private DamageHud() {}
 
-    static void render(GuiGraphics graphics, int width, int height, DroneEntity drone) {
+    static void render(GuiGraphicsExtractor graphics, int width, int height, DroneEntity drone) {
         if (!(drone instanceof ModularDroneEntity modular)) return;
         DroneAssembly assembly = modular.getAssembly();
         if (assembly == null) return;
@@ -68,14 +68,14 @@ final class DamageHud {
         return stack.isEmpty() ? 1f : ComponentCondition.ratio(stack);
     }
 
-    private static void drawDisc(GuiGraphics graphics, int cx, int cy, int r, int color) {
+    private static void drawDisc(GuiGraphicsExtractor graphics, int cx, int cy, int r, int color) {
         for (int dy = -r; dy <= r; dy++) {
             int dx = (int) Math.round(Math.sqrt(Math.max(0, r * r - dy * dy)));
             graphics.fill(cx - dx, cy + dy, cx + dx + 1, cy + dy + 1, color);
         }
     }
 
-    private static void drawRing(GuiGraphics graphics, int cx, int cy, int r, int color) {
+    private static void drawRing(GuiGraphicsExtractor graphics, int cx, int cy, int r, int color) {
         for (int dy = -r; dy <= r; dy++) {
             int outer = (int) Math.round(Math.sqrt(Math.max(0, r * r - dy * dy)));
             int innerSq = (r - 1) * (r - 1) - dy * dy;
@@ -89,7 +89,7 @@ final class DamageHud {
         }
     }
 
-    private static void drawLine(GuiGraphics graphics, int x0, int y0, int x1, int y1, int color) {
+    private static void drawLine(GuiGraphicsExtractor graphics, int x0, int y0, int x1, int y1, int color) {
         int steps = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
         for (int i = 0; i <= steps; i++) {
             int x = x0 + (x1 - x0) * i / Math.max(1, steps);

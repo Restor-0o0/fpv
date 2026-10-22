@@ -2,7 +2,7 @@ package org.restor.fpv.client.ui.screen;
 
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
@@ -144,28 +144,28 @@ public class RaceGateScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(g, mouseX, mouseY, partialTick);
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(g, mouseX, mouseY, partialTick);
         GuiPanels.panel(g, left, top, PANEL_W, PANEL_H);
         GuiPanels.inset(g, left + 12, top + 26, PANEL_W - 24, 14, 0xFF000000 | color);
         for (StepperRow row : rows) row.drawPlate(g);
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
 
-        g.drawCenteredString(font, title, left + PANEL_W / 2, top + 10, GuiPanels.TEXT);
+        g.centeredText(font, title, left + PANEL_W / 2, top + 10, GuiPanels.TEXT);
         for (StepperRow row : rows) row.drawText(g, font);
         int hintY = top + 194;
         for (var line : font.split(Component.translatable("screen.fpv.race_gate_hint"), PANEL_W - 24)) {
-            g.drawCenteredString(font, line, left + PANEL_W / 2, hintY, GuiPanels.LABEL);
+            g.centeredText(font, line, left + PANEL_W / 2, hintY, GuiPanels.LABEL);
             hintY += 10;
         }
     }
 
     @Override
     public void onClose() {
-        minecraft.setScreen(null);
+        minecraft.gui.setScreen(null);
     }
 }

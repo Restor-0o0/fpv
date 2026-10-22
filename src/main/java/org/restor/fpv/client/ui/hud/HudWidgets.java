@@ -3,7 +3,7 @@ package org.restor.fpv.client.ui.hud;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -26,17 +26,17 @@ final class HudWidgets {
 
     // Built from the live keybindings so labels localize and follow rebinds.
     // Returns the Y just below the block so telemetry can stack underneath.
-    static int keyHints(GuiGraphics graphics, int startY, KeyMapping[] keys, String... extra) {
+    static int keyHints(GuiGraphicsExtractor graphics, int startY, KeyMapping[] keys, String... extra) {
         Font font = MC.font;
         int color = 0xC0FFFF55;
         int y = startY;
         for (KeyMapping k : keys) {
             String name = Component.translatable(k.getName()).getString();
-            graphics.drawString(font, "[" + k.getTranslatedKeyMessage().getString() + "] " + name, MARGIN, y, color);
+            graphics.text(font, "[" + k.getTranslatedKeyMessage().getString() + "] " + name, MARGIN, y, color);
             y += lineHeight();
         }
         for (String line : extra) {
-            graphics.drawString(font, line, MARGIN, y, color);
+            graphics.text(font, line, MARGIN, y, color);
             y += lineHeight();
         }
         return y + 4;
@@ -59,19 +59,19 @@ final class HudWidgets {
         return Math.max(0, e.getY() - surfaceY);
     }
 
-    static void controllerAndSpeed(GuiGraphics graphics, int height, double speed) {
+    static void controllerAndSpeed(GuiGraphicsExtractor graphics, int height, double speed) {
         String ctrl = RCController.isConnected() ? "TX: " + RCController.getControllerName() : "TX: NONE";
-        graphics.drawString(MC.font, ctrl, MARGIN, height - MARGIN - lineHeight() * 2, GREEN);
-        graphics.drawString(MC.font, String.format("SPD: %.1f m/s", speed), MARGIN, height - MARGIN - lineHeight(), GREEN);
+        graphics.text(MC.font, ctrl, MARGIN, height - MARGIN - lineHeight() * 2, GREEN);
+        graphics.text(MC.font, String.format("SPD: %.1f m/s", speed), MARGIN, height - MARGIN - lineHeight(), GREEN);
     }
 
-    static void heading(GuiGraphics graphics, int width, int height, float yaw) {
+    static void heading(GuiGraphicsExtractor graphics, int width, int height, float yaw) {
         int hdg = Math.floorMod(Math.round(yaw) + 180, 360);
         String s = String.format("HDG %03d", hdg);
-        graphics.drawString(MC.font, s, width / 2 - MC.font.width(s) / 2, (int) (height * 0.06f), GREEN);
+        graphics.text(MC.font, s, width / 2 - MC.font.width(s) / 2, (int) (height * 0.06f), GREEN);
     }
 
-    static void throttleBar(GuiGraphics graphics, int width, int height, float throttle) {
+    static void throttleBar(GuiGraphicsExtractor graphics, int width, int height, float throttle) {
         Font font = MC.font;
         int barWidth = 6;
         int barHeight = (int) (height * 0.3);
@@ -82,12 +82,12 @@ final class HudWidgets {
         int fillH = (int) (throttle * barHeight);
         graphics.fill(barX, barY + barHeight - fillH, barX + barWidth, barY + barHeight, throttle > 0.9f ? RED : GREEN);
 
-        graphics.drawString(font, "THR", barX - 2, barY - lineHeight(), GREEN);
+        graphics.text(font, "THR", barX - 2, barY - lineHeight(), GREEN);
         String pct = String.format("%.0f%%", throttle * 100);
-        graphics.drawString(font, pct, barX + barWidth - font.width(pct), barY + barHeight + 3, GREEN);
+        graphics.text(font, pct, barX + barWidth - font.width(pct), barY + barHeight + 3, GREEN);
     }
 
-    static void verticalSpeedBar(GuiGraphics graphics, int width, int height, float throttle, float verticalSpeed) {
+    static void verticalSpeedBar(GuiGraphicsExtractor graphics, int width, int height, float throttle, float verticalSpeed) {
         Font font = MC.font;
         int barWidth = 6;
         int barHeight = (int) (height * 0.3);
@@ -102,13 +102,13 @@ final class HudWidgets {
         graphics.fill(barX, top, barX + barWidth, top + Math.max(1, h), GREEN);
         graphics.fill(barX - 2, mid, barX + barWidth + 2, mid + 1, GREEN);
 
-        graphics.drawString(font, "V/S", barX - 2, barY - lineHeight(), GREEN);
+        graphics.text(font, "V/S", barX - 2, barY - lineHeight(), GREEN);
         String vs = String.format("%+.1f", verticalSpeed);
-        graphics.drawString(font, vs, barX + barWidth - font.width(vs), barY + barHeight + 3, GREEN);
+        graphics.text(font, vs, barX + barWidth - font.width(vs), barY + barHeight + 3, GREEN);
     }
 
     // Mode 2 layout: left = yaw (x) / throttle (y), right = roll (x) / pitch (y).
-    static void stickBoxes(GuiGraphics graphics, int width, int height,
+    static void stickBoxes(GuiGraphicsExtractor graphics, int width, int height,
                            float yaw, float throttle, float roll, float pitch) {
         int size = 34;
         int gap = 16;
@@ -118,15 +118,15 @@ final class HudWidgets {
         stickBox(graphics, cx + gap / 2, boxY, size, roll, pitch);
     }
 
-    private static void stickBox(GuiGraphics graphics, int x, int y, int size, float sx, float sy) {
+    private static void stickBox(GuiGraphicsExtractor graphics, int x, int y, int size, float sx, float sy) {
         int border = 0x88FFFFFF;
         graphics.fill(x, y, x + size, y + size, 0x55000000);
-        graphics.hLine(x, x + size - 1, y, border);
-        graphics.hLine(x, x + size - 1, y + size - 1, border);
-        graphics.vLine(x, y, y + size - 1, border);
-        graphics.vLine(x + size - 1, y, y + size - 1, border);
-        graphics.hLine(x + 2, x + size - 3, y + size / 2, 0x33FFFFFF);
-        graphics.vLine(x + size / 2, y + 2, y + size - 3, 0x33FFFFFF);
+        graphics.horizontalLine(x, x + size - 1, y, border);
+        graphics.horizontalLine(x, x + size - 1, y + size - 1, border);
+        graphics.verticalLine(x, y, y + size - 1, border);
+        graphics.verticalLine(x + size - 1, y, y + size - 1, border);
+        graphics.horizontalLine(x + 2, x + size - 3, y + size / 2, 0x33FFFFFF);
+        graphics.verticalLine(x + size / 2, y + 2, y + size - 3, 0x33FFFFFF);
         int half = size / 2 - 3;
         int px = x + size / 2 + Math.round(Mth.clamp(sx, -1f, 1f) * half);
         int py = y + size / 2 - Math.round(Mth.clamp(sy, -1f, 1f) * half);
@@ -135,7 +135,7 @@ final class HudWidgets {
 
     // The camera itself is rolled by +roll, so the real horizon appears at -roll;
     // the dashes counter-rotate to stay on it.
-    static void rollLine(GuiGraphics graphics, int width, int height, float roll) {
+    static void rollLine(GuiGraphicsExtractor graphics, int width, int height, float roll) {
         int cx = width / 2;
         int cy = height / 2;
         float rad = (float) Math.toRadians(-roll);
@@ -152,7 +152,7 @@ final class HudWidgets {
     }
 
     // Tick + label every 10°, window ±32°. Displayed value is -xRot so positive = nose up.
-    static void pitchLadder(GuiGraphics graphics, int width, int height, float pitch) {
+    static void pitchLadder(GuiGraphicsExtractor graphics, int width, int height, float pitch) {
         Font font = MC.font;
         int cx = width / 2;
         int cy = height / 2;
@@ -163,23 +163,23 @@ final class HudWidgets {
             int ty = cy - Math.round((a - disp) * pxPerDeg);
             if (Math.abs(ty - cy) > 45) continue;
             boolean zero = a == 0;
-            graphics.hLine(x, x + (zero ? 14 : 8), ty, zero ? 0xFFFFFFFF : 0x99FFFFFF);
-            graphics.drawString(font, String.valueOf(a), x + 18, ty - 4, 0x99FFFFFF);
+            graphics.horizontalLine(x, x + (zero ? 14 : 8), ty, zero ? 0xFFFFFFFF : 0x99FFFFFF);
+            graphics.text(font, String.valueOf(a), x + 18, ty - 4, 0x99FFFFFF);
         }
-        graphics.hLine(x - 7, x - 3, cy, GREEN);
+        graphics.horizontalLine(x - 7, x - 3, cy, GREEN);
         graphics.fill(x - 3, cy - 1, x - 1, cy + 2, GREEN);
     }
 
-    static void crosshair(GuiGraphics graphics, int width, int height) {
+    static void crosshair(GuiGraphicsExtractor graphics, int width, int height) {
         int cx = width / 2;
         int cy = height / 2;
         int size = 8;
         int gap = 3;
         int color = 0xAAFFFFFF;
-        graphics.vLine(cx, cy - gap - size, cy - gap, color);
-        graphics.vLine(cx, cy + gap, cy + gap + size, color);
-        graphics.hLine(cx - gap - size, cx - gap, cy, color);
-        graphics.hLine(cx + gap, cx + gap + size, cy, color);
+        graphics.verticalLine(cx, cy - gap - size, cy - gap, color);
+        graphics.verticalLine(cx, cy + gap, cy + gap + size, color);
+        graphics.horizontalLine(cx - gap - size, cx - gap, cy, color);
+        graphics.horizontalLine(cx + gap, cx + gap + size, cy, color);
         graphics.fill(cx - 1, cy - 1, cx + 2, cy + 2, color);
     }
 }

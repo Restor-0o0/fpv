@@ -18,7 +18,7 @@ public abstract class RemoteDroneEntity extends DroneEntity {
     public boolean isRemoteControllable() { return true; }
 
     @Override
-    public InteractionResult interact(Player player, InteractionHand hand) {
+    public InteractionResult interact(Player player, InteractionHand hand, net.minecraft.world.phys.Vec3 location) {
         if (level().isClientSide() && hand == InteractionHand.MAIN_HAND) {
             org.restor.fpv.client.ui.screen.ClientScreens.openSetCode(getId(), getLinkCode());
         }

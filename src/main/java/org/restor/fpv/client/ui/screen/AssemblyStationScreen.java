@@ -1,6 +1,6 @@
 package org.restor.fpv.client.ui.screen;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
@@ -25,9 +25,7 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
     private Button channelButton;
 
     public AssemblyStationScreen(AssemblyStationMenu menu, Inventory inv, Component title) {
-        super(menu, inv, title);
-        imageWidth = 276;
-        imageHeight = 225;
+        super(menu, inv, title, 276, 225);
         inventoryLabelY = imageHeight - 94;
     }
 
@@ -60,7 +58,8 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
     }
 
     @Override
-    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(g, mouseX, mouseY, partialTick);
         int x = leftPos;
         int y = topPos;
         // Panel
@@ -101,34 +100,34 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        super.renderLabels(g, mouseX, mouseY);
-        g.drawString(font, Component.translatable("screen.fpv.assembly.diagnostics"), 182, 8, 0xFFE0E0E8, false);
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        super.extractLabels(g, mouseX, mouseY);
+        g.text(font, Component.translatable("screen.fpv.assembly.diagnostics"), 182, 8, 0xFFE0E0E8, false);
 
         var issues = menu.issues();
         int lineY = 23;
         if (issues.isEmpty()) {
-            g.drawString(font, Component.translatable("assembly.validation.ready"), 182, lineY, 0xFF66CC66, false);
+            g.text(font, Component.translatable("assembly.validation.ready"), 182, lineY, 0xFF66CC66, false);
         } else {
             int lines = 0;
             for (var issue : issues) {
                 int color = issue.isError() ? 0xFFFF7777 : 0xFFFFC45C;
                 for (var line : font.split(Component.translatable(issue.localizationKey()), 84)) {
                     if (lines++ >= 5) break;
-                    g.drawString(font, line, 182, lineY, color, false);
+                    g.text(font, line, 182, lineY, color, false);
                     lineY += 10;
                 }
                 if (lines >= 5) break;
             }
         }
 
-        g.drawString(font, metric("screen.fpv.assembly.mass", menu.massKg(), "kg", 3), 182, 78, 0xFFB8B8C4, false);
-        g.drawString(font, metric("screen.fpv.assembly.thrust", menu.thrustN(), "N", 2), 182, 90, 0xFFB8B8C4, false);
-        g.drawString(font, metric("screen.fpv.assembly.twr", menu.twr(), "", 2), 182, 102, 0xFFB8B8C4, false);
-        g.drawString(font, metric("screen.fpv.assembly.hover", menu.hoverThrottle() * 100f, "%", 0), 182, 114, 0xFFB8B8C4, false);
+        g.text(font, metric("screen.fpv.assembly.mass", menu.massKg(), "kg", 3), 182, 78, 0xFFB8B8C4, false);
+        g.text(font, metric("screen.fpv.assembly.thrust", menu.thrustN(), "N", 2), 182, 90, 0xFFB8B8C4, false);
+        g.text(font, metric("screen.fpv.assembly.twr", menu.twr(), "", 2), 182, 102, 0xFFB8B8C4, false);
+        g.text(font, metric("screen.fpv.assembly.hover", menu.hoverThrottle() * 100f, "%", 0), 182, 114, 0xFFB8B8C4, false);
         int conditionColor = menu.conditionPercent() < 50 ? 0xFFFF7777
             : menu.conditionPercent() < 100 ? 0xFFFFC45C : 0xFF66CC66;
-        g.drawString(font, Component.translatable("screen.fpv.assembly.condition", menu.conditionPercent()),
+        g.text(font, Component.translatable("screen.fpv.assembly.condition", menu.conditionPercent()),
             182, 126, conditionColor, false);
 
         ComponentType repairType = menu.repairTargetType();
@@ -138,12 +137,12 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
         } else {
             Component target = repairTargetName(repairType, menu.repairTargetIndex());
             repairStatus = Component.translatable("screen.fpv.assembly.repair_cost", target,
-                menu.repairMaterial().getName());
+                menu.repairMaterial().getDefaultInstance().getHoverName());
         }
         int repairY = 138;
         for (var line : font.split(repairStatus, 84)) {
             if (repairY > 148) break;
-            g.drawString(font, line, 182, repairY, 0xFFAFC8D8, false);
+            g.text(font, line, 182, repairY, 0xFFAFC8D8, false);
             repairY += 10;
         }
     }
@@ -169,7 +168,7 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
 
     // An occupied slot gets a lit frame and a pale tray; an empty one stays a dark recess.
     // Dark parts (props especially) were unreadable when both looked the same.
-    private void drawSlot(GuiGraphics g, int x, int y, int accent, boolean filled) {
+    private void drawSlot(GuiGraphicsExtractor g, int x, int y, int accent, boolean filled) {
         g.fill(x, y, x + 18, y + 18, filled ? accent : dim(accent));
         g.fill(x + 1, y + 1, x + 17, y + 17, filled ? 0xFF55555F : 0xFF101015);
         if (filled) {
@@ -219,9 +218,9 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
         };
     }
 
-    private void drawGhost(GuiGraphics g, ItemStack stack, int x, int y) {
+    private void drawGhost(GuiGraphicsExtractor g, ItemStack stack, int x, int y) {
         if (stack.isEmpty()) return;
-        g.renderFakeItem(stack, x, y);
+        g.fakeItem(stack, x, y);
         g.fill(x, y, x + 16, y + 16, 0xB08B8B8B);
     }
 
@@ -259,8 +258,8 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
         if (hoveredSlot != null && !hoveredSlot.hasItem() && hoveredSlot.index < AssemblyStationMenu.SLOT_COUNT) {
             Component name = slotName(hoveredSlot.index);
             if (name != null) {
@@ -270,6 +269,5 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
                         .withStyle(net.minecraft.ChatFormatting.DARK_GRAY)), mouseX, mouseY);
             }
         }
-        renderTooltip(g, mouseX, mouseY);
     }
 }

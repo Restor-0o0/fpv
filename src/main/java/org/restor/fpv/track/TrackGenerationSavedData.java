@@ -14,7 +14,7 @@ public final class TrackGenerationSavedData extends SavedData {
 
     private final Set<Long> attemptedRegions = new HashSet<>();
 
-    private static final SavedDataType<TrackGenerationSavedData> TYPE = new SavedDataType<>(NAME, TrackGenerationSavedData::new,
+    private static final SavedDataType<TrackGenerationSavedData> TYPE = new SavedDataType<>(net.minecraft.resources.Identifier.fromNamespaceAndPath(org.restor.fpv.Fpv.MODID, NAME), TrackGenerationSavedData::new,
         Codec.LONG.listOf().fieldOf("AttemptedRegions").codec().xmap(TrackGenerationSavedData::load, TrackGenerationSavedData::save));
 
     public static TrackGenerationSavedData get(ServerLevel level) {

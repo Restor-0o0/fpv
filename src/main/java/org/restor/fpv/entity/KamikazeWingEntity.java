@@ -84,7 +84,7 @@ public class KamikazeWingEntity extends PlaneEntity {
 
     @Override
     public net.minecraft.world.InteractionResult interact(net.minecraft.world.entity.player.Player player,
-                                                          net.minecraft.world.InteractionHand hand) {
+                                                          net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.Vec3 location) {
         net.minecraft.world.item.ItemStack held = player.getItemInHand(hand);
         if (org.restor.fpv.warhead.WarheadLoading.isWarhead(held)) {
             if (!level().isClientSide()) {
@@ -93,7 +93,7 @@ public class KamikazeWingEntity extends PlaneEntity {
             }
             return net.minecraft.world.InteractionResult.SUCCESS;
         }
-        return super.interact(player, hand);
+        return super.interact(player, hand, location);
     }
 
     protected WarheadType defaultWarhead() { return WarheadType.HE; }
@@ -206,7 +206,7 @@ public class KamikazeWingEntity extends PlaneEntity {
         int cz = ((int) Math.floor(pos.z)) >> 4;
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
-                out.add(net.minecraft.world.level.ChunkPos.asLong(cx + dx, cz + dz));
+                out.add(net.minecraft.world.level.ChunkPos.pack(cx + dx, cz + dz));
             }
         }
     }

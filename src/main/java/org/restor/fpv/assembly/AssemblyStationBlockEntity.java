@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
 import org.restor.fpv.block.entity.ModBlockEntities;
 
 public class AssemblyStationBlockEntity extends BlockEntity implements MenuProvider {
-    private final SimpleContainer items = new SimpleContainer(AssemblyStationMenu.INPUT_SLOT_COUNT);
+    private final org.restor.fpv.util.ListenableContainer items = new org.restor.fpv.util.ListenableContainer(AssemblyStationMenu.INPUT_SLOT_COUNT);
 
     public AssemblyStationBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.ASSEMBLY_STATION.get(), pos, state);

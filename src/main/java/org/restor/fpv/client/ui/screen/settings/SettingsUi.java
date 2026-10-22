@@ -1,6 +1,6 @@
 package org.restor.fpv.client.ui.screen.settings;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 final class SettingsUi {
     static final int WINDOW = 0xF2181A20;
@@ -21,7 +21,7 @@ final class SettingsUi {
 
     private SettingsUi() {}
 
-    static void rect(GuiGraphics g, int x, int y, int w, int h, int color) {
+    static void rect(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
         if (w <= 2 || h <= 2) {
             g.fill(x, y, x + w, y + h, color);
             return;
@@ -31,14 +31,14 @@ final class SettingsUi {
         g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
     }
 
-    static void outline(GuiGraphics g, int x, int y, int w, int h, int color) {
+    static void outline(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
         g.fill(x + 1, y, x + w - 1, y + 1, color);
         g.fill(x + 1, y + h - 1, x + w - 1, y + h, color);
         g.fill(x, y + 1, x + 1, y + h - 1, color);
         g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
     }
 
-    static void pill(GuiGraphics g, int x, int y, int w, int h, int color) {
+    static void pill(GuiGraphicsExtractor g, int x, int y, int w, int h, int color) {
         g.fill(x + 2, y, x + w - 2, y + h, color);
         g.fill(x + 1, y + 1, x + 2, y + h - 1, color);
         g.fill(x + w - 2, y + 1, x + w - 1, y + h - 1, color);
@@ -60,7 +60,7 @@ final class SettingsUi {
     }
 
     // 12x12 quad silhouette: X arms, four rotors, a body.
-    static void droneIcon(GuiGraphics g, int x, int y, int color) {
+    static void droneIcon(GuiGraphicsExtractor g, int x, int y, int color) {
         for (int i = 0; i < 8; i++) {
             g.fill(x + 2 + i, y + 2 + i, x + 3 + i, y + 3 + i, color);
             g.fill(x + 9 - i, y + 2 + i, x + 10 - i, y + 3 + i, color);

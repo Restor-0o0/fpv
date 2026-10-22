@@ -112,7 +112,7 @@ public final class RcLink {
             : assembly.validate().errors();
         Component reason = errors.isEmpty() ? Component.translatable("msg.fpv.tx_bind_incomplete")
             : Component.translatable(errors.get(0).localizationKey());
-        player.displayClientMessage(Component.translatable("msg.fpv.tx_bind_not_ready", reason), true);
+        player.sendOverlayMessage(Component.translatable("msg.fpv.tx_bind_not_ready", reason));
     }
 
     /** Binds when the target is new, clears the binding when it is the one already bound. */
@@ -120,11 +120,11 @@ public final class RcLink {
         boolean wasBound = target.getUUID().equals(boundId(stack));
         if (wasBound) {
             unbind(stack);
-            player.displayClientMessage(Component.translatable("msg.fpv.tx_unlinked"), true);
+            player.sendOverlayMessage(Component.translatable("msg.fpv.tx_unlinked"));
         } else {
             bind(stack, target);
-            player.displayClientMessage(Component.translatable("msg.fpv.tx_linked",
-                Component.translatable(target.getType().getDescriptionId())), true);
+            player.sendOverlayMessage(Component.translatable("msg.fpv.tx_linked",
+                Component.translatable(target.getType().getDescriptionId())));
         }
         player.level().playSound(null, player.blockPosition(),
             wasBound ? org.restor.fpv.sound.ModSounds.TX_UNBIND.get() : org.restor.fpv.sound.ModSounds.TX_BIND.get(),

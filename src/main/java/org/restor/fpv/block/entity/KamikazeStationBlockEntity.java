@@ -30,8 +30,8 @@ public class KamikazeStationBlockEntity extends BlockEntity {
     public void startSession(ServerPlayer player) {
         if (pilotId != null && !player.getUUID().equals(pilotId)) return; // occupied
         if (!org.restor.fpv.item.RcLink.hasGoggles(player)) {
-            player.displayClientMessage(
-                net.minecraft.network.chat.Component.translatable("msg.fpv.need_goggles"), true);
+            player.sendOverlayMessage(
+                net.minecraft.network.chat.Component.translatable("msg.fpv.need_goggles"));
             return;
         }
         pilotId = player.getUUID();
@@ -81,8 +81,8 @@ public class KamikazeStationBlockEntity extends BlockEntity {
             if (magazine != null) break;
         }
         if (magazine == null) {
-            pilot.displayClientMessage(
-                net.minecraft.network.chat.Component.translatable("msg.fpv.station_empty"), true);
+            pilot.sendOverlayMessage(
+                net.minecraft.network.chat.Component.translatable("msg.fpv.station_empty"));
             reset();
             return;
         }

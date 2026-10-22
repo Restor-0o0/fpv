@@ -32,13 +32,6 @@ import org.restor.fpv.block.entity.GuardStationBlockEntity;
 import org.restor.fpv.block.entity.ModBlockEntities;
 
 public class GuardStationBlock extends BaseEntityBlock {
-    public static final com.mojang.serialization.MapCodec<GuardStationBlock> CODEC = simpleCodec(GuardStationBlock::new);
-
-    @Override
-    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
-
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public GuardStationBlock(Properties props) {

@@ -1202,7 +1202,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // -------------------------------------------------------------------------
 
     @Override
-    public InteractionResult interact(Player player, InteractionHand hand) {
+    public InteractionResult interact(Player player, InteractionHand hand, Vec3 location) {
         if (!level().isClientSide()) {
             if (!canPlayerAccess(player)) return InteractionResult.FAIL;
             claimOwner(player);
@@ -1245,13 +1245,13 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     /** Radio entry point: goggles give the mounted FPV feed, bare eyes give line-of-sight. */
     public boolean startPilotSession(ServerPlayer player) {
         if (!isFlightReady()) {
-            player.displayClientMessage(
-                net.minecraft.network.chat.Component.translatable("msg.fpv.airframe_incomplete"), true);
+            player.sendOverlayMessage(
+                net.minecraft.network.chat.Component.translatable("msg.fpv.airframe_incomplete"));
             return false;
         }
         if (!org.restor.fpv.item.RcLink.hasTransmitter(player)) {
-            player.displayClientMessage(
-                net.minecraft.network.chat.Component.translatable("msg.fpv.need_transmitter"), true);
+            player.sendOverlayMessage(
+                net.minecraft.network.chat.Component.translatable("msg.fpv.need_transmitter"));
             return false;
         }
         if (org.restor.fpv.item.RcLink.hasGoggles(player)) return beginRidingControl(player);
@@ -1627,14 +1627,14 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     /** Cycles through the modes the installed firmware supports; a bare FC flies nothing on its own. */
     public void cycleMode(Player player) {
         if (!isFlightReady()) {
-            player.displayClientMessage(
-                net.minecraft.network.chat.Component.translatable("msg.fpv.airframe_incomplete"), true);
+            player.sendOverlayMessage(
+                net.minecraft.network.chat.Component.translatable("msg.fpv.airframe_incomplete"));
             return;
         }
         org.restor.fpv.component.FirmwareType fw = firmware();
         if (fw == null) {
-            player.displayClientMessage(
-                net.minecraft.network.chat.Component.translatable("msg.fpv.mode_needs_firmware"), true);
+            player.sendOverlayMessage(
+                net.minecraft.network.chat.Component.translatable("msg.fpv.mode_needs_firmware"));
             return;
         }
         setAutoMode(fw.next(autoMode), player);
@@ -1649,8 +1649,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             playSound(org.restor.fpv.sound.ModSounds.ARM.get(), 0.7f, 1.8f);
         }
         if (player != null) {
-            player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                "msg.fpv.mode_set", net.minecraft.network.chat.Component.translatable(mode.translationKey())), true);
+            player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+                "msg.fpv.mode_set", net.minecraft.network.chat.Component.translatable(mode.translationKey())));
         }
     }
 
@@ -1780,7 +1780,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         double reach = ENGAGE_STANDOFF + target.getBbWidth() + getBbWidth();
         if (distanceToSqr(target) > reach * reach || !consumeCompanionWeaponEnergy(1.5f)) return;
         target.hurt(damageSources().mobAttack(owner), RAM_DAMAGE);
-        target.knockback(0.4, position().x - target.getX(), position().z - target.getZ());
+        target.knockback(0.4, position().x - target.getX(), position().z - target.getZ(), damageSources().mobAttack(owner), RAM_DAMAGE);
         ramCooldown = 20;
         playSound(net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_SWEEP, 0.6f, 1.6f);
     }
@@ -1852,20 +1852,20 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     // Loads as many charges as fit from the held stack (server-side).
     private void loadPayload(Player player, net.minecraft.world.item.ItemStack held) {
         if (payloadCapacity() <= 0) {
-            player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-                hasPayloadBay() ? "msg.fpv.payload_too_heavy" : "msg.fpv.payload_no_bay"), true);
+            player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+                hasPayloadBay() ? "msg.fpv.payload_too_heavy" : "msg.fpv.payload_no_bay"));
             return;
         }
         int space = payloadCapacity() - getPayloadAmmo();
         if (space <= 0) {
-            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.payload_full"), true);
+            player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.payload_full"));
             return;
         }
         int take = Math.min(space, held.getCount());
         entityData.set(DATA_PAYLOAD_AMMO, getPayloadAmmo() + take);
         if (!player.getAbilities().instabuild) held.shrink(take);
-        player.displayClientMessage(
-            net.minecraft.network.chat.Component.translatable("msg.fpv.payload_loaded", getPayloadAmmo(), payloadCapacity()), true);
+        player.sendOverlayMessage(
+            net.minecraft.network.chat.Component.translatable("msg.fpv.payload_loaded", getPayloadAmmo(), payloadCapacity()));
         playSound(org.restor.fpv.sound.ModSounds.PAYLOAD_RELEASE.get(), 0.6f, 1.4f);
     }
 
@@ -1881,19 +1881,19 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     private void loadRockets(Player player, net.minecraft.world.item.ItemStack held) {
         if (rocketCapacity() <= 0) {
-            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.rocket_no_pod"), true);
+            player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.rocket_no_pod"));
             return;
         }
         int space = rocketCapacity() - getRocketAmmo();
         if (space <= 0) {
-            player.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.rocket_full"), true);
+            player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.rocket_full"));
             return;
         }
         int take = Math.min(space, held.getCount());
         entityData.set(DATA_ROCKET_AMMO, getRocketAmmo() + take);
         if (!player.getAbilities().instabuild) held.shrink(take);
-        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-            "msg.fpv.rocket_loaded", getRocketAmmo(), rocketCapacity()), true);
+        player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+            "msg.fpv.rocket_loaded", getRocketAmmo(), rocketCapacity()));
         playSound(org.restor.fpv.sound.ModSounds.PAYLOAD_RELEASE.get(), 0.6f, 1.2f);
     }
 
@@ -1913,14 +1913,14 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             giveBack(player, new net.minecraft.world.item.ItemStack(
                 org.restor.fpv.item.ModItems.DROP_CHARGE.get(), charges));
         }
-        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-            "msg.fpv.ordnance_unloaded", rockets, charges), true);
+        player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+            "msg.fpv.ordnance_unloaded", rockets, charges));
         playSound(org.restor.fpv.sound.ModSounds.PAYLOAD_RELEASE.get(), 0.6f, 0.9f);
         return true;
     }
 
     private void giveBack(Player player, net.minecraft.world.item.ItemStack stack) {
-        if (!player.addItem(stack)) player.drop(stack, false);
+        if (!player.addItem(stack)) player.drop(stack, false, net.minecraft.util.Prediction.SERVER_ONLY);
     }
 
     /** Weapon key: launches a rocket off the rails, or fires the dart gun straight ahead. */
@@ -1930,7 +1930,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (rocketCapacity() > 0) {
             boolean infinite = ServerRule.INFINITE_AMMO.on();
             if (!infinite && getRocketAmmo() <= 0) {
-                pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.rocket_empty"), true);
+                pilot.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.rocket_empty"));
                 return;
             }
             if (!infinite) entityData.set(DATA_ROCKET_AMMO, getRocketAmmo() - 1);
@@ -1951,7 +1951,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
             playSound(org.restor.fpv.sound.ModSounds.DART.get(), 0.7f, 1.7f);
             return;
         }
-        pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.no_weapon"), true);
+        pilot.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.no_weapon"));
     }
 
     // Spawns a projectile just ahead of the airframe, aimed down the camera axis and carrying
@@ -1978,7 +1978,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (!canPlayerAccess(pilot)) return;
         boolean infinite = ServerRule.INFINITE_AMMO.on() && payloadCapacity() > 0;
         if (!infinite && getPayloadAmmo() <= 0) {
-            pilot.displayClientMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.payload_empty"), true);
+            pilot.sendOverlayMessage(net.minecraft.network.chat.Component.translatable("msg.fpv.payload_empty"));
             return;
         }
         if (payloadCooldown > 0) return;
@@ -2096,9 +2096,9 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
 
     public void cycleFlightMode(Player player) {
         cycleFlightMode();
-        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
+        player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
             "msg.fpv.flight_mode_set",
-            net.minecraft.network.chat.Component.translatable(flightController.getMode().translationKey())), true);
+            net.minecraft.network.chat.Component.translatable(flightController.getMode().translationKey())));
     }
 
     /** Tailsitter airframes stand on their tail: thrust leaves through the nose. */
@@ -2275,8 +2275,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         // The pilot's body follows the drone (that's what streams chunks to the
         // client) — keep it invisible and invulnerable for the duration.
         PilotSessions.open(player, this, stationReturn);
-        pilotWasInvulnerable = player.isInvulnerable();
-        player.setInvulnerable(true);
+        pilotWasInvulnerable = player.isPermanentlyInvulnerable();
+        player.setPermanentlyInvulnerable(true);
         player.setInvisible(true);
         PilotSessions.syncFlagsToSelf(player);
         spawnDummy(player, stationReturn.pos());
@@ -2327,7 +2327,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (p != null) {
             if (remoteFpv) {
                 PilotSessions.close(p);
-                p.setInvulnerable(pilotWasInvulnerable);
+                p.setPermanentlyInvulnerable(pilotWasInvulnerable);
                 p.setInvisible(false);
                 PilotSessions.syncFlagsToSelf(p);
                 if (home != null) home.send(p);
@@ -2385,10 +2385,10 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         r = Math.max(r, 2);
         net.minecraft.world.level.ChunkPos center = chunkPosition();
 
-        boolean centerMoved = center.toLong() != lastStreamCenter;
+        boolean centerMoved = center.pack() != lastStreamCenter;
         if (centerMoved) {
-            lastStreamCenter = center.toLong();
-            pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket(center.x, center.z));
+            lastStreamCenter = center.pack();
+            pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket(center.x(), center.z()));
         } else if (streamTickets.isEmpty()) {
             // Nothing moved and nothing is still generating: every chunk in radius is already
             // on the client, so there is nothing for a rescan to find.
@@ -2417,10 +2417,10 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
                 for (int dz = -d; dz <= d; dz++) {
                     if (d > 0 && Math.abs(dx) != d && Math.abs(dz) != d) continue;
                     if (sentThisTick >= budget) break ring;
-                    int cx = center.x + dx;
-                    int cz = center.z + dz;
+                    int cx = center.x() + dx;
+                    int cz = center.z() + dz;
                     candidates++;
-                    long key = net.minecraft.world.level.ChunkPos.asLong(cx, cz);
+                    long key = net.minecraft.world.level.ChunkPos.pack(cx, cz);
                     if (streamedChunks.contains(key)) continue;
                     net.minecraft.world.level.chunk.LevelChunk chunk = sl.getChunkSource().getChunkNow(cx, cz);
                     if (chunk != null) {
@@ -2454,8 +2454,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     private static int chunkDist(long key, net.minecraft.world.level.ChunkPos center) {
-        return Math.max(Math.abs(net.minecraft.world.level.ChunkPos.getX(key) - center.x),
-            Math.abs(net.minecraft.world.level.ChunkPos.getZ(key) - center.z));
+        return Math.max(Math.abs(net.minecraft.world.level.ChunkPos.getX(key) - center.x()),
+            Math.abs(net.minecraft.world.level.ChunkPos.getZ(key) - center.z()));
     }
 
     private static void removeStreamTicket(net.minecraft.server.level.ServerLevel sl, long key) {
@@ -2480,7 +2480,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (!(level() instanceof net.minecraft.server.level.ServerLevel sl)) return;
         int r = Math.min(1, org.restor.fpv.Config.DEV_CHUNK_RADIUS.get());
         if (r < 0) { clearForcedChunks(); return; }
-        long center = net.minecraft.world.level.ChunkPos.asLong(
+        long center = net.minecraft.world.level.ChunkPos.pack(
             blockPosition().getX() >> 4, blockPosition().getZ() >> 4);
         if (center == lastForcedCenter && !forcedChunks.isEmpty()) return;
         lastForcedCenter = center;
@@ -2489,7 +2489,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         java.util.Set<Long> want = new java.util.HashSet<>();
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
-                want.add(net.minecraft.world.level.ChunkPos.asLong(cx + dx, cz + dz));
+                want.add(net.minecraft.world.level.ChunkPos.pack(cx + dx, cz + dz));
             }
         }
         if (want.equals(forcedChunks)) return;
@@ -2553,21 +2553,22 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     @Override
-    public net.minecraft.world.entity.InterpolationHandler getInterpolation() {
-        return interpolation;
-    }
-
-    private final net.minecraft.world.entity.InterpolationHandler interpolation = new net.minecraft.world.entity.InterpolationHandler(this) {
-        @Override
-        public void interpolateTo(Vec3 pos, float yRot, float xRot) {
-            if (level().isClientSide() && (predAge <= 5 || entityData.get(DATA_POSE_LOCK))) {
-                serverSyncPos = pos;
-                return;
+    protected net.minecraft.world.entity.InterpolationHandler createInterpolationHandler() {
+        return new net.minecraft.world.entity.InterpolationHandler.NoOpInterpolationHandler() {
+            @Override
+            public boolean interpolateTo(net.minecraft.world.entity.PositionPath path, float yRot, float xRot, boolean hasRotation) {
+                if (path == null) return false;
+                Vec3 pos = path.endPosition();
+                if (level().isClientSide() && (predAge <= 5 || entityData.get(DATA_POSE_LOCK))) {
+                    serverSyncPos = pos;
+                    return true;
+                }
+                setPos(pos);
+                if (hasRotation) setRot(yRot, xRot);
+                return true;
             }
-            setPos(pos);
-            setRot(yRot, xRot);
-        }
-    };
+        };
+    }
 
     // Called client-side by ClientEventHandler with the same values it sends to the
     // server, enabling zero-latency rotation prediction in clientTick().

@@ -31,7 +31,7 @@ public class CargoPlaneEntity extends PlaneEntity implements MenuProvider {
     private static final EntityDataAccessor<Float> DATA_CARGO =
         SynchedEntityData.defineId(CargoPlaneEntity.class, EntityDataSerializers.FLOAT);
 
-    private final SimpleContainer bay = new SimpleContainer(BAY_SLOTS);
+    private final org.restor.fpv.util.ListenableContainer bay = new org.restor.fpv.util.ListenableContainer(BAY_SLOTS);
 
     public CargoPlaneEntity(EntityType<?> type, Level level) {
         super(type, level);
@@ -68,14 +68,14 @@ public class CargoPlaneEntity extends PlaneEntity implements MenuProvider {
     }
 
     @Override
-    public InteractionResult interact(Player player, InteractionHand hand) {
+    public InteractionResult interact(Player player, InteractionHand hand, net.minecraft.world.phys.Vec3 location) {
         if (player.isSecondaryUseActive()) {
             if (!level().isClientSide() && player instanceof ServerPlayer sp) {
 sp.openMenu(this, buf -> buf.writeInt(getId()));
             }
             return InteractionResult.SUCCESS;
         }
-        return super.interact(player, hand);
+        return super.interact(player, hand, location);
     }
 
     @Override

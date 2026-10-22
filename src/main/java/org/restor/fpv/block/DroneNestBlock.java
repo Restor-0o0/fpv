@@ -26,13 +26,6 @@ import net.minecraft.world.level.block.Block;
 // player is near, capped by how many of its drones are still alive around it. Break the
 // nest to stop the swarm.
 public class DroneNestBlock extends BaseEntityBlock {
-    public static final com.mojang.serialization.MapCodec<DroneNestBlock> CODEC = simpleCodec(DroneNestBlock::new);
-
-    @Override
-    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
-
 
     public DroneNestBlock(Properties props) {
         super(props);
@@ -53,7 +46,7 @@ public class DroneNestBlock extends BaseEntityBlock {
     @Override
     protected net.minecraft.world.InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.player.Player player, net.minecraft.world.phys.BlockHitResult hit) {
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof DroneNestBlockEntity nest) {
-            player.displayClientMessage(nest.status(level), true);
+            player.sendOverlayMessage(nest.status(level));
         }
         return net.minecraft.world.InteractionResult.SUCCESS;
     }

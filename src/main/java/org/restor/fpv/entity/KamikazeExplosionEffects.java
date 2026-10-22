@@ -59,7 +59,7 @@ public final class KamikazeExplosionEffects {
         BlockPos origin = BlockPos.containing(x, y, z);
 
         for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-radius, -radius, -radius), origin.offset(radius, radius, radius))) {
-            double d2 = pos.getCenter().distanceToSqr(center);
+            double d2 = Vec3.atCenterOf(pos).distanceToSqr(center);
             if (d2 > radius * radius) continue;
             BlockState state = sl.getBlockState(pos);
             if (state.isAir() || !state.getFluidState().isEmpty()) continue;
@@ -67,23 +67,23 @@ public final class KamikazeExplosionEffects {
             candidates.add(pos.immutable());
         }
 
-        java.util.Collections.shuffle(candidates, new java.util.Random(sl.random.nextLong()));
+        java.util.Collections.shuffle(candidates, new java.util.Random(sl.getRandom().nextLong()));
         int count = Math.min(maxBlocks, candidates.size());
         for (int i = 0; i < count; i++) {
             BlockPos pos = candidates.get(i);
             BlockState state = sl.getBlockState(pos);
             if (state.isAir()) continue;
-            Vec3 fromCenter = pos.getCenter().subtract(center);
-            if (fromCenter.lengthSqr() < 1.0e-4) fromCenter = new Vec3(sl.random.nextDouble() - 0.5, 0.35, sl.random.nextDouble() - 0.5);
-            Vec3 dir = fromCenter.normalize().add(0, 0.75 + sl.random.nextDouble() * 0.55, 0).normalize();
-            Vec3 spawn = pos.getCenter().add(dir.scale(0.65 + sl.random.nextDouble() * 0.55)).add(0, 0.35, 0);
+            Vec3 fromCenter = Vec3.atCenterOf(pos).subtract(center);
+            if (fromCenter.lengthSqr() < 1.0e-4) fromCenter = new Vec3(sl.getRandom().nextDouble() - 0.5, 0.35, sl.getRandom().nextDouble() - 0.5);
+            Vec3 dir = fromCenter.normalize().add(0, 0.75 + sl.getRandom().nextDouble() * 0.55, 0).normalize();
+            Vec3 spawn = Vec3.atCenterOf(pos).add(dir.scale(0.65 + sl.getRandom().nextDouble() * 0.55)).add(0, 0.35, 0);
             FallingBlockEntity block = FallingBlockEntity.fall(sl, BlockPos.containing(spawn), state);
             block.setPos(spawn.x, spawn.y, spawn.z);
             double powerScale = Math.sqrt(Math.max(1.0, power)) / 4.0;
-            double strength = (0.35 + sl.random.nextDouble() * 0.35
-                + Math.max(0, radius - Math.sqrt(pos.getCenter().distanceToSqr(center))) * 0.025) * powerScale;
+            double strength = (0.35 + sl.getRandom().nextDouble() * 0.35
+                + Math.max(0, radius - Math.sqrt(Vec3.atCenterOf(pos).distanceToSqr(center))) * 0.025) * powerScale;
             block.setDeltaMovement(dir.scale(strength));
-            block.hurtMarked = true;
+            block.syncVelocity = true;
         }
     }
 
@@ -97,7 +97,7 @@ public final class KamikazeExplosionEffects {
         Vec3 center = new Vec3(x, y, z);
         BlockPos origin = BlockPos.containing(x, y, z);
         for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-radius, -radius, -radius), origin.offset(radius, radius, radius))) {
-            if (pos.getCenter().distanceToSqr(center) > radius * radius) continue;
+            if (Vec3.atCenterOf(pos).distanceToSqr(center) > radius * radius) continue;
             BlockState state = sl.getBlockState(pos);
             if (state.isAir() || state.getDestroySpeed(sl, pos) < 0f || sl.getBlockEntity(pos) != null) continue;
             blocks.put(pos.immutable(), state);
@@ -110,7 +110,7 @@ public final class KamikazeExplosionEffects {
         double breakPercent = ServerRule.BLOCK_BREAK.value();
         if (breakPercent <= 0.0) breakPercent = 0.0;
         java.util.ArrayList<BlockPos> positions = new java.util.ArrayList<>(before.keySet());
-        java.util.Collections.shuffle(positions, new java.util.Random(sl.random.nextLong()));
+        java.util.Collections.shuffle(positions, new java.util.Random(sl.getRandom().nextLong()));
         int keepBroken = (int) Math.round(positions.size() * Math.min(100.0, breakPercent) / 100.0);
         for (int i = keepBroken; i < positions.size(); i++) {
             BlockPos pos = positions.get(i);
@@ -128,7 +128,7 @@ public final class KamikazeExplosionEffects {
         java.util.ArrayList<BlockPos> floating = new java.util.ArrayList<>();
 
         for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-radius, -radius, -radius), origin.offset(radius, radius, radius))) {
-            if (pos.getCenter().distanceToSqr(center) > radius * radius) continue;
+            if (Vec3.atCenterOf(pos).distanceToSqr(center) > radius * radius) continue;
             BlockState state = sl.getBlockState(pos);
             if (state.isAir() || !state.getFluidState().isEmpty()) continue;
             if (state.getDestroySpeed(sl, pos) < 0f || sl.getBlockEntity(pos) != null) continue;

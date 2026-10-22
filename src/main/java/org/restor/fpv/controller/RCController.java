@@ -1,12 +1,8 @@
 package org.restor.fpv.controller;
 
 import com.mojang.logging.LogUtils;
-import org.lwjgl.glfw.GLFW;
 import org.restor.fpv.Config;
 import org.slf4j.Logger;
-
-import java.nio.ByteBuffer;
-import java.nio.FloatBuffer;
 
 public class RCController {
     public static final int AXIS_THROTTLE = 0;
@@ -33,33 +29,30 @@ public class RCController {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public static void scan() {
-        for (int jid = GLFW.GLFW_JOYSTICK_1; jid <= GLFW.GLFW_JOYSTICK_LAST; jid++) {
-            if (GLFW.glfwJoystickPresent(jid)) {
-                String name = GLFW.glfwGetJoystickName(jid);
-                if (name != null && (name.toLowerCase().contains("tx") || name.toLowerCase().contains("radio")
-                    || name.toLowerCase().contains("transmitter") || name.toLowerCase().contains("joystick")
-                    || name.toLowerCase().contains("gamepad") || name.toLowerCase().contains("controller")
-                    || name.toLowerCase().contains("radiomaster") || name.toLowerCase().contains("pocket")
-                    || name.toLowerCase().contains("boxer") || name.toLowerCase().contains("zorro")
-                    || name.toLowerCase().contains("t-lite") || name.toLowerCase().contains("t-pro")
-                    || name.toLowerCase().contains("commander") || name.toLowerCase().contains("elrs")
-                    || name.toLowerCase().contains("jumper") || name.toLowerCase().contains("betaflight")
-                    || name.toLowerCase().contains("ethos") || name.toLowerCase().contains("frsky"))) {
-                    setupController(jid, name);
-                    return;
-                }
+        int[] ids = Joysticks.ids();
+        for (int jid : ids) {
+            String name = Joysticks.name(jid);
+            if (name != null && (name.toLowerCase().contains("tx") || name.toLowerCase().contains("radio")
+                || name.toLowerCase().contains("transmitter") || name.toLowerCase().contains("joystick")
+                || name.toLowerCase().contains("gamepad") || name.toLowerCase().contains("controller")
+                || name.toLowerCase().contains("radiomaster") || name.toLowerCase().contains("pocket")
+                || name.toLowerCase().contains("boxer") || name.toLowerCase().contains("zorro")
+                || name.toLowerCase().contains("t-lite") || name.toLowerCase().contains("t-pro")
+                || name.toLowerCase().contains("commander") || name.toLowerCase().contains("elrs")
+                || name.toLowerCase().contains("jumper") || name.toLowerCase().contains("betaflight")
+                || name.toLowerCase().contains("ethos") || name.toLowerCase().contains("frsky"))) {
+                setupController(jid, name);
+                return;
             }
         }
 
         // Fallback: pick first joystick with 4+ axes
-        for (int jid = GLFW.GLFW_JOYSTICK_1; jid <= GLFW.GLFW_JOYSTICK_LAST; jid++) {
-            if (GLFW.glfwJoystickPresent(jid)) {
-                FloatBuffer buf = GLFW.glfwGetJoystickAxes(jid);
-                if (buf != null && buf.remaining() >= 4) {
-                    String name = GLFW.glfwGetJoystickName(jid);
-                    setupController(jid, name != null ? name : "Unknown");
-                    return;
-                }
+        for (int jid : ids) {
+            float[] buf = Joysticks.axes(jid);
+            if (buf != null && buf.length >= 4) {
+                String name = Joysticks.name(jid);
+                setupController(jid, name != null ? name : "Unknown");
+                return;
             }
         }
 
@@ -96,8 +89,8 @@ public class RCController {
         axisCenter = null; // will be calibrated on first readAxes call
 
         // Auto-detect buttons
-        ByteBuffer buttons = GLFW.glfwGetJoystickButtons(jid);
-        int btnCount = buttons != null ? buttons.remaining() : 0;
+        boolean[] buttons = Joysticks.buttons(jid);
+        int btnCount = buttons != null ? buttons.length : 0;
         if (btnCount >= 2) {
             armButton = 0;
             modeButton = 1;
@@ -114,15 +107,13 @@ public class RCController {
         if (!connected || currentJoystick < 0) return null;
         if (applyConfiguredAxisMap()) axisCenter = null;
 
-        FloatBuffer axes = GLFW.glfwGetJoystickAxes(currentJoystick);
-        if (axes == null || axes.remaining() < 4) {
+        float[] raw = Joysticks.axes(currentJoystick);
+        if (raw == null || raw.length < 4) {
             connected = false;
             return null;
         }
 
         float[] values = new float[4];
-        float[] raw = new float[axes.remaining()];
-        for (int i = 0; i < raw.length; i++) raw[i] = axes.get(i);
         lastRawAxes = raw;
 
         if (isRCTransmitter) {
@@ -270,24 +261,24 @@ public class RCController {
     public static boolean[] readButtons() {
         if (!connected || currentJoystick < 0) return null;
 
-        ByteBuffer buttons = GLFW.glfwGetJoystickButtons(currentJoystick);
-        if (buttons == null || buttons.remaining() == 0) return null;
+        boolean[] buttons = Joysticks.buttons(currentJoystick);
+        if (buttons == null || buttons.length == 0) return null;
 
         boolean[] state = new boolean[2];
-        int btnCount = buttons.remaining();
+        int btnCount = buttons.length;
 
         if (armButton >= 0 && armButton < btnCount) {
-            state[0] = buttons.get(armButton) == GLFW.GLFW_PRESS;
+            state[0] = buttons[armButton];
         }
         if (modeButton >= 0 && modeButton < btnCount) {
-            state[1] = buttons.get(modeButton) == GLFW.GLFW_PRESS;
+            state[1] = buttons[modeButton];
         }
 
         return state;
     }
 
     // RC transmitters expose their arm switch as an AUX axis (rest ~-1, flipped ~+1),
-    // not a GLFW button — so the button-based arm path never fires for them. Read the
+    // not a joystick button — so the button-based arm path never fires for them. Read the
     // configured arm axis; when unset (-1), auto-detect the first non-gimbal axis the
     // user flips high and persist it so future reads use it directly.
     public static boolean isArmSwitchOn() {

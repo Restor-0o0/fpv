@@ -9,7 +9,7 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.phys.AABB;
@@ -43,7 +43,11 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
     private static final float BOARD = 1.1f / 16f;
     private static final float BOARD_PITCH = 1.6f / 16f;
     private static final float LIP = 1.0f / 16f;
-    private static final BlockState SLAT_STATE = Blocks.BLACK_CONCRETE.defaultBlockState();
+    private static final BlockState SLAT_STATE = Blocks.CONCRETE.pick(net.minecraft.world.item.DyeColor.BLACK).defaultBlockState();
+    private static final net.minecraft.client.renderer.block.model.BlockDisplayContext SLAT_CONTEXT =
+        net.minecraft.client.renderer.block.model.BlockDisplayContext.create();
+    private static final net.minecraft.client.renderer.block.BlockModelRenderState SLAT_MODEL =
+        new net.minecraft.client.renderer.block.BlockModelRenderState();
 
     private static final Map<Item, float[]> BOUNDS = new HashMap<>();
 
@@ -123,7 +127,7 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
 
         pose.pushPose();
         pose.translate(0.5f, 0f, 0.5f);
-        pose.mulPose(Axis.YP.rotationDegrees(facing));
+        pose.rotate(Axis.YP.rotationDegrees(facing));
         pose.translate(-0.5f, 0f, -0.5f);
         for (int layer = 0; layer < layers; layer++) {
             renderTray(pose, buffer, light, overlay, layout, base + layer * step, coveredAbove || layer < layers - 1);
@@ -139,12 +143,12 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
 
             pose.pushPose();
             pose.translate(0.5f, base + layer * step + Layout.RACK_HEIGHT + 0.002f, 0.5f);
-            pose.mulPose(Axis.YP.rotationDegrees(facing));
+            pose.rotate(Axis.YP.rotationDegrees(facing));
             pose.translate(x - 0.5f, 0f, z - 0.5f);
-            if (yaw != 0f) pose.mulPose(Axis.YP.rotationDegrees(yaw));
+            if (yaw != 0f) pose.rotate(Axis.YP.rotationDegrees(yaw));
             pose.scale(scale, scale, scale);
             if (tipped) {
-                pose.mulPose(Axis.XP.rotationDegrees(90f));
+                pose.rotate(Axis.XP.rotationDegrees(90f));
                 pose.translate(0.5f - centerX, 0.5f - centerY, 0.5f - box[5]);
             } else {
                 pose.translate(0.5f - centerX, 0.5f - box[1], 0.5f - centerZ);
@@ -202,7 +206,10 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
         pose.pushPose();
         pose.translate(x, y, z);
         pose.scale(sx, sy, sz);
-        buffer.submitBlock(pose, SLAT_STATE, light, overlay, 0);
+        if (SLAT_MODEL.isEmpty()) {
+            net.minecraft.client.Minecraft.getInstance().getBlockModelResolver().update(SLAT_MODEL, SLAT_STATE, SLAT_CONTEXT);
+        }
+        SLAT_MODEL.submit(pose, buffer, light, overlay, 0);
         pose.popPose();
     }
 

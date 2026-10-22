@@ -7,7 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.world.level.Level;
@@ -176,7 +176,7 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
                              CameraRenderState camera, float scale, int color) {
         pose.pushPose();
         pose.translate(at.x, at.y, at.z);
-        pose.mulPose(camera.orientation);
+        pose.rotate(camera.orientation);
         pose.scale(-scale, -scale, scale);
         buffer.collector().submitText(pose, -font.width(s) / 2f, -4f, net.minecraft.network.chat.Component.literal(s).getVisualOrderText(),
             false, Font.DisplayMode.SEE_THROUGH, 0xF000F0, color, 0, 0);

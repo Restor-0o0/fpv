@@ -41,7 +41,7 @@ public class CarrierPlaneEntity extends PlaneEntity implements MenuProvider {
     private static final EntityDataAccessor<Float> DATA_LOAD =
         SynchedEntityData.defineId(CarrierPlaneEntity.class, EntityDataSerializers.FLOAT);
 
-    private final SimpleContainer hardpoints = new SimpleContainer(HARDPOINTS);
+    private final org.restor.fpv.util.ListenableContainer hardpoints = new org.restor.fpv.util.ListenableContainer(HARDPOINTS);
     private int releaseCooldown;
 
     public CarrierPlaneEntity(EntityType<?> type, Level level) {
@@ -105,12 +105,12 @@ public class CarrierPlaneEntity extends PlaneEntity implements MenuProvider {
     public float getModelScale() { return 1.6f; }
 
     @Override
-    public net.minecraft.world.InteractionResult interact(Player player, net.minecraft.world.InteractionHand hand) {
+    public net.minecraft.world.InteractionResult interact(Player player, net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.Vec3 location) {
         if (player.isSecondaryUseActive()) {
             if (!level().isClientSide() && player instanceof ServerPlayer sp) openHardpoints(sp);
             return net.minecraft.world.InteractionResult.SUCCESS;
         }
-        return super.interact(player, hand);
+        return super.interact(player, hand, location);
     }
 
     @Override

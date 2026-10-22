@@ -1,19 +1,31 @@
 package org.restor.fpv.assembly;
 
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.Unit;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.npc.villager.VillagerTrades;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
+import net.minecraft.world.item.trading.TradeSet;
+import net.minecraft.world.item.trading.TradeSets;
+import net.minecraft.world.item.trading.VillagerTrade;
+import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.LootParams;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Trader-firmware brain: the drone answers a right-click with a wandering trader's
@@ -24,6 +36,8 @@ import net.minecraft.world.item.trading.MerchantOffers;
 public class DroneTrader implements Merchant {
     private static final int OFFER_COUNT = 8;
     private static final int USES_PER_OFFER = 3;
+    private static final List<ResourceKey<TradeSet>> TIERS =
+        List.of(TradeSets.WANDERING_TRADER_BUYING, TradeSets.WANDERING_TRADER_UNCOMMON, TradeSets.WANDERING_TRADER_COMMON);
 
     private final Entity host;
     private MerchantOffers offers;
@@ -42,12 +56,21 @@ public class DroneTrader implements Merchant {
     private MerchantOffers roll() {
         MerchantOffers result = new MerchantOffers();
         if (!(host.level() instanceof ServerLevel level)) return result;
-        RandomSource random = level.getRandom();
-        for (var tier : VillagerTrades.WANDERING_TRADER_TRADES) {
-            VillagerTrades.ItemListing[] pool = tier.getLeft();
-            if (pool == null || pool.length == 0) continue;
+        var registry = level.registryAccess().lookupOrThrow(Registries.TRADE_SET);
+        LootContext context = new LootContext.Builder(new LootParams.Builder(level)
+                .withParameter(LootContextParams.ORIGIN, host.position())
+                .withParameter(LootContextParams.THIS_ENTITY, host)
+                .withParameter(LootContextParams.ADDITIONAL_COST_COMPONENT_ALLOWED, Unit.INSTANCE)
+                .create(LootContextParamSets.VILLAGER_TRADE))
+            .create(java.util.Optional.empty());
+        for (ResourceKey<TradeSet> key : TIERS) {
+            TradeSet set = registry.getOptional(key).orElse(null);
+            if (set == null) continue;
+            List<Holder<VillagerTrade>> pool = new ArrayList<>();
+            set.trades().forEach(pool::add);
+            if (pool.isEmpty()) continue;
             for (int i = 0; i < OFFER_COUNT * 2 && result.size() < OFFER_COUNT; i++) {
-                MerchantOffer offer = pool[random.nextInt(pool.length)].getOffer(level, host, random);
+                MerchantOffer offer = pool.get(context.getRandom().nextInt(pool.size())).value().getOffer(context);
                 if (offer == null || containsSame(result, offer)) continue;
                 result.add(new MerchantOffer(offer.getItemCostA(), offer.getItemCostB(), offer.getResult(),
                     0, USES_PER_OFFER, offer.getXp(), offer.getPriceMultiplier()));

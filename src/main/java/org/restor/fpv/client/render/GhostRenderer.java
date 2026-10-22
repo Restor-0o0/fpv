@@ -4,15 +4,13 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.SubmitCustomGeometryEvent;
 import net.neoforged.bus.api.SubscribeEvent;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -55,7 +53,7 @@ public final class GhostRenderer {
     public static void clear() { GHOSTS.clear(); }
 
     @SubscribeEvent
-    public static void onRenderLevel(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    public static void onRenderLevel(SubmitCustomGeometryEvent event) {
         if (MC.level == null) return;
 
         boolean renderRaceGhosts = !GHOSTS.isEmpty() && ClientRaceState.active();
@@ -68,9 +66,8 @@ public final class GhostRenderer {
 
         Vec3 cam = event.getLevelRenderState().cameraRenderState.pos;
         PoseStack pose = new PoseStack();
-        MultiBufferSource.BufferSource buffers = MC.renderBuffers().bufferSource();
-        RenderType type = RenderTypes.entityTranslucent(TEXTURE);
-        VertexConsumer vc = buffers.getBuffer(type);
+        SubmitBuffers buffers = new SubmitBuffers(event.getSubmitNodeCollector());
+        VertexConsumer vc = buffers.getBuffer(RenderTypes.entityTranslucent(TEXTURE));
 
         if (renderRaceGhosts) {
             for (Ghost ghost : GHOSTS) {
@@ -78,7 +75,7 @@ public final class GhostRenderer {
             }
         }
         if (replay != null) drawReplay(replay, ReplayManager.renderFrame(partial), cam, pose, vc);
-        buffers.endBatch(type);
+        buffers.flush();
     }
 
     private static void drawGhost(Ghost ghost, float elapsed, Vec3 cam, PoseStack pose, VertexConsumer vc) {
@@ -120,7 +117,7 @@ public final class GhostRenderer {
 
         pose.pushPose();
         pose.translate(x - cam.x, y - cam.y, z - cam.z);
-        pose.mulPose(q);
+        pose.rotate(q);
         float s = scaleFor(modelType);
         pose.scale(s, s, s);
 

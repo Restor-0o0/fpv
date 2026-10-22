@@ -1,7 +1,7 @@
 package org.restor.fpv.client.ui.screen;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 import java.util.function.Supplier;
@@ -17,14 +17,14 @@ public record StepperRow(int x, int y, int width, Component label, Supplier<Stri
     public int plateX() { return x + BUTTON + GAP; }
     public int plateWidth() { return width - 2 * (BUTTON + GAP); }
 
-    public void drawPlate(GuiGraphics g) {
+    public void drawPlate(GuiGraphicsExtractor g) {
         GuiPanels.inset(g, plateX(), y, plateWidth(), BUTTON, 0xFF1B1B22);
     }
 
-    public void drawText(GuiGraphics g, Font font) {
+    public void drawText(GuiGraphicsExtractor g, Font font) {
         int ty = y + (BUTTON - 8) / 2;
-        g.drawString(font, label, plateX() + 5, ty, GuiPanels.LABEL, false);
+        g.text(font, label, plateX() + 5, ty, GuiPanels.LABEL, false);
         String v = value.get();
-        g.drawString(font, v, plateX() + plateWidth() - 5 - font.width(v), ty, GuiPanels.TEXT, false);
+        g.text(font, v, plateX() + plateWidth() - 5 - font.width(v), ty, GuiPanels.TEXT, false);
     }
 }

@@ -5,10 +5,9 @@ import net.minecraft.util.Util;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.client.settings.KeyModifier;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -40,7 +39,7 @@ final class KeyBindRow extends SettingRow {
     }
 
     @Override
-    void renderControl(GuiGraphics g, Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {
+    void renderControl(GuiGraphicsExtractor g, Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {
         int chipW = w - RESET_WIDTH - 4;
         int by = y + (height() - 16) / 2;
         boolean hot = SettingsUi.inside(mouseX, mouseY, x, by, chipW, 16);
@@ -63,14 +62,14 @@ final class KeyBindRow extends SettingRow {
         if (textW > chipW - 8) {
             drawClipped(g, font, text, x + 4, by + 4, chipW - 8, color);
         } else {
-            g.drawString(font, text, x + (chipW - textW) / 2, by + 4, color, false);
+            g.text(font, text, x + (chipW - textW) / 2, by + 4, color, false);
         }
 
         if (!key.isDefault()) {
             int rx = x + w - RESET_WIDTH;
             boolean rhot = SettingsUi.inside(mouseX, mouseY, rx, by, RESET_WIDTH, 16);
             SettingsUi.rect(g, rx, by, RESET_WIDTH, 16, rhot ? SettingsUi.CHIP_HOVER : SettingsUi.CHIP);
-            g.drawString(font, "↺", rx + (RESET_WIDTH - font.width("↺")) / 2, by + 4,
+            g.text(font, "↺", rx + (RESET_WIDTH - font.width("↺")) / 2, by + 4,
                 rhot ? SettingsUi.ACCENT : SettingsUi.MUTED, false);
         }
     }
@@ -103,7 +102,7 @@ final class KeyBindRow extends SettingRow {
     @Override
     boolean keyPressed(int keyCode, int scanCode) {
         if (!listening) return false;
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+        if (keyCode == InputConstants.KEY_ESCAPE) {
             bind(KeyModifier.NONE, InputConstants.UNKNOWN);
         } else {
             InputConstants.Key pressed = InputConstants.getKey(new net.minecraft.client.input.KeyEvent(keyCode, scanCode, 0));

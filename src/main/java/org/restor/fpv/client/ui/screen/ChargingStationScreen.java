@@ -1,6 +1,6 @@
 package org.restor.fpv.client.ui.screen;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
@@ -12,9 +12,7 @@ public class ChargingStationScreen extends AbstractContainerScreen<ChargingStati
     private static final int SLOTS = 6;
 
     public ChargingStationScreen(ChargingStationMenu menu, Inventory inv, Component title) {
-        super(menu, inv, title);
-        this.imageWidth = 176;
-        this.imageHeight = 178;
+        super(menu, inv, title, 176, 178);
     }
 
     @Override
@@ -27,7 +25,8 @@ public class ChargingStationScreen extends AbstractContainerScreen<ChargingStati
     }
 
     @Override
-    protected void renderBg(GuiGraphics g, float partialTick, int mouseX, int mouseY) {
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(g, mouseX, mouseY, partialTick);
         int x = leftPos;
         int y = topPos;
         GuiPanels.panel(g, x, y, imageWidth, imageHeight);
@@ -41,7 +40,7 @@ public class ChargingStationScreen extends AbstractContainerScreen<ChargingStati
         }
     }
 
-    private void drawBar(GuiGraphics g, int x, int y, ItemStack stack) {
+    private void drawBar(GuiGraphicsExtractor g, int x, int y, ItemStack stack) {
         g.fill(x - 1, y - 1, x + 19, y + 7, 0xFF14141A);
         g.fill(x, y, x + 18, y + 6, 0xFF2F2F38);
         float charge = BatteryCharge.get(stack);
@@ -52,14 +51,8 @@ public class ChargingStationScreen extends AbstractContainerScreen<ChargingStati
     }
 
     @Override
-    protected void renderLabels(GuiGraphics g, int mouseX, int mouseY) {
-        super.renderLabels(g, mouseX, mouseY);
-        g.drawString(font, Component.translatable("screen.fpv.charging_station.hint"), 8, 20, GuiPanels.LABEL, false);
-    }
-
-    @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
-        renderTooltip(g, mouseX, mouseY);
+    protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        super.extractLabels(g, mouseX, mouseY);
+        g.text(font, Component.translatable("screen.fpv.charging_station.hint"), 8, 20, GuiPanels.LABEL, false);
     }
 }

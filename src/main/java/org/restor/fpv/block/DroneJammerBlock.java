@@ -25,13 +25,6 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class DroneJammerBlock extends BaseEntityBlock {
-    public static final com.mojang.serialization.MapCodec<DroneJammerBlock> CODEC = simpleCodec(DroneJammerBlock::new);
-
-    @Override
-    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
-        return CODEC;
-    }
-
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 
     public DroneJammerBlock(Properties properties) {
@@ -64,8 +57,8 @@ public class DroneJammerBlock extends BaseEntityBlock {
             return net.minecraft.world.InteractionResult.PASS;
         }
         int channel = jammer.cycleChannel();
-        player.displayClientMessage(net.minecraft.network.chat.Component.translatable(
-            "block.fpv.drone_jammer.channel", org.restor.fpv.component.RadioChannel.name(channel)), true);
+        player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(
+            "block.fpv.drone_jammer.channel", org.restor.fpv.component.RadioChannel.name(channel)));
         level.playSound(null, pos, net.minecraft.sounds.SoundEvents.LEVER_CLICK,
             net.minecraft.sounds.SoundSource.BLOCKS, 0.6f, channel == 0 ? 0.8f : 1.2f);
         return net.minecraft.world.InteractionResult.CONSUME;

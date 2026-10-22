@@ -2,7 +2,6 @@ package org.restor.fpv.client;
 
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.resources.language.I18n;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -21,10 +20,10 @@ public final class BlockHintTooltips {
         Identifier id = BuiltInRegistries.ITEM.getKey(event.getItemStack().getItem());
         if (!Fpv.MODID.equals(id.getNamespace())) return;
         String key = "tooltip.fpv.hint." + id.getPath();
-        if (I18n.exists(key)) {
+        if (net.minecraft.locale.Language.getInstance().has(key)) {
             event.getToolTip().add(Component.translatable(key).withStyle(ChatFormatting.DARK_GRAY));
         }
-        if (I18n.exists(key + ".2")) {
+        if (net.minecraft.locale.Language.getInstance().has(key + ".2")) {
             event.getToolTip().add(Component.translatable(key + ".2").withStyle(ChatFormatting.DARK_GRAY));
         }
     }

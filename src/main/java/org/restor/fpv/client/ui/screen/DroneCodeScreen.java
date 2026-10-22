@@ -1,7 +1,7 @@
 package org.restor.fpv.client.ui.screen;
 
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
@@ -28,7 +28,7 @@ public class DroneCodeScreen extends Screen {
 
         codeBox = new EditBox(font, cx - 50, cy - 20, 100, 20, Component.empty());
         codeBox.setMaxLength(6);
-        codeBox.setFilter(s -> s.matches("\\d*"));
+        codeBox.setResponder(s -> { if (!s.matches("\\d*")) codeBox.setValue(s.replaceAll("\\D", "")); });
         codeBox.setValue(currentCode);
         addRenderableWidget(codeBox);
         setInitialFocus(codeBox);
@@ -62,7 +62,7 @@ public class DroneCodeScreen extends Screen {
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
         int keyCode = event.key();
-        if (keyCode == 257 || keyCode == 335) { // Enter / numpad Enter
+        if (keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_RETURN || keyCode == com.mojang.blaze3d.platform.InputConstants.KEY_NUMPADENTER) {
             save(false);
             return true;
         }
@@ -70,10 +70,10 @@ public class DroneCodeScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.drawCenteredString(font, title, width / 2, height / 2 - 45, 0xFFFFFF);
-        graphics.drawCenteredString(font, Component.translatable("screen.fpv.set_code_hint"),
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(graphics, mouseX, mouseY, partialTick);
+        graphics.centeredText(font, title, width / 2, height / 2 - 45, 0xFFFFFF);
+        graphics.centeredText(font, Component.translatable("screen.fpv.set_code_hint"),
             width / 2, height / 2 - 33, 0xAAAAAA);
     }
 

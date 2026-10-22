@@ -32,9 +32,9 @@ public final class WarheadDetonation {
         if (type.incendiary()) scorch(sl, at, Math.max(power, 1.0f));
         int submunitions = type.submunitions();
         for (int i = 0; i < submunitions; i++) {
-            double a = sl.random.nextDouble() * Math.PI * 2;
-            double r = 2.5 + sl.random.nextDouble() * power * 1.6;
-            Vec3 sub = at.add(Math.cos(a) * r, sl.random.nextDouble() * 1.5, Math.sin(a) * r);
+            double a = sl.getRandom().nextDouble() * Math.PI * 2;
+            double r = 2.5 + sl.getRandom().nextDouble() * power * 1.6;
+            Vec3 sub = at.add(Math.cos(a) * r, sl.getRandom().nextDouble() * 1.5, Math.sin(a) * r);
             blast(sl, source, sub, power * 0.8f, blockPower * 0.8f, type.mobDamageMul());
         }
     }
@@ -74,7 +74,7 @@ public final class WarheadDetonation {
         BlockPos origin = BlockPos.containing(at);
         for (BlockPos pos : BlockPos.betweenClosed(origin.offset(-r, -r, -r), origin.offset(r, r, r))) {
             if (pos.distSqr(origin) > (double) r * r) continue;
-            if (sl.random.nextFloat() > 0.28f) continue;
+            if (sl.getRandom().nextFloat() > 0.28f) continue;
             BlockState state = sl.getBlockState(pos);
             if (!state.isAir()) continue;
             if (!sl.getBlockState(pos.below()).isFaceSturdy(sl, pos.below(), net.minecraft.core.Direction.UP)) continue;

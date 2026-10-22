@@ -38,7 +38,8 @@ public final class ModSoundVolume {
 
     private record Scaled(SoundInstance inner, float scale) implements SoundInstance {
         @Override public Identifier getIdentifier() { return inner.getIdentifier(); }
-        @Override public WeighedSoundEvents resolve(SoundManager manager) { return inner.resolve(manager); }
+        @Override public WeighedSoundEvents getOrResolve(SoundManager manager) { return inner.getOrResolve(manager); }
+        @Override public WeighedSoundEvents getSoundEvent() { return inner.getSoundEvent(); }
         @Override public Sound getSound() { return inner.getSound(); }
         @Override public SoundSource getSource() { return inner.getSource(); }
         @Override public boolean isLooping() { return inner.isLooping(); }

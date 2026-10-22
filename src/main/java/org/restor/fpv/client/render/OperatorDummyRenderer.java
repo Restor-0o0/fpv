@@ -9,7 +9,7 @@ import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -65,13 +65,13 @@ public class OperatorDummyRenderer extends EntityRenderer<OperatorDummyEntity, O
 
         poseStack.pushPose();
         // Standard living-entity model space: rotate to facing, flip, drop to feet.
-        poseStack.mulPose(Axis.YP.rotationDegrees(180f - Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot())));
+        poseStack.rotate(Axis.YP.rotationDegrees(180f - Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot())));
         poseStack.scale(-1f, -1f, 1f);
         poseStack.translate(0f, -1.501f, 0f);
 
         pose(m);
         var vc = buffer.getBuffer(RenderTypes.entityTranslucent(skin));
-        m.renderToBuffer(poseStack, vc, packedLight, OverlayTexture.NO_OVERLAY);
+        m.renderToBuffer(poseStack, vc, packedLight, OverlayTexture.NO_OVERLAY, -1);
         renderHeadGear(entity, m, poseStack, buffer, packedLight);
         poseStack.popPose();
 
@@ -87,7 +87,7 @@ public class OperatorDummyRenderer extends EntityRenderer<OperatorDummyEntity, O
         poseStack.pushPose();
         m.head.translateAndRotate(poseStack);
         poseStack.translate(0f, -0.25f, 0f);
-        poseStack.mulPose(Axis.YP.rotationDegrees(180f));
+        poseStack.rotate(Axis.YP.rotationDegrees(180f));
         poseStack.scale(0.625f, -0.625f, -0.625f);
         buffer.item(gear, net.minecraft.world.item.ItemDisplayContext.HEAD, poseStack, packedLight, entity.level());
         poseStack.popPose();
@@ -98,10 +98,10 @@ public class OperatorDummyRenderer extends EntityRenderer<OperatorDummyEntity, O
         var radio = entity.getRadio();
         if (radio.isEmpty()) return;
         poseStack.pushPose();
-        poseStack.mulPose(Axis.YP.rotationDegrees(180f - Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot())));
+        poseStack.rotate(Axis.YP.rotationDegrees(180f - Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot())));
         poseStack.translate(0f, 1.12f, -0.34f);
-        poseStack.mulPose(Axis.XP.rotationDegrees(-55f));
-        poseStack.mulPose(Axis.YP.rotationDegrees(180f));
+        poseStack.rotate(Axis.XP.rotationDegrees(-55f));
+        poseStack.rotate(Axis.YP.rotationDegrees(180f));
         poseStack.scale(0.9f, 0.9f, 0.9f);
         buffer.item(radio, net.minecraft.world.item.ItemDisplayContext.FIXED, poseStack, packedLight, entity.level());
         poseStack.popPose();
@@ -110,7 +110,7 @@ public class OperatorDummyRenderer extends EntityRenderer<OperatorDummyEntity, O
     // Static "operator" pose: standing, both arms forward holding the radio.
     private static void pose(PlayerModel m) {
         m.resetPose();
-        m.setAllVisible(true);
+        m.allParts().forEach(p -> p.visible = true);
         m.head.setRotation(0.25f, 0, 0); // looking slightly down at the sticks
         m.body.setRotation(0, 0, 0);
         m.rightArm.setRotation(-1.1f, -0.25f, 0);

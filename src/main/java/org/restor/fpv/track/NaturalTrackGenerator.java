@@ -51,14 +51,14 @@ public final class NaturalTrackGenerator {
             || !level.dimension().equals(Level.OVERWORLD)) return;
         ChunkPos chunk = event.getChunk().getPos();
         int spacing = TrackGenerationConfig.SPACING_CHUNKS.get();
-        int regionX = Math.floorDiv(chunk.x, spacing);
-        int regionZ = Math.floorDiv(chunk.z, spacing);
-        long region = ChunkPos.asLong(regionX, regionZ);
+        int regionX = Math.floorDiv(chunk.x(), spacing);
+        int regionZ = Math.floorDiv(chunk.z(), spacing);
+        long region = ChunkPos.pack(regionX, regionZ);
         long seed = regionSeed(level.getSeed(), regionX, regionZ);
         if (unitDouble(seed) >= TrackGenerationConfig.REGION_CHANCE.get()) return;
         int targetX = regionX * spacing + Math.floorMod(mix(seed ^ 0x31f2a9b47c6d8e05L), spacing);
         int targetZ = regionZ * spacing + Math.floorMod(mix(seed ^ 0x7c15d3e9a4206bf1L), spacing);
-        if (chunk.x == targetX && chunk.z == targetZ) {
+        if (chunk.x() == targetX && chunk.z() == targetZ) {
             PENDING.computeIfAbsent(level.dimension(), key -> new PendingRegions())
                 .offer(region, TrackGenerationConfig.MAX_PENDING_REGIONS.get());
         }

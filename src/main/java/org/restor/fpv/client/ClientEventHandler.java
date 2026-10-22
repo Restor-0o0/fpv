@@ -108,7 +108,7 @@ public class ClientEventHandler {
     // or Q drops the held item and E opens the inventory every time the drone yaws.
     @SubscribeEvent
     public static void onClientTickPre(ClientTickEvent.Pre event) {
-        if (!heavyDroneActive || MC.player == null || MC.screen != null) return;
+        if (!heavyDroneActive || MC.player == null || MC.gui.screen() != null) return;
         while (MC.options.keyDrop.consumeClick()) { }
         while (MC.options.keyInventory.consumeClick()) { }
     }
@@ -212,7 +212,7 @@ public class ClientEventHandler {
             prevSneakKey = sneakDown;
 
             if (ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
-                MC.setScreen(new FpvSettingsScreen(null));
+                MC.gui.setScreen(new FpvSettingsScreen(null));
                 return;
             }
 
@@ -290,8 +290,8 @@ public class ClientEventHandler {
         // Planes are riding-only (no remote control station).
         PlaneEntity plane = MC.player.getVehicle() instanceof PlaneEntity p ? p : null;
         if (plane == null) {
-            if (MC.screen == null && ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
-                MC.setScreen(new FpvSettingsScreen(null));
+            if (MC.gui.screen() == null && ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
+                MC.gui.setScreen(new FpvSettingsScreen(null));
             }
             planeInitialized = false;
             planeTargetStreamActive = false;
@@ -305,7 +305,7 @@ public class ClientEventHandler {
         }
 
         if (ModKeyBindings.OPEN_SETTINGS.consumeClick()) {
-            MC.setScreen(new FpvSettingsScreen(null));
+            MC.gui.setScreen(new FpvSettingsScreen(null));
             return;
         }
         if (ModKeyBindings.TOGGLE_HUD.consumeClick()) {
@@ -358,8 +358,8 @@ public class ClientEventHandler {
                 ClientPacketDistributor.sendToServer(new org.restor.fpv.network.PlaneStrikePacket(
                     plane.getId(), target.x, target.y, target.z));
             } else {
-                MC.player.displayClientMessage(
-                    net.minecraft.network.chat.Component.translatable("msg.fpv.strike_no_target"), true);
+                MC.player.sendOverlayMessage(
+                    net.minecraft.network.chat.Component.translatable("msg.fpv.strike_no_target"));
             }
         }
         // Default: mouse drives the gimbal with a radio connected, flies the wing without
@@ -848,7 +848,7 @@ public class ClientEventHandler {
 
     private static void actionBar(String key) {
         if (MC.player != null) {
-            MC.player.displayClientMessage(net.minecraft.network.chat.Component.translatable(key), true);
+            MC.player.sendOverlayMessage(net.minecraft.network.chat.Component.translatable(key));
         }
     }
 
@@ -1057,7 +1057,7 @@ public class ClientEventHandler {
 
     @SubscribeEvent
     public static void onMouseScroll(net.neoforged.neoforge.client.event.InputEvent.MouseScrollingEvent event) {
-        if (MC.screen != null || !fpvActive()) return;
+        if (MC.gui.screen() != null || !fpvActive()) return;
         fpvZoom = (float) Math.max(1.0, Math.min(8.0, fpvZoom + event.getScrollDeltaY() * 0.5));
         event.setCanceled(true); // don't also scroll the hotbar
     }

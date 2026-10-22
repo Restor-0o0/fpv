@@ -2,7 +2,7 @@ package org.restor.fpv.client.ui.screen.settings;
 
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
@@ -51,11 +51,11 @@ public final class MenuSettingsButton extends AbstractWidget {
 
     @Override
     public void onClick(net.minecraft.client.input.MouseButtonEvent event, boolean doubleClick) {
-        Minecraft.getInstance().setScreen(new FpvSettingsScreen(owner));
+        Minecraft.getInstance().gui.setScreen(new FpvSettingsScreen(owner));
     }
 
     @Override
-    protected void renderWidget(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    protected void extractWidgetRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         boolean hot = isHoveredOrFocused();
         SettingsUi.rect(g, getX(), getY(), SIZE, SIZE, hot ? 0xE0262932 : 0xC0181A20);
         SettingsUi.outline(g, getX(), getY(), SIZE, SIZE, hot ? SettingsUi.ACCENT : 0xFF000000);

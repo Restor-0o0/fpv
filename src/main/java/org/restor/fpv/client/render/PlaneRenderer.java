@@ -31,14 +31,14 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity, PlaneRenderer.Sta
 
     @Override
     public boolean shouldRender(PlaneEntity entity, net.minecraft.client.renderer.culling.Frustum frustum,
-                                double camX, double camY, double camZ) {
+                                double camX, double camY, double camZ, float partialTicks) {
         if (entity instanceof org.restor.fpv.entity.KamikazeWingEntity) {
             double dx = entity.getX() - camX;
             double dy = entity.getY() - camY;
             double dz = entity.getZ() - camZ;
             if (dx * dx + dy * dy + dz * dz < FAR_RENDER_DISTANCE_SQR) return true;
         }
-        return super.shouldRender(entity, frustum, camX, camY, camZ);
+        return super.shouldRender(entity, frustum, camX, camY, camZ, partialTicks);
     }
 
     @Override
@@ -54,7 +54,7 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity, PlaneRenderer.Sta
 
     @Override
     public void submit(State state, PoseStack poseStack, net.minecraft.client.renderer.SubmitNodeCollector collector,
-                       net.minecraft.client.renderer.state.CameraRenderState camera) {
+                       net.minecraft.client.renderer.state.level.CameraRenderState camera) {
         SubmitBuffers buffer = new SubmitBuffers(collector);
         render(state.entity, state.partialTick, poseStack, buffer, state.lightCoords);
         buffer.flush();
@@ -85,7 +85,7 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity, PlaneRenderer.Sta
             q = new Quaternionf(modelQuat(entity.yRotO, entity.xRotO, entity.getPrevRoll()))
                 .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
         }
-        poseStack.mulPose(q);
+        poseStack.rotate(q);
 
         float scale = MODEL_SCALE * entity.getModelScale();
         poseStack.scale(scale, scale, scale);

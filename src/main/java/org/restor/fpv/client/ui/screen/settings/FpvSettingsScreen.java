@@ -1,14 +1,14 @@
 package org.restor.fpv.client.ui.screen.settings;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.neoforged.neoforge.common.ModConfigSpec;
-import org.lwjgl.glfw.GLFW;
 import org.restor.fpv.Config;
 import org.restor.fpv.client.LineOfSightSession;
 import org.restor.fpv.client.ModKeyBindings;
@@ -496,13 +496,13 @@ public class FpvSettingsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
         float delta = minecraft.getDeltaTracker().getRealtimeDeltaTicks();
         openAnim = Math.min(1f, openAnim + delta * 0.25f);
         scroll += (scrollTarget - scroll) * Math.min(1f, delta * 0.6f);
         if (Math.abs(scrollTarget - scroll) < 0.25) scroll = scrollTarget;
 
-        renderBackground(g, mouseX, mouseY, partialTick);
+        extractBackground(g, mouseX, mouseY, partialTick);
         g.fill(0, 0, width, height, (int) (openAnim * 0x60) << 24);
 
         g.pose().pushMatrix();
@@ -525,7 +525,7 @@ public class FpvSettingsScreen extends Screen {
         renderRowTooltip(g, mouseX, mouseY);
     }
 
-    private void renderRowTooltip(GuiGraphics g, int mouseX, int mouseY) {
+    private void renderRowTooltip(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         if (tipRow == null || pressed != null || listening != null) return;
         if (net.minecraft.util.Util.getMillis() - tipSince < TOOLTIP_DELAY_MS) return;
         List<net.minecraft.util.FormattedCharSequence> lines = new ArrayList<>();
@@ -548,7 +548,7 @@ public class FpvSettingsScreen extends Screen {
         int ly = by + 5;
         for (int i = 0; i < lines.size(); i++) {
             if (i == labelLines && i > 0) ly += 3;
-            g.drawString(font, lines.get(i), bx + 6, ly, i < labelLines ? SettingsUi.TEXT : SettingsUi.MUTED, false);
+            g.text(font, lines.get(i), bx + 6, ly, i < labelLines ? SettingsUi.TEXT : SettingsUi.MUTED, false);
             ly += 10;
         }
     }
@@ -557,13 +557,13 @@ public class FpvSettingsScreen extends Screen {
         return 1f - (1f - t) * (1f - t) * (1f - t);
     }
 
-    private void renderSidebar(GuiGraphics g, int mouseX, int mouseY) {
+    private void renderSidebar(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         boolean wide = sidebar == SIDEBAR_WIDE;
         int bx = wx + (wide ? 12 : (sidebar - 12) / 2);
         SettingsUi.droneIcon(g, bx, wy + 13, SettingsUi.ACCENT);
         if (wide) {
-            g.drawString(font, Component.literal("FPV").withStyle(s -> s.withBold(true)), bx + 18, wy + 11, SettingsUi.TEXT, false);
-            g.drawString(font, tr("brand_sub"), bx + 18, wy + 21, SettingsUi.FAINT, false);
+            g.text(font, Component.literal("FPV").withStyle(s -> s.withBold(true)), bx + 18, wy + 11, SettingsUi.TEXT, false);
+            g.text(font, tr("brand_sub"), bx + 18, wy + 21, SettingsUi.FAINT, false);
         }
 
         int ty = wy + 44;
@@ -578,9 +578,9 @@ public class FpvSettingsScreen extends Screen {
             }
             int color = active ? SettingsUi.ACCENT : hot ? SettingsUi.TEXT : SettingsUi.MUTED;
             int iconX = wide ? wx + 16 : wx + (sidebar - font.width(t.icon)) / 2;
-            g.drawString(font, t.icon, iconX, ty + 8, color, false);
+            g.text(font, t.icon, iconX, ty + 8, color, false);
             if (wide) {
-                g.drawString(font, Component.translatable(t.labelKey), wx + 30, ty + 8,
+                g.text(font, Component.translatable(t.labelKey), wx + 30, ty + 8,
                     active ? SettingsUi.TEXT : color, false);
             }
             ty += TAB_HEIGHT + 2;
@@ -592,17 +592,17 @@ public class FpvSettingsScreen extends Screen {
         boolean doneHot = SettingsUi.inside(mouseX, mouseY, doneX, doneY, doneW, 20);
         SettingsUi.rect(g, doneX, doneY, doneW, 20, doneHot ? 0xFFFFC555 : SettingsUi.ACCENT);
         Component done = wide ? Component.translatable("gui.done") : Component.literal("✔");
-        g.drawString(font, done, doneX + (doneW - font.width(done)) / 2, doneY + 6, 0xFF1A1A1F, false);
+        g.text(font, done, doneX + (doneW - font.width(done)) / 2, doneY + 6, 0xFF1A1A1F, false);
     }
 
-    private void renderHeader(GuiGraphics g) {
+    private void renderHeader(GuiGraphicsExtractor g) {
         int x = contentX();
-        g.drawString(font, Component.translatable(tab.labelKey).withStyle(s -> s.withBold(true)), x, wy + 12, SettingsUi.TEXT, false);
+        g.text(font, Component.translatable(tab.labelKey).withStyle(s -> s.withBold(true)), x, wy + 12, SettingsUi.TEXT, false);
         SettingRow.drawClipped(g, font, Component.translatable(tab.labelKey + ".sub"), x, wy + 25, contentW(), SettingsUi.MUTED);
         g.fill(x, wy + HEADER_HEIGHT - 5, x + contentW(), wy + HEADER_HEIGHT - 4, SettingsUi.WINDOW_EDGE);
     }
 
-    private void renderList(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    private void renderList(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         int top = listTop();
         int bottom = listBottom();
         int x = contentX();
@@ -753,20 +753,20 @@ public class FpvSettingsScreen extends Screen {
 
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
-        int keyCode = event.key(), scanCode = event.scancode(), modifiers = event.modifiers();
+        int keyCode = event.key(), scanCode = event.keycode();
         if (listening != null) {
             listening.keyPressed(keyCode, scanCode);
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_TAB) {
+        if (keyCode == InputConstants.KEY_TAB) {
             List<Tab> tabs = visibleTabs();
-            int step = (modifiers & GLFW.GLFW_MOD_SHIFT) != 0 ? -1 : 1;
+            int step = event.hasShiftDown() ? -1 : 1;
             selectTab(tabs.get(Math.floorMod(tabs.indexOf(tab) + step, tabs.size())));
             return true;
         }
-        if (keyCode == GLFW.GLFW_KEY_PAGE_DOWN || keyCode == GLFW.GLFW_KEY_PAGE_UP) {
+        if (keyCode == InputConstants.KEY_PAGEDOWN || keyCode == InputConstants.KEY_PAGEUP) {
             int page = listBottom() - listTop() - 30;
-            scrollTarget = Math.max(0, Math.min(maxScroll(), scrollTarget + (keyCode == GLFW.GLFW_KEY_PAGE_DOWN ? page : -page)));
+            scrollTarget = Math.max(0, Math.min(maxScroll(), scrollTarget + (keyCode == InputConstants.KEY_PAGEDOWN ? page : -page)));
             return true;
         }
         if (ModKeyBindings.OPEN_SETTINGS.matches(event)) {
@@ -786,7 +786,7 @@ public class FpvSettingsScreen extends Screen {
         stopListening();
         sendRules();
         Config.save();
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     private enum Tab {
@@ -820,14 +820,14 @@ public class FpvSettingsScreen extends Screen {
         }
 
         @Override
-        void render(GuiGraphics g, net.minecraft.client.gui.Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {
+        void render(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {
             SettingsUi.rect(g, x, y + 4, w, 20, 0x22FFB733);
             g.fill(x, y + 4, x + 2, y + 24, SettingsUi.ACCENT);
             drawClipped(g, font, label, x + 8, y + 10, w - 14, SettingsUi.ACCENT);
         }
 
         @Override
-        void renderControl(GuiGraphics g, net.minecraft.client.gui.Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {}
+        void renderControl(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {}
     }
 
     private static final class ControllerStatusRow extends SettingRow {
@@ -836,7 +836,7 @@ public class FpvSettingsScreen extends Screen {
         }
 
         @Override
-        void render(GuiGraphics g, net.minecraft.client.gui.Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {
+        void render(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {
             boolean connected = RCController.isConnected();
             int cy = y + height() / 2;
             SettingsUi.pill(g, x + 8, cy - 3, 6, 6, connected ? 0xFF5FD37A : SettingsUi.FAINT);
@@ -848,7 +848,7 @@ public class FpvSettingsScreen extends Screen {
         }
 
         @Override
-        void renderControl(GuiGraphics g, net.minecraft.client.gui.Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {
+        void renderControl(GuiGraphicsExtractor g, net.minecraft.client.gui.Font font, int x, int y, int w, int mouseX, int mouseY, float delta) {
             Component text = Component.translatable("settings.fpv.controller_rescan");
             int bw = Math.min(w, font.width(text) + 20);
             int bx = x + w - bw;
@@ -856,7 +856,7 @@ public class FpvSettingsScreen extends Screen {
             boolean hot = SettingsUi.inside(mouseX, mouseY, bx, by, bw, 16);
             SettingsUi.rect(g, bx, by, bw, 16, hot ? SettingsUi.CHIP_HOVER : SettingsUi.CHIP);
             SettingsUi.outline(g, bx, by, bw, 16, SettingsUi.WINDOW_EDGE);
-            g.drawString(font, text, bx + (bw - font.width(text)) / 2, by + 4, SettingsUi.TEXT, false);
+            g.text(font, text, bx + (bw - font.width(text)) / 2, by + 4, SettingsUi.TEXT, false);
         }
 
         @Override

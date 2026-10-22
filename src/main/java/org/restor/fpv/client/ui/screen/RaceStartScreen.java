@@ -2,7 +2,7 @@ package org.restor.fpv.client.ui.screen;
 
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
@@ -161,8 +161,8 @@ public class RaceStartScreen extends Screen {
     }
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(g, mouseX, mouseY, partialTick);
+    public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(g, mouseX, mouseY, partialTick);
         int rx = left + 24 + COL_W;
         GuiPanels.panel(g, left, top, PANEL_W, PANEL_H);
         GuiPanels.inset(g, left + 12, top + 26, COL_W, 14, 0xFF000000 | color);
@@ -171,17 +171,17 @@ public class RaceStartScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
+        super.extractRenderState(g, mouseX, mouseY, partialTick);
 
         int rx = left + 24 + COL_W;
-        g.drawCenteredString(font, title, left + PANEL_W / 2, top + 10, GuiPanels.TEXT);
+        g.centeredText(font, title, left + PANEL_W / 2, top + 10, GuiPanels.TEXT);
         for (StepperRow row : rows) row.drawText(g, font);
 
         RaceStartBlockEntity be = be();
         int gates = be != null ? be.getRouteSize() : 0;
-        g.drawString(font, Component.translatable("screen.fpv.race_results"), rx + 6, top + 32, 0xFFFFD040, false);
-        g.drawString(font, Component.translatable("screen.fpv.race_route_size", gates),
+        g.text(font, Component.translatable("screen.fpv.race_results"), rx + 6, top + 32, 0xFFFFD040, false);
+        g.text(font, Component.translatable("screen.fpv.race_route_size", gates),
             rx + 6, top + 44, GuiPanels.LABEL, false);
         g.fill(rx + 6, top + 56, rx + COL_W - 6, top + 57, 0xFF3C3C46);
 
@@ -189,7 +189,7 @@ public class RaceStartScreen extends Screen {
         int y = top + 62;
         int bottom = top + PANEL_H - 38;
         if (results.isEmpty()) {
-            g.drawString(font, Component.translatable("screen.fpv.race_no_results"), rx + 6, y, 0xFF888888, false);
+            g.text(font, Component.translatable("screen.fpv.race_no_results"), rx + 6, y, 0xFF888888, false);
         } else {
             int rank = 1;
             for (RaceStartBlockEntity.Result r : results) {
@@ -197,10 +197,10 @@ public class RaceStartScreen extends Screen {
                 int col = rank == 1 ? 0xFFFFE860 : 0xFFCCCCCC;
                 String name = r.player();
                 if (font.width(name) > COL_W - 78) name = font.plainSubstrByWidth(name, COL_W - 84) + "..";
-                g.drawString(font, rank + ".", rx + 6, y, col, false);
-                g.drawString(font, name, rx + 22, y, col, false);
+                g.text(font, rank + ".", rx + 6, y, col, false);
+                g.text(font, name, rx + 22, y, col, false);
                 String time = RaceStartBlockEntity.formatTime(r.timeTicks());
-                g.drawString(font, time, rx + COL_W - 6 - font.width(time), y, col, false);
+                g.text(font, time, rx + COL_W - 6 - font.width(time), y, col, false);
                 rank++;
                 y += 11;
             }
@@ -209,6 +209,6 @@ public class RaceStartScreen extends Screen {
 
     @Override
     public void onClose() {
-        minecraft.setScreen(null);
+        minecraft.gui.setScreen(null);
     }
 }

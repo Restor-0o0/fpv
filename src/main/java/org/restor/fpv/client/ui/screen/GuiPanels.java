@@ -1,6 +1,6 @@
 package org.restor.fpv.client.ui.screen;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 // Shared flat-panel drawing used by every fpv screen so they look like one mod.
 public final class GuiPanels {
@@ -16,28 +16,28 @@ public final class GuiPanels {
 
     private GuiPanels() {}
 
-    public static void panel(GuiGraphics g, int x, int y, int w, int h) {
+    public static void panel(GuiGraphicsExtractor g, int x, int y, int w, int h) {
         g.fill(x, y, x + w, y + h, EDGE);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, FRAME);
         g.fill(x + 3, y + 3, x + w - 3, y + h - 3, BODY);
     }
 
-    public static void inset(GuiGraphics g, int x, int y, int w, int h, int fill) {
+    public static void inset(GuiGraphicsExtractor g, int x, int y, int w, int h, int fill) {
         g.fill(x, y, x + w, y + h, EDGE);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, fill);
     }
 
     // Slot squares are drawn one pixel outside the 16x16 item area, like vanilla.
-    public static void slot(GuiGraphics g, int x, int y, int border) {
+    public static void slot(GuiGraphicsExtractor g, int x, int y, int border) {
         g.fill(x - 1, y - 1, x + 17, y + 17, border);
         g.fill(x, y, x + 16, y + 16, SUNKEN);
     }
 
-    public static void slot(GuiGraphics g, int x, int y) {
+    public static void slot(GuiGraphicsExtractor g, int x, int y) {
         slot(g, x, y, SLOT_BORDER);
     }
 
-    public static void arrow(GuiGraphics g, int x, int y, int color) {
+    public static void arrow(GuiGraphicsExtractor g, int x, int y, int color) {
         g.fill(x, y + 3, x + 11, y + 6, color);
         for (int i = 0; i < 5; i++) g.fill(x + 11 + i, y + i, x + 12 + i, y + 9 - i, color);
     }

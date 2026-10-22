@@ -9,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
 public final class CraftPickup {
     public static void giveTo(Player player, ItemStack stack) {
         if (stack.isEmpty()) return;
-        if (!player.getInventory().add(stack)) player.drop(stack, false);
+        if (!player.getInventory().add(stack)) player.drop(stack, false, net.minecraft.util.Prediction.SERVER_ONLY);
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
             SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 0.4f, 1.4f);
     }

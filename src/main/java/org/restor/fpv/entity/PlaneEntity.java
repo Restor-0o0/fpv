@@ -126,11 +126,11 @@ public class PlaneEntity extends Entity
             orbitRadius = Math.max(4.0, radius + ORBIT_RADIUS_MARGIN);
             orbitY = getY();
             Vec3 v = getDeltaMovement();
-            double rx = getX() - center.x, rz = getZ() - center.z;
+            double rx = getX() - center.x(), rz = getZ() - center.z();
             double cross = rx * v.z - rz * v.x; // sign picks the current rotation sense
             orbitDir = cross >= 0 ? 1 : -1;
-            entityData.set(DATA_ORB_CX, (float) center.x);
-            entityData.set(DATA_ORB_CZ, (float) center.z);
+            entityData.set(DATA_ORB_CX, (float) center.x());
+            entityData.set(DATA_ORB_CZ, (float) center.z());
             entityData.set(DATA_ORB_R, (float) orbitRadius);
             entityData.set(DATA_ORB_DIR, (float) orbitDir);
             entityData.set(DATA_ORB_Y, (float) orbitY);
@@ -584,21 +584,22 @@ public class PlaneEntity extends Entity
     }
 
     @Override
-    public net.minecraft.world.entity.InterpolationHandler getInterpolation() {
-        return interpolation;
-    }
-
-    private final net.minecraft.world.entity.InterpolationHandler interpolation = new net.minecraft.world.entity.InterpolationHandler(this) {
-        @Override
-        public void interpolateTo(Vec3 pos, float yRot, float xRot) {
-            if (level().isClientSide() && (predAge <= 5 || entityData.get(DATA_ORBIT))) {
-                serverSyncPos = pos;
-                return;
+    protected net.minecraft.world.entity.InterpolationHandler createInterpolationHandler() {
+        return new net.minecraft.world.entity.InterpolationHandler.NoOpInterpolationHandler() {
+            @Override
+            public boolean interpolateTo(net.minecraft.world.entity.PositionPath path, float yRot, float xRot, boolean hasRotation) {
+                if (path == null) return false;
+                Vec3 pos = path.endPosition();
+                if (level().isClientSide() && (predAge <= 5 || entityData.get(DATA_ORBIT))) {
+                    serverSyncPos = pos;
+                    return true;
+                }
+                setPos(pos);
+                if (hasRotation) setRot(yRot, xRot);
+                return true;
             }
-            setPos(pos);
-            setRot(yRot, xRot);
-        }
-    };
+        };
+    }
 
     public void setClientPredictedInputs(float throttle, float pitch, float roll, float yaw) {
         predThrottle = throttle;
@@ -620,14 +621,14 @@ public class PlaneEntity extends Entity
     // -------------------------------------------------------------------------
 
     @Override
-    public InteractionResult interact(Player player, InteractionHand hand) {
+    public InteractionResult interact(Player player, InteractionHand hand, Vec3 location) {
         if (player.isSecondaryUseActive()) return InteractionResult.PASS;
         if (!level().isClientSide() && !hasPassenger(player)) {
             if (player instanceof ServerPlayer sp) {
                 if (!org.restor.fpv.item.RcLink.hasTransmitter(sp)) {
-                    sp.displayClientMessage(Component.translatable("msg.fpv.need_transmitter"), true);
+                    sp.sendOverlayMessage(Component.translatable("msg.fpv.need_transmitter"));
                 } else if (!mountPilot(sp)) {
-                    sp.displayClientMessage(Component.translatable("msg.fpv.need_goggles"), true);
+                    sp.sendOverlayMessage(Component.translatable("msg.fpv.need_goggles"));
                 }
             }
             return InteractionResult.SUCCESS;
@@ -715,8 +716,8 @@ public class PlaneEntity extends Entity
         orbitBlend = Math.min(1.0f, orbitBlend + 0.045f);
         double ease = orbitBlend * orbitBlend * (3.0 - 2.0 * orbitBlend);
 
-        double rx = getX() - center.x;
-        double rz = getZ() - center.z;
+        double rx = getX() - center.x();
+        double rz = getZ() - center.z();
         double dist = Math.sqrt(rx * rx + rz * rz);
         if (dist < 1e-3) dist = 1e-3;
 
@@ -788,7 +789,7 @@ public class PlaneEntity extends Entity
         // the plane is about to enter — a wider ring meant force-ticking dozens of chunks of
         // other mods' block entities and contraptions at 20 Hz for nothing.
         int r = 1;
-        long center = net.minecraft.world.level.ChunkPos.asLong(
+        long center = net.minecraft.world.level.ChunkPos.pack(
             blockPosition().getX() >> 4, blockPosition().getZ() >> 4);
         if (center == lastForcedCenter && !forcedChunks.isEmpty()) return;
         lastForcedCenter = center;
@@ -797,7 +798,7 @@ public class PlaneEntity extends Entity
         java.util.Set<Long> want = new java.util.HashSet<>();
         for (int dx = -r; dx <= r; dx++) {
             for (int dz = -r; dz <= r; dz++) {
-                want.add(net.minecraft.world.level.ChunkPos.asLong(cx + dx, cz + dz));
+                want.add(net.minecraft.world.level.ChunkPos.pack(cx + dx, cz + dz));
             }
         }
         syncForcedChunkSet(sl, forcedChunks, want);
@@ -819,9 +820,9 @@ public class PlaneEntity extends Entity
             // every one of those packets re-centres the client's chunk cache.
             if (pilot != null) {
                 net.minecraft.world.level.ChunkPos self = chunkPosition();
-                if (self.toLong() != lastSelfCacheCenter) {
-                    lastSelfCacheCenter = self.toLong();
-                    pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket(self.x, self.z));
+                if (self.pack() != lastSelfCacheCenter) {
+                    lastSelfCacheCenter = self.pack();
+                    pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket(self.x(), self.z()));
                 }
             }
             clearTargetStreaming();
@@ -837,13 +838,13 @@ public class PlaneEntity extends Entity
             ((int) Math.floor(targetStreamCenter.x)) >> 4,
             ((int) Math.floor(targetStreamCenter.z)) >> 4);
 
-        if (center.toLong() != lastTargetStreamCenter) {
-            lastTargetStreamCenter = center.toLong();
+        if (center.pack() != lastTargetStreamCenter) {
+            lastTargetStreamCenter = center.pack();
             targetStreamedChunks.clear();
             targetCacheCenterRefresh = 0;
         }
         if (targetCacheCenterRefresh-- <= 0) {
-            pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket(center.x, center.z));
+            pilot.connection.send(new net.minecraft.network.protocol.game.ClientboundSetChunkCacheCenterPacket(center.x(), center.z()));
             targetCacheCenterRefresh = 10;
         }
 
@@ -851,7 +852,7 @@ public class PlaneEntity extends Entity
         int tickRadius = Math.min(2, r);
         for (int dx = -tickRadius; dx <= tickRadius; dx++) {
             for (int dz = -tickRadius; dz <= tickRadius; dz++) {
-                wantForced.add(net.minecraft.world.level.ChunkPos.asLong(center.x + dx, center.z + dz));
+                wantForced.add(net.minecraft.world.level.ChunkPos.pack(center.x() + dx, center.z() + dz));
             }
         }
         syncForcedChunkSet(sl, targetForcedChunks, wantForced);
@@ -863,9 +864,9 @@ public class PlaneEntity extends Entity
                 for (int dz = -d; dz <= d; dz++) {
                     if (d > 0 && Math.abs(dx) != d && Math.abs(dz) != d) continue;
                     if (sentThisTick >= MAX_STREAM_SENDS_PER_TICK) break ring;
-                    int cx = center.x + dx;
-                    int cz = center.z + dz;
-                    long key = net.minecraft.world.level.ChunkPos.asLong(cx, cz);
+                    int cx = center.x() + dx;
+                    int cz = center.z() + dz;
+                    long key = net.minecraft.world.level.ChunkPos.pack(cx, cz);
                     if (targetStreamedChunks.contains(key)) continue;
                     net.minecraft.world.level.chunk.LevelChunk chunk = sl.getChunkSource().getChunkNow(cx, cz);
                     if (chunk != null) {
@@ -929,8 +930,8 @@ public class PlaneEntity extends Entity
     }
 
     private static int chunkDist(long key, net.minecraft.world.level.ChunkPos center) {
-        return Math.max(Math.abs(net.minecraft.world.level.ChunkPos.getX(key) - center.x),
-            Math.abs(net.minecraft.world.level.ChunkPos.getZ(key) - center.z));
+        return Math.max(Math.abs(net.minecraft.world.level.ChunkPos.getX(key) - center.x()),
+            Math.abs(net.minecraft.world.level.ChunkPos.getZ(key) - center.z()));
     }
 
     private static void removeStreamTicket(net.minecraft.server.level.ServerLevel sl, long key) {
