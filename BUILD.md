@@ -1,6 +1,6 @@
 # Сборка и запуск
 
-Forge 1.20.1 (47.4.20), Java 17. Все команды — из корня проекта в PowerShell.
+Minecraft 1.21.11, NeoForge 21.11.48, Java 21. Все команды — из корня проекта в PowerShell.
 
 ## Собрать jar
 
@@ -29,23 +29,23 @@ Forge 1.20.1 (47.4.20), Java 17. Все команды — из корня пр�
 ## Куда ложится файл
 
 ```
-build\libs\fpv-1.0.0+1.20.1-forge.jar
+build\libs\fpv-1.0.0+1.21.11-neoforge.jar
 ```
 
-Имя = `mod_id`-`mod_version`+`minecraft_version`-forge из `gradle.properties`.
+Имя = `mod_id`-`mod_version`+`minecraft_version`-neoforge из `gradle.properties`.
 
 ## Установить в игру
 
 Профиль лаунчера `fpvtest`:
 
 ```powershell
-Copy-Item build\libs\fpv-1.0.0+1.20.1-forge.jar "$env:APPDATA\.minecraft\versions\fpvtest\mods\" -Force
+Copy-Item build\libs\fpv-1.0.0+1.21.11-neoforge.jar "$env:APPDATA\.minecraft\versions\fpvtest\mods\" -Force
 ```
 
 Сборка + установка одной строкой:
 
 ```powershell
-.\gradlew.bat build --offline; if ($?) { Copy-Item build\libs\fpv-1.0.0+1.20.1-forge.jar "$env:APPDATA\.minecraft\versions\fpvtest\mods\" -Force }
+.\gradlew.bat build --offline; if ($?) { Copy-Item build\libs\fpv-1.0.0+1.21.11-neoforge.jar "$env:APPDATA\.minecraft\versions\fpvtest\mods\" -Force }
 ```
 
 ## Запуск из IDE/Gradle (dev-клиент)
