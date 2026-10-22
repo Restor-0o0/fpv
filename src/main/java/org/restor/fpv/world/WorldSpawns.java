@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Mod.EventBusSubscriber(modid = Fpv.MODID)
 public final class WorldSpawns {
+    private static final boolean WILD_NESTS = false;
     private static final int NEST_CHANCE = 700;
     private static final int VILLAGE_GUARD_CHANCE = 4;
     private static final int POPULATE_PER_TICK = 8;
@@ -90,6 +91,7 @@ public final class WorldSpawns {
             return;
         }
 
+        if (!WILD_NESTS) return;
         if (random.nextInt(NEST_CHANCE) != 0) return;
         if (surface.getY() <= level.getMinBuildHeight() + 1) return;
         if (!level.getBlockState(surface).canBeReplaced()) return;

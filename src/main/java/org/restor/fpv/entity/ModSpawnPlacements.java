@@ -10,6 +10,8 @@ import org.restor.fpv.Fpv;
 
 @Mod.EventBusSubscriber(modid = Fpv.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class ModSpawnPlacements {
+    private static final boolean NATURAL_SPAWNS = false;
+
     private ModSpawnPlacements() {}
 
     @SubscribeEvent
@@ -30,6 +32,7 @@ public final class ModSpawnPlacements {
             net.minecraft.world.entity.MobSpawnType spawnType,
             net.minecraft.core.BlockPos pos,
             net.minecraft.util.RandomSource random) {
+        if (!NATURAL_SPAWNS && (spawnType == net.minecraft.world.entity.MobSpawnType.NATURAL || spawnType == net.minecraft.world.entity.MobSpawnType.CHUNK_GENERATION)) return false;
         if (level.getDifficulty() == Difficulty.PEACEFUL) return false;
         if (!level.getBlockState(pos).isAir()) return false;
         return pos.getY() >= level.getLevel().getSeaLevel() - 4 && random.nextInt(3) == 0;
