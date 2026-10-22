@@ -31,6 +31,13 @@ import net.minecraft.world.level.block.Block;
 // Right-click: spawn a kamikaze drone on top and take control; a new one launches
 // automatically after each detonation. Sneak exits the loop.
 public class KamikazeStationBlock extends BaseEntityBlock {
+    public static final com.mojang.serialization.MapCodec<KamikazeStationBlock> CODEC = simpleCodec(KamikazeStationBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
 
     public KamikazeStationBlock(Properties props) {
         super(props);

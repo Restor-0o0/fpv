@@ -33,7 +33,7 @@ public final class WarheadLoading {
             if (!player.getAbilities().instabuild) {
                 held.shrink(1);
                 ItemStack removed = new ItemStack(ModItems.WARHEADS.get(current).get());
-                if (!player.addItem(removed)) player.drop(removed, false, net.minecraft.util.Prediction.SERVER_ONLY);
+                if (!player.addItem(removed)) player.drop(removed, false);
             }
         }
         player.sendOverlayMessage(Component.translatable("msg.fpv.warhead_loaded",

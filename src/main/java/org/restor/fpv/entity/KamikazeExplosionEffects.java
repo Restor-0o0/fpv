@@ -83,7 +83,7 @@ public final class KamikazeExplosionEffects {
             double strength = (0.35 + sl.getRandom().nextDouble() * 0.35
                 + Math.max(0, radius - Math.sqrt(Vec3.atCenterOf(pos).distanceToSqr(center))) * 0.025) * powerScale;
             block.setDeltaMovement(dir.scale(strength));
-            block.syncVelocity = true;
+            block.hurtMarked = true;
         }
     }
 

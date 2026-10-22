@@ -176,7 +176,7 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
                              CameraRenderState camera, float scale, int color) {
         pose.pushPose();
         pose.translate(at.x, at.y, at.z);
-        pose.rotate(camera.orientation);
+        pose.mulPose(camera.orientation);
         pose.scale(-scale, -scale, scale);
         buffer.collector().submitText(pose, -font.width(s) / 2f, -4f, net.minecraft.network.chat.Component.literal(s).getVisualOrderText(),
             false, Font.DisplayMode.SEE_THROUGH, 0xF000F0, color, 0, 0);

@@ -24,6 +24,13 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class DroneDetectorBlock extends BaseEntityBlock {
+    public static final com.mojang.serialization.MapCodec<DroneDetectorBlock> CODEC = simpleCodec(DroneDetectorBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
     public static final BooleanProperty DETECTED = BlockStateProperties.LIT;
 
     public DroneDetectorBlock(Properties properties) {

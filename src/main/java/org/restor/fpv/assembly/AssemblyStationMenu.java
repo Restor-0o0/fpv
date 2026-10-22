@@ -193,7 +193,7 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         // A drone parked in the output was brought in by the player; a generated result is
         // rebuilt from the parts that stay in the bench, so only the former is handed back.
         if (!left.isEmpty() && areComponentSlotsEmpty() && !player.level().isClientSide()) {
-            if (!player.getInventory().add(left)) player.drop(left, false, net.minecraft.util.Prediction.SERVER_ONLY);
+            if (!player.getInventory().add(left)) player.drop(left, false);
         }
     }
 

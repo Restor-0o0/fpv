@@ -29,6 +29,13 @@ import net.minecraft.world.level.block.Block;
 // Drone assembly station: frame in the center, battery above, camera below,
 // motors at the corners with a prop slot next to each motor.
 public class AssemblyStationBlock extends BaseEntityBlock {
+    public static final com.mojang.serialization.MapCodec<AssemblyStationBlock> CODEC = simpleCodec(AssemblyStationBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
     public AssemblyStationBlock(Properties props) {
         super(props);
         registerDefaultState(stateDefinition.any()

@@ -117,7 +117,7 @@ public final class GhostRenderer {
 
         pose.pushPose();
         pose.translate(x - cam.x, y - cam.y, z - cam.z);
-        pose.rotate(q);
+        pose.mulPose(q);
         float s = scaleFor(modelType);
         pose.scale(s, s, s);
 

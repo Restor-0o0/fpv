@@ -83,9 +83,9 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity, Mod
         poseStack.translate(0, entity.getBbHeight() / 2, 0);
         Quaternionf q = new Quaternionf(modelQuat(entity.yRotO, entity.xRotO, entity.getPrevRoll()))
             .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
-        poseStack.rotate(q);
+        poseStack.mulPose(q);
         if (spec != null && spec.isTailsitter()) {
-            poseStack.rotate(com.mojang.math.Axis.XP.rotationDegrees(90));
+            poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
         }
         float s = DroneVisual.of(spec).scale();
         poseStack.scale(s, s, s);
@@ -142,7 +142,7 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity, Mod
         poseStack.translate(x, y, z);
         poseStack.scale(scale, scale, scale);
         if (spinDeg != 0) {
-            poseStack.rotate(com.mojang.math.Axis.YP.rotationDegrees(spinDeg));
+            poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(spinDeg));
         }
         buffer.item(stack, poseStack, light);
         poseStack.popPose();
@@ -154,9 +154,9 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity, Mod
         if (stack.isEmpty()) return;
         poseStack.pushPose();
         poseStack.translate(x, y, z);
-        poseStack.rotate(com.mojang.math.Axis.XP.rotationDegrees(90));
+        poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(90));
         poseStack.scale(scale, scale, scale);
-        if (spinDeg != 0) poseStack.rotate(com.mojang.math.Axis.YP.rotationDegrees(spinDeg));
+        if (spinDeg != 0) poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(spinDeg));
         buffer.item(stack, poseStack, light);
         poseStack.popPose();
     }
@@ -166,7 +166,7 @@ public class ModularDroneRenderer extends EntityRenderer<ModularDroneEntity, Mod
         if (stack.isEmpty()) return;
         poseStack.pushPose();
         poseStack.translate(x, y, z);
-        poseStack.rotate(com.mojang.math.Axis.XP.rotationDegrees(22.5f));
+        poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(22.5f));
         poseStack.scale(scale, scale, scale);
         buffer.item(stack, poseStack, light);
         poseStack.popPose();

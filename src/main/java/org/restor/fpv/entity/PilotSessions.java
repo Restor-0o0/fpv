@@ -34,7 +34,7 @@ public final class PilotSessions {
         ACTIVE.put(player.getUUID(), craft);
         CompoundTag data = player.getPersistentData();
         data.putBoolean(FLAG, true);
-        data.putBoolean(WAS_INVULNERABLE, player.isPermanentlyInvulnerable());
+        data.putBoolean(WAS_INVULNERABLE, player.isInvulnerable());
         if (home != null) data.store(HOME, PilotReturn.CODEC, home);
     }
 
@@ -117,7 +117,7 @@ public final class PilotSessions {
         PilotReturn home = sendHome ? home(player) : null;
         clearFlag(player);
         player.setInvisible(false);
-        player.setPermanentlyInvulnerable(wasInvulnerable);
+        player.setInvulnerable(wasInvulnerable);
         if (player.getCamera() != player) player.setCamera(player);
         if (home != null) home.send(player);
     }

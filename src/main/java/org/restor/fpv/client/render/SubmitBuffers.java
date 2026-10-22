@@ -105,11 +105,6 @@ public final class SubmitBuffers {
         }
 
         @Override
-        public VertexConsumer setUv3(float u, float v) {
-            return this;
-        }
-
-        @Override
         public VertexConsumer setNormal(float x, float y, float z) {
             floats.set(fBase() + 5, x);
             floats.set(fBase() + 6, y);

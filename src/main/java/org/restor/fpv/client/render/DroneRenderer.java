@@ -35,14 +35,14 @@ public class DroneRenderer extends EntityRenderer<DroneEntity, DroneRenderer.Sta
 
     @Override
     public boolean shouldRender(DroneEntity entity, net.minecraft.client.renderer.culling.Frustum frustum,
-                                double camX, double camY, double camZ, float partialTicks) {
+                                double camX, double camY, double camZ) {
         if (entity instanceof org.restor.fpv.entity.KamikazeDroneEntity) {
             double dx = entity.getX() - camX;
             double dy = entity.getY() - camY;
             double dz = entity.getZ() - camZ;
             if (dx * dx + dy * dy + dz * dz < FAR_RENDER_DISTANCE_SQR) return true;
         }
-        return super.shouldRender(entity, frustum, camX, camY, camZ, partialTicks);
+        return super.shouldRender(entity, frustum, camX, camY, camZ);
     }
 
     @Override
@@ -94,8 +94,8 @@ public class DroneRenderer extends EntityRenderer<DroneEntity, DroneRenderer.Sta
         // pitch ±90 where the decomposition flips yaw/roll by 180°.
         Quaternionf q = new Quaternionf(modelQuat(entity.yRotO, entity.xRotO, entity.getPrevRoll()))
             .slerp(modelQuat(entity.getYRot(), entity.getXRot(), entity.getRoll()), partialTick);
-        poseStack.rotate(q);
-        if (entity.isTailsitter()) poseStack.rotate(Axis.XP.rotationDegrees(90));
+        poseStack.mulPose(q);
+        if (entity.isTailsitter()) poseStack.mulPose(Axis.XP.rotationDegrees(90));
 
         poseStack.scale(scale, scale, scale);
 
@@ -133,10 +133,10 @@ public class DroneRenderer extends EntityRenderer<DroneEntity, DroneRenderer.Sta
             .rotateY((float) Math.toRadians(a[0] + 180f));
 
         ps.translate(camPos.x - ex, camPos.y - ey, camPos.z - ez); // undo world placement → pose = view
-        ps.rotate(rView.conjugate());                             // undo view rotation → screen space
+        ps.mulPose(rView.conjugate());                             // undo view rotation → screen space
         ps.translate(0.0, Config.FPV_PROPS_DOWN.get(), -Config.FPV_PROPS_FORWARD.get());
         // Tilt the prop disc by the camera uptilt so the props lie as the real camera sees them.
-        ps.rotate(Axis.XP.rotationDegrees(e.getCameraAngle()));
+        ps.mulPose(Axis.XP.rotationDegrees(e.getCameraAngle()));
     }
 
     // Same composition the old Axis-based code produced: Ry(yaw−180)·Rx(−pitch)·Rz(roll).
@@ -201,7 +201,7 @@ public class DroneRenderer extends EntityRenderer<DroneEntity, DroneRenderer.Sta
         poseStack.pushPose();
         poseStack.translate(x, y, z);
         poseStack.scale(scale, scale, scale);
-        if (spinDeg != 0) poseStack.rotate(Axis.YP.rotationDegrees(spinDeg));
+        if (spinDeg != 0) poseStack.mulPose(Axis.YP.rotationDegrees(spinDeg));
         buffer.item(stack, poseStack, light);
         poseStack.popPose();
     }
@@ -211,9 +211,9 @@ public class DroneRenderer extends EntityRenderer<DroneEntity, DroneRenderer.Sta
                                  int light, float x, float y, float z, float spinDeg, float scale) {
         poseStack.pushPose();
         poseStack.translate(x, y, z);
-        poseStack.rotate(Axis.XP.rotationDegrees(90));
+        poseStack.mulPose(Axis.XP.rotationDegrees(90));
         poseStack.scale(scale, scale, scale);
-        if (spinDeg != 0) poseStack.rotate(Axis.YP.rotationDegrees(spinDeg));
+        if (spinDeg != 0) poseStack.mulPose(Axis.YP.rotationDegrees(spinDeg));
         buffer.item(stack, poseStack, light);
         poseStack.popPose();
     }
@@ -222,7 +222,7 @@ public class DroneRenderer extends EntityRenderer<DroneEntity, DroneRenderer.Sta
                                   int light, float x, float y, float z, float scale) {
         poseStack.pushPose();
         poseStack.translate(x, y, z);
-        poseStack.rotate(Axis.XP.rotationDegrees(22.5f));
+        poseStack.mulPose(Axis.XP.rotationDegrees(22.5f));
         poseStack.scale(scale, scale, scale);
         buffer.item(stack, poseStack, light);
         poseStack.popPose();
@@ -367,7 +367,7 @@ public class DroneRenderer extends EntityRenderer<DroneEntity, DroneRenderer.Sta
         // Propeller (spinning blur when throttle > 0)
         if (spinRate > 1) {
             float angle = tick * spinRate * (cw ? 1 : -1);
-            poseStack.rotate(Axis.YP.rotationDegrees(angle));
+            poseStack.mulPose(Axis.YP.rotationDegrees(angle));
             float pr = 0.2f, pw = 0.015f;
             renderBox(consumer, poseStack.last().pose(), packedLight,
                 -pr, 0.04f, -pw, pr, 0.05f, pw, 0.4f, 0.6f, 0.9f);

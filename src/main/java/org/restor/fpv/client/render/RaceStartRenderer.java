@@ -99,7 +99,7 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
             .add(new Vector3f(axes[2]).mul(0.36f));
         pose.pushPose();
         pose.translate(p.x, p.y, p.z);
-        pose.rotate(new org.joml.Quaternionf().rotationTo(new Vector3f(0, 0, 1), new Vector3f(normal).normalize()));
+        pose.mulPose(new org.joml.Quaternionf().rotationTo(new Vector3f(0, 0, 1), new Vector3f(normal).normalize()));
         pose.scale(-0.14f, -0.14f, 0.14f);
         buffer.collector().submitText(pose, -font.width(text) / 2f, -4f, net.minecraft.network.chat.Component.literal(text).getVisualOrderText(),
             false, Font.DisplayMode.SEE_THROUGH, 0xF000F0, color, 0, 0);

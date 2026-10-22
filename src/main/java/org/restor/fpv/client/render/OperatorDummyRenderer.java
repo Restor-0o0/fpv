@@ -65,7 +65,7 @@ public class OperatorDummyRenderer extends EntityRenderer<OperatorDummyEntity, O
 
         poseStack.pushPose();
         // Standard living-entity model space: rotate to facing, flip, drop to feet.
-        poseStack.rotate(Axis.YP.rotationDegrees(180f - Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot())));
+        poseStack.mulPose(Axis.YP.rotationDegrees(180f - Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot())));
         poseStack.scale(-1f, -1f, 1f);
         poseStack.translate(0f, -1.501f, 0f);
 
@@ -87,7 +87,7 @@ public class OperatorDummyRenderer extends EntityRenderer<OperatorDummyEntity, O
         poseStack.pushPose();
         m.head.translateAndRotate(poseStack);
         poseStack.translate(0f, -0.25f, 0f);
-        poseStack.rotate(Axis.YP.rotationDegrees(180f));
+        poseStack.mulPose(Axis.YP.rotationDegrees(180f));
         poseStack.scale(0.625f, -0.625f, -0.625f);
         buffer.item(gear, net.minecraft.world.item.ItemDisplayContext.HEAD, poseStack, packedLight, entity.level());
         poseStack.popPose();
@@ -98,10 +98,10 @@ public class OperatorDummyRenderer extends EntityRenderer<OperatorDummyEntity, O
         var radio = entity.getRadio();
         if (radio.isEmpty()) return;
         poseStack.pushPose();
-        poseStack.rotate(Axis.YP.rotationDegrees(180f - Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot())));
+        poseStack.mulPose(Axis.YP.rotationDegrees(180f - Mth.rotLerp(partialTick, entity.yRotO, entity.getYRot())));
         poseStack.translate(0f, 1.12f, -0.34f);
-        poseStack.rotate(Axis.XP.rotationDegrees(-55f));
-        poseStack.rotate(Axis.YP.rotationDegrees(180f));
+        poseStack.mulPose(Axis.XP.rotationDegrees(-55f));
+        poseStack.mulPose(Axis.YP.rotationDegrees(180f));
         poseStack.scale(0.9f, 0.9f, 0.9f);
         buffer.item(radio, net.minecraft.world.item.ItemDisplayContext.FIXED, poseStack, packedLight, entity.level());
         poseStack.popPose();

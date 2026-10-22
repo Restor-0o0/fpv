@@ -753,7 +753,7 @@ public class FpvSettingsScreen extends Screen {
 
     @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent event) {
-        int keyCode = event.key(), scanCode = event.keycode();
+        int keyCode = event.key(), scanCode = event.scancode();
         if (listening != null) {
             listening.keyPressed(keyCode, scanCode);
             return true;

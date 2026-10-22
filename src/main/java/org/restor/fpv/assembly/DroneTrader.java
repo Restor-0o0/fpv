@@ -67,7 +67,7 @@ public class DroneTrader implements Merchant {
             TradeSet set = registry.getOptional(key).orElse(null);
             if (set == null) continue;
             List<Holder<VillagerTrade>> pool = new ArrayList<>();
-            set.trades().forEach(pool::add);
+            set.getTrades().forEach(pool::add);
             if (pool.isEmpty()) continue;
             for (int i = 0; i < OFFER_COUNT * 2 && result.size() < OFFER_COUNT; i++) {
                 MerchantOffer offer = pool.get(context.getRandom().nextInt(pool.size())).value().getOffer(context);

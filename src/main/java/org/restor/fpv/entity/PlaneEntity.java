@@ -584,22 +584,21 @@ public class PlaneEntity extends Entity
     }
 
     @Override
-    protected net.minecraft.world.entity.InterpolationHandler createInterpolationHandler() {
-        return new net.minecraft.world.entity.InterpolationHandler.NoOpInterpolationHandler() {
-            @Override
-            public boolean interpolateTo(net.minecraft.world.entity.PositionPath path, float yRot, float xRot, boolean hasRotation) {
-                if (path == null) return false;
-                Vec3 pos = path.endPosition();
-                if (level().isClientSide() && (predAge <= 5 || entityData.get(DATA_ORBIT))) {
-                    serverSyncPos = pos;
-                    return true;
-                }
-                setPos(pos);
-                if (hasRotation) setRot(yRot, xRot);
-                return true;
-            }
-        };
+    public net.minecraft.world.entity.InterpolationHandler getInterpolation() {
+        return interpolation;
     }
+
+    private final net.minecraft.world.entity.InterpolationHandler interpolation = new net.minecraft.world.entity.InterpolationHandler(this) {
+        @Override
+        public void interpolateTo(Vec3 pos, float yRot, float xRot) {
+            if (level().isClientSide() && (predAge <= 5 || entityData.get(DATA_ORBIT))) {
+                serverSyncPos = pos;
+                return;
+            }
+            setPos(pos);
+            setRot(yRot, xRot);
+        }
+    };
 
     public void setClientPredictedInputs(float throttle, float pitch, float roll, float yaw) {
         predThrottle = throttle;

@@ -54,8 +54,8 @@ public class ModularPlaneRenderer extends PlaneRenderer {
         poseStack.pushPose();
         poseStack.translate(at.x(), at.y(), at.z());
         poseStack.scale(scale, scale, scale);
-        if (flip) poseStack.rotate(com.mojang.math.Axis.YP.rotationDegrees(180f));
-        if (spinDeg != 0) poseStack.rotate(com.mojang.math.Axis.ZP.rotationDegrees(spinDeg));
+        if (flip) poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180f));
+        if (spinDeg != 0) poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(spinDeg));
         buffer.item(stack, poseStack, light);
         poseStack.popPose();
     }

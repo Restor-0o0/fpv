@@ -127,7 +127,7 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
 
         pose.pushPose();
         pose.translate(0.5f, 0f, 0.5f);
-        pose.rotate(Axis.YP.rotationDegrees(facing));
+        pose.mulPose(Axis.YP.rotationDegrees(facing));
         pose.translate(-0.5f, 0f, -0.5f);
         for (int layer = 0; layer < layers; layer++) {
             renderTray(pose, buffer, light, overlay, layout, base + layer * step, coveredAbove || layer < layers - 1);
@@ -143,12 +143,12 @@ public class PartsPileRenderer implements BlockEntityRenderer<PartsPileBlockEnti
 
             pose.pushPose();
             pose.translate(0.5f, base + layer * step + Layout.RACK_HEIGHT + 0.002f, 0.5f);
-            pose.rotate(Axis.YP.rotationDegrees(facing));
+            pose.mulPose(Axis.YP.rotationDegrees(facing));
             pose.translate(x - 0.5f, 0f, z - 0.5f);
-            if (yaw != 0f) pose.rotate(Axis.YP.rotationDegrees(yaw));
+            if (yaw != 0f) pose.mulPose(Axis.YP.rotationDegrees(yaw));
             pose.scale(scale, scale, scale);
             if (tipped) {
-                pose.rotate(Axis.XP.rotationDegrees(90f));
+                pose.mulPose(Axis.XP.rotationDegrees(90f));
                 pose.translate(0.5f - centerX, 0.5f - centerY, 0.5f - box[5]);
             } else {
                 pose.translate(0.5f - centerX, 0.5f - box[1], 0.5f - centerZ);

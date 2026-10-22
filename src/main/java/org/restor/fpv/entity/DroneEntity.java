@@ -1920,7 +1920,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     private void giveBack(Player player, net.minecraft.world.item.ItemStack stack) {
-        if (!player.addItem(stack)) player.drop(stack, false, net.minecraft.util.Prediction.SERVER_ONLY);
+        if (!player.addItem(stack)) player.drop(stack, false);
     }
 
     /** Weapon key: launches a rocket off the rails, or fires the dart gun straight ahead. */
@@ -2275,8 +2275,8 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         // The pilot's body follows the drone (that's what streams chunks to the
         // client) — keep it invisible and invulnerable for the duration.
         PilotSessions.open(player, this, stationReturn);
-        pilotWasInvulnerable = player.isPermanentlyInvulnerable();
-        player.setPermanentlyInvulnerable(true);
+        pilotWasInvulnerable = player.isInvulnerable();
+        player.setInvulnerable(true);
         player.setInvisible(true);
         PilotSessions.syncFlagsToSelf(player);
         spawnDummy(player, stationReturn.pos());
@@ -2327,7 +2327,7 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
         if (p != null) {
             if (remoteFpv) {
                 PilotSessions.close(p);
-                p.setPermanentlyInvulnerable(pilotWasInvulnerable);
+                p.setInvulnerable(pilotWasInvulnerable);
                 p.setInvisible(false);
                 PilotSessions.syncFlagsToSelf(p);
                 if (home != null) home.send(p);
@@ -2553,22 +2553,21 @@ public class DroneEntity extends Entity implements Pilotable, RadioInterferenceR
     }
 
     @Override
-    protected net.minecraft.world.entity.InterpolationHandler createInterpolationHandler() {
-        return new net.minecraft.world.entity.InterpolationHandler.NoOpInterpolationHandler() {
-            @Override
-            public boolean interpolateTo(net.minecraft.world.entity.PositionPath path, float yRot, float xRot, boolean hasRotation) {
-                if (path == null) return false;
-                Vec3 pos = path.endPosition();
-                if (level().isClientSide() && (predAge <= 5 || entityData.get(DATA_POSE_LOCK))) {
-                    serverSyncPos = pos;
-                    return true;
-                }
-                setPos(pos);
-                if (hasRotation) setRot(yRot, xRot);
-                return true;
-            }
-        };
+    public net.minecraft.world.entity.InterpolationHandler getInterpolation() {
+        return interpolation;
     }
+
+    private final net.minecraft.world.entity.InterpolationHandler interpolation = new net.minecraft.world.entity.InterpolationHandler(this) {
+        @Override
+        public void interpolateTo(Vec3 pos, float yRot, float xRot) {
+            if (level().isClientSide() && (predAge <= 5 || entityData.get(DATA_POSE_LOCK))) {
+                serverSyncPos = pos;
+                return;
+            }
+            setPos(pos);
+            setRot(yRot, xRot);
+        }
+    };
 
     // Called client-side by ClientEventHandler with the same values it sends to the
     // server, enabling zero-latency rotation prediction in clientTick().

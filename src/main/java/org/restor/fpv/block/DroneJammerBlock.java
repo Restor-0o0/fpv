@@ -25,6 +25,13 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class DroneJammerBlock extends BaseEntityBlock {
+    public static final com.mojang.serialization.MapCodec<DroneJammerBlock> CODEC = simpleCodec(DroneJammerBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
 
     public DroneJammerBlock(Properties properties) {

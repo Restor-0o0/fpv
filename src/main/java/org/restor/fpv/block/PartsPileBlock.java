@@ -29,6 +29,13 @@ import org.restor.fpv.block.entity.ModBlockEntities;
 import org.restor.fpv.block.entity.PartsPileBlockEntity;
 
 public class PartsPileBlock extends BaseEntityBlock {
+    public static final com.mojang.serialization.MapCodec<PartsPileBlock> CODEC = simpleCodec(PartsPileBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     private static final VoxelShape[] SHAPES = new VoxelShape[17];
@@ -97,7 +104,7 @@ public class PartsPileBlock extends BaseEntityBlock {
         if (!(level.getBlockEntity(pos) instanceof PartsPileBlockEntity pile) || pile.isEmpty()) return InteractionResult.PASS;
         if (level.isClientSide()) return InteractionResult.SUCCESS;
         ItemStack out = pile.extract(player.isShiftKeyDown() ? PartsPileBlockEntity.MAX_CAPACITY : 1);
-        if (!player.addItem(out)) player.drop(out, false, net.minecraft.util.Prediction.SERVER_ONLY);
+        if (!player.addItem(out)) player.drop(out, false);
         level.playSound(null, pos, SoundEvents.ITEM_FRAME_REMOVE_ITEM, SoundSource.BLOCKS, 0.7f, 1.4f);
         if (pile.isEmpty()) level.removeBlock(pos, false);
         return InteractionResult.CONSUME;
