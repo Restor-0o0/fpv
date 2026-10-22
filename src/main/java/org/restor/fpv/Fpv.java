@@ -131,7 +131,7 @@ public class Fpv {
 
     public Fpv(IEventBus modEventBus, ModContainer container) {
         container.registerConfig(ModConfig.Type.CLIENT, Config.SPEC);
-        container.registerConfig(ModConfig.Type.LOCAL, CommonConfig.SPEC);
+        container.registerConfig(ModConfig.Type.LOCAL, CommonConfig.SPEC, "fpv-common.toml");
         container.registerConfig(ModConfig.Type.LOCAL, org.restor.fpv.rules.ExplosivesConfig.SPEC, "fpv-explosives.toml");
         container.registerConfig(ModConfig.Type.SYNCED, TrackGenerationConfig.SPEC, "fpv-track-generation.toml");
 

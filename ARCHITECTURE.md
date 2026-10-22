@@ -1,6 +1,6 @@
 # FPV Drones — архитектура
 
-Minecraft Forge 1.20.1, Java 17. Сборка: `.\gradlew.bat build`, деплой: скопировать
+Minecraft 26.3, NeoForge 26.3.0.95, Java 25. Сборка: `.\gradlew.bat build`, деплой: скопировать
 `build\libs\fpv-1.0.jar` в `%APPDATA%\.minecraft\versions\fpvtest\mods\`.
 
 ## Пакеты
