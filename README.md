@@ -1,3 +1,5 @@
+<p align="center"><img src="src/main/resources/fpv_logo.png" alt="FPV Drones logo" width="128"></p>
+
 # FPV Drones
 
 **Real FPV quads and fixed-wing aircraft for Minecraft.** Build a drone from parts, bind a transmitter, put on the goggles and fly in full acro, with a real RC radio or with mouse and keyboard. Race through gates, run strike missions, defend your base with jammers, or let a drone with companion firmware follow you around.
