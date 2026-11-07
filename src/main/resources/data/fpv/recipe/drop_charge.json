@@ -5,8 +5,5 @@
     "minecraft:iron_nugget",
     "minecraft:redstone"
   ],
-  "result": {
-    "id": "fpv:drop_charge"
-  },
-  "key": {}
+  "result": { "id": "fpv:drop_charge" }
 }
