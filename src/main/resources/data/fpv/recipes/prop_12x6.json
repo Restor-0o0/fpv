@@ -1,9 +1,9 @@
 {
-  ""type"": ""minecraft:crafting_shaped"",
-  ""pattern"": ["" S "", ""SCS"", "" S ""],
-  ""key"": {
-    ""S"": { ""item"": ""minecraft:stick"" },
-    ""C"": { ""item"": ""minecraft:gold_ingot"" }
+  "type": "minecraft:crafting_shaped",
+  "pattern": [" S ", "SCS", " S "],
+  "key": {
+    "S": { "item": "minecraft:stick" },
+    "C": { "item": "minecraft:gold_ingot" }
   },
-  ""result"": { ""item"": ""fpv:prop_12x6"", ""count"": 4 }
+  "result": { "item": "fpv:prop_12x6", "count": 4 }
 }
