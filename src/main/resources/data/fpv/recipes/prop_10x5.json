@@ -1,0 +1,9 @@
+{
+  ""type"": ""minecraft:crafting_shaped"",
+  ""pattern"": ["" S "", ""SCS"", "" S ""],
+  ""key"": {
+    ""S"": { ""item"": ""minecraft:stick"" },
+    ""C"": { ""item"": ""minecraft:copper_ingot"" }
+  },
+  ""result"": { ""item"": ""fpv:prop_10x5"", ""count"": 4 }
+}
