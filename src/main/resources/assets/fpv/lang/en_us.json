@@ -619,5 +619,15 @@
   "tooltip.fpv.warhead.mass": "Mass: %s kg",
   "tooltip.fpv.warhead.mount": "Mount: sneak + right-click a craft that has a warhead bay",
   "tooltip.fpv.warhead.power": "Blast power: %s",
-  "tooltip.fpv.warhead.shaped": "Armour piercing"
+  "tooltip.fpv.warhead.shaped": "Armour piercing",
+  "jei.fpv.assembly.slot.required": "Required for this build",
+  "jei.fpv.assembly.slot.optional": "Optional component",
+  "jei.fpv.assembly.slot.preset": "Included in this ready-made build",
+  "jei.fpv.assembly.slot.motors": "Install %s compatible motors",
+  "jei.fpv.assembly.slot.propellers": "Install %s compatible propellers",
+  "jei.fpv.assembly.station_hint": "Place the parts in matching station slots",
+  "jei.fpv.assembly.motor_count": "Motors: %s",
+  "jei.fpv.assembly.propeller_count": "Propellers: %s",
+  "jei.fpv.assembly.warhead": "Load this warhead onto the finished aircraft",
+  "jei.fpv.assembly.warhead.short": "Warhead"
 }
