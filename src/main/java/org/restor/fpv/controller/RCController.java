@@ -28,6 +28,10 @@ public class RCController {
     private static int modeButton = -1;
     private static float[] lastRawAxes;
     private static float[] lastProcessedAxes;
+    private static int armAxisStateIndex = -1;
+    private static boolean armSwitchOn;
+    private static boolean armAxisFormatKnown;
+    private static boolean armAxisBipolar;
     private static int logCounter;
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -71,6 +75,7 @@ public class RCController {
         currentJoystick = -1;
         controllerName = "";
         axisCenter = null;
+        resetArmAxisState();
     }
 
     private static void setupController(int jid, String name) {
@@ -78,6 +83,7 @@ public class RCController {
         currentJoystick = jid;
         controllerName = name;
         connected = true;
+        resetArmAxisState();
         LOGGER.info("Connected to controller: \"{}\" (joystick #{})", name, jid);
 
         // Auto-detect axis mapping and device type based on name
@@ -297,10 +303,35 @@ public class RCController {
         boolean invert = Config.RC_INVERT_ARM.get();
         int cfg = Config.RC_AXIS_ARM.get();
         if (cfg >= 0 && cfg < raw.length) {
-            float v = invert ? -raw[cfg] : raw[cfg];
-            return v > 0f;
+            if (armAxisStateIndex != cfg) {
+                resetArmAxisState();
+                armAxisStateIndex = cfg;
+            }
+            float rawValue = raw[cfg];
+            if (!armAxisFormatKnown) {
+                armAxisBipolar = rawValue < -0.2f;
+                armAxisFormatKnown = true;
+            } else if (rawValue < -0.2f) {
+                // Most transmitter switches report -1/+1. Some HID profiles report 0/1.
+                // Detect the format so the neutral/off position is handled correctly.
+                armAxisBipolar = true;
+            }
+
+            float value = invert ? -rawValue : rawValue;
+            if (armAxisBipolar) {
+                // Leave a dead zone around the switch midpoint so small HID noise cannot
+                // repeatedly disarm and re-arm the flight controller.
+                if (value >= 0.35f) armSwitchOn = true;
+                else if (value <= -0.35f) armSwitchOn = false;
+            } else {
+                // Unipolar switches commonly report 0/1 instead of -1/+1.
+                if (value >= 0.75f) armSwitchOn = true;
+                else if (value <= 0.25f) armSwitchOn = false;
+            }
+            return armSwitchOn;
         }
         if (cfg < 0) {
+            resetArmAxisState();
             for (int i = 0; i < raw.length; i++) {
                 if (i == axisMap[AXIS_THROTTLE] || i == axisMap[AXIS_ROLL]
                     || i == axisMap[AXIS_PITCH] || i == axisMap[AXIS_YAW]) continue;
@@ -308,12 +339,23 @@ public class RCController {
                 if (v > 0.5f) {
                     Config.RC_AXIS_ARM.set(i);
                     Config.save();
+                    armAxisStateIndex = i;
+                    armSwitchOn = true;
+                    armAxisFormatKnown = true;
+                    armAxisBipolar = raw[i] < -0.2f;
                     LOGGER.info("[RC-ARM] auto-detected arm switch on AUX axis {}", i);
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private static void resetArmAxisState() {
+        armAxisStateIndex = -1;
+        armSwitchOn = false;
+        armAxisFormatKnown = false;
+        armAxisBipolar = false;
     }
 
     public static String getControllerName() {

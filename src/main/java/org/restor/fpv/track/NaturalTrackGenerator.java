@@ -1,10 +1,13 @@
 package org.restor.fpv.track;
 
-import net.minecraft.resources.Identifier;
-import net.neoforged.fml.common.EventBusSubscriber;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.commands.Commands;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
@@ -12,7 +15,10 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.AddServerReloadListenersEvent;
+import net.minecraft.resources.Identifier;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -33,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.SplittableRandom;
 
 @EventBusSubscriber(modid = Fpv.MODID)
 public final class NaturalTrackGenerator {
@@ -40,9 +47,85 @@ public final class NaturalTrackGenerator {
     private static final Map<ResourceKey<Level>, PendingRegions> PENDING = new ConcurrentHashMap<>();
     private static final RoutePlanner PLANNER = new RoutePlanner();
 
+    private static final TrackProfile SMALL = new TrackProfile(6, 32, 6, 4, 2, 20, 0.10, 0.10, 0.55, 2, 1, 1.5, 1.5);
+    private static final TrackProfile MEDIUM = new TrackProfile(8, 42, 8, 6, 3, 24, 0.14, 0.12, 0.45, 3, 1, 2.0, 1.5);
+    private static final TrackProfile LARGE = new TrackProfile(10, 72, 12, 8, 3, 32, 0.16, 0.12, 0.40, 3, 1, 2.5, 1.5);
+
     @SubscribeEvent
     public static void addReloadListener(AddServerReloadListenersEvent event) {
         event.addListener(Identifier.fromNamespaceAndPath(Fpv.MODID, "track_profiles"), new TrackProfiles());
+    }
+
+    @SubscribeEvent
+    public static void registerCommands(RegisterCommandsEvent event) {
+        event.getDispatcher().register(Commands.literal("fpv")
+            .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
+            .then(Commands.literal("track")
+                .then(Commands.literal("generate")
+                    .then(sizeCommand("small", SMALL, false))
+                    .then(sizeCommand("medium", MEDIUM, false))
+                    .then(sizeCommand("large", LARGE, false))
+                    .then(Commands.literal("mixed").executes(ctx -> generateCommand(ctx.getSource(), null, 3, true))
+                        .then(Commands.argument("count", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 3))
+                            .executes(ctx -> generateCommand(ctx.getSource(), null, com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "count"), true))))
+                    .then(Commands.literal("force")
+                        .then(sizeCommand("small", SMALL, true))
+                        .then(sizeCommand("medium", MEDIUM, true))
+                        .then(sizeCommand("large", LARGE, true))))));
+    }
+
+    private static LiteralArgumentBuilder<CommandSourceStack> sizeCommand(String name, TrackProfile profile, boolean forceLoad) {
+        var command = Commands.literal(name)
+            .executes(ctx -> generateCommand(ctx.getSource(), profile, 1, forceLoad))
+            .then(Commands.literal("gates")
+                .then(Commands.argument("gateCount", com.mojang.brigadier.arguments.IntegerArgumentType.integer(4, 32))
+                    .executes(ctx -> generateCommand(ctx.getSource(), profile.withGateCount(
+                        com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "gateCount")), 1, forceLoad))));
+        if (!forceLoad) {
+            command.then(Commands.argument("count", com.mojang.brigadier.arguments.IntegerArgumentType.integer(1, 8))
+                .executes(ctx -> generateCommand(ctx.getSource(), profile,
+                    com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "count"), false)));
+        }
+        return command;
+    }
+
+    private static int generateCommand(CommandSourceStack source, TrackProfile requested, int count, boolean forceLoad) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        ServerLevel level = (ServerLevel) player.level();
+        SplittableRandom random = new SplittableRandom(level.getSeed() ^ player.blockPosition().asLong() ^ level.getGameTime());
+        int generated = 0;
+        int failed = 0;
+        for (int i = 0; i < count; i++) {
+            TrackProfile profile = requested != null ? requested : switch (i % 3) {
+                case 0 -> SMALL;
+                case 1 -> MEDIUM;
+                default -> LARGE;
+            };
+            int angle = random.nextInt(360);
+            double radians = Math.toRadians(angle);
+            int distance = i == 0 ? 0 : (LARGE.radius() * 2 + 80) * ((i + 1) / 2) * (i % 2 == 1 ? 1 : -1);
+            int originX = player.blockPosition().getX() + (int) (Math.cos(radians) * distance);
+            int originZ = player.blockPosition().getZ() + (int) (Math.sin(radians) * distance);
+            int reach = (int) Math.ceil((profile.radius() * (1.0 + profile.radialJitter()) + profile.radius() / 3.0 + profile.clearanceRadius() + 2.0) / 16.0);
+            int centerChunkX = Math.floorDiv(originX, 16);
+            int centerChunkZ = Math.floorDiv(originZ, 16);
+            if (forceLoad) {
+                for (int x = centerChunkX - reach; x <= centerChunkX + reach; x++) {
+                    for (int z = centerChunkZ - reach; z <= centerChunkZ + reach; z++) level.getChunk(x, z);
+                }
+            } else if (!areaLoaded(level, centerChunkX, centerChunkZ, reach)) {
+                failed++;
+                continue;
+            }
+            long seed = random.nextLong();
+            var plan = PLANNER.plan(seed, originX, originZ, profile, new LevelTerrain(level), TrackGenerationConfig.PLANNER_TERRAIN_CHECK_BUDGET.get());
+            if (plan.isPresent() && place(level, plan.get(), profile)) generated++;
+            else failed++;
+        }
+        int result = generated;
+        int misses = failed;
+        source.sendSuccess(() -> Component.literal("FPV: создано трасс: " + result + (misses > 0 ? ", не удалось: " + misses + ". Попробуй другое место." : ".")), true);
+        return generated;
     }
 
     @SubscribeEvent
@@ -146,10 +229,11 @@ public final class NaturalTrackGenerator {
                 rollback(level, originals);
                 return false;
             }
-            gate.configureGenerated(profile.gateSize(), plan.gates().get(i).yaw());
+            gate.configureGenerated(profile.gateSize(), plan.gates().get(i).yaw(), plan.gates().get(i).pitch());
         }
         if (!(level.getBlockEntity(startPos) instanceof RaceStartBlockEntity start)
-            || !start.installGeneratedRoute(positions.subList(1, positions.size()), profile.laps(), profile.gateSize(), plan.start().yaw())) {
+            || !start.installGeneratedRoute(positions.subList(1, positions.size()), profile.laps(),
+                profile.gateSize(), plan.start().yaw(), plan.start().pitch())) {
             rollback(level, originals);
             return false;
         }
@@ -200,7 +284,7 @@ public final class NaturalTrackGenerator {
         public RoutePlanner.Surface surface(int x, int z) {
             int airY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
             int groundY = airY - 1;
-            if (groundY < level.getMinY() || groundY >= level.getMaxY()) {
+            if (groundY < level.getMinY() || groundY >= level.getMaxY() - 1) {
                 return new RoutePlanner.Surface(groundY, false);
             }
             BlockPos ground = new BlockPos(x, groundY, z);
@@ -213,14 +297,14 @@ public final class NaturalTrackGenerator {
 
         @Override
         public boolean isClear(int x, int y, int z) {
-            if (y < level.getMinY() || y > level.getMaxY()) return false;
+            if (y < level.getMinY() || y >= level.getMaxY()) return false;
             BlockPos pos = new BlockPos(x, y, z);
             return level.getFluidState(pos).isEmpty() && level.getBlockState(pos).getCollisionShape(level, pos).isEmpty();
         }
 
         @Override
         public boolean canPlaceAnchor(int x, int y, int z) {
-            if (y < level.getMinY() || y > level.getMaxY()) return false;
+            if (y < level.getMinY() || y >= level.getMaxY()) return false;
             BlockPos pos = new BlockPos(x, y, z);
             return level.getFluidState(pos).isEmpty() && level.getBlockState(pos).canBeReplaced();
         }
