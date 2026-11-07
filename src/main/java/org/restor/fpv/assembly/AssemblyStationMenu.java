@@ -152,11 +152,11 @@ public class AssemblyStationMenu extends AbstractContainerMenu {
         // Player inventory
         for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 9; c++) {
-                addSlot(new Slot(inv, c + r * 9 + 9, 8 + c * 18, 143 + r * 18));
+                addSlot(new Slot(inv, c + r * 9 + 9, 8 + c * 18, 137 + r * 18));
             }
         }
         for (int c = 0; c < 9; c++) {
-            addSlot(new Slot(inv, c, 8 + c * 18, 201));
+            addSlot(new Slot(inv, c, 8 + c * 18, 195));
         }
 
         if (container instanceof SimpleContainer sc) sc.addListener(refresh);
