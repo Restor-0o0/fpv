@@ -61,6 +61,7 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 repositories { maven { url = 'https://maven.blamejared.com/' } }
 
 dependencies {
+    compileOnly "org.lwjgl:lwjgl-glfw:3.4.1"
     compileOnly "mezz.jei:jei-26.3-neoforge-api:31.17.0.109"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
