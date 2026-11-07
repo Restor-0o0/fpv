@@ -19,6 +19,15 @@ public record TrackProfile(
     double clearanceRadius,
     double segmentSampleStep
 ) {
+    public TrackProfile withGateCount(int count) {
+        if (count < 4 || count > 32) throw new IllegalArgumentException("gate count must be in [4, 32]");
+        int minGap = Math.max(24, gateSize * 3);
+        int spacingRadius = (int) Math.ceil((count + 1.0) * (minGap + gateSize) / (Math.PI * 2.0));
+        return new TrackProfile(count, Math.max(radius, spacingRadius), height, gateSize, laps,
+            candidateAttempts, radialJitter, angularJitter, maxSlope, startPlatformRadius,
+            startFlatness, clearanceRadius, segmentSampleStep);
+    }
+
     public static TrackProfile fromJson(JsonObject json) {
         rejectUnknownFields(json);
         TrackProfile profile = new TrackProfile(
