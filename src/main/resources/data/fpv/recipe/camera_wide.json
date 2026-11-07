@@ -6,21 +6,11 @@
     "CRC"
   ],
   "key": {
-    "A": {
-      "item": "minecraft:amethyst_shard"
-    },
-    "G": {
-      "item": "minecraft:glass_pane"
-    },
-    "Q": {
-      "item": "minecraft:quartz"
-    },
-    "C": {
-      "item": "minecraft:copper_ingot"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "A": "minecraft:amethyst_shard",
+    "G": "minecraft:glass_pane",
+    "Q": "minecraft:quartz",
+    "C": "minecraft:copper_ingot",
+    "R": "minecraft:redstone"
   },
   "result": {
     "id": "fpv:camera_wide"

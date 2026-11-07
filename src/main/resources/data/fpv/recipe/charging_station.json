@@ -6,18 +6,10 @@
     "III"
   ],
   "key": {
-    "C": {
-      "item": "minecraft:copper_ingot"
-    },
-    "R": {
-      "item": "minecraft:redstone_block"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "B": {
-      "item": "fpv:battery_4s_650"
-    }
+    "C": "minecraft:copper_ingot",
+    "R": "minecraft:redstone_block",
+    "I": "minecraft:iron_ingot",
+    "B": "fpv:battery_4s_650"
   },
   "result": {
     "id": "fpv:charging_station"

@@ -6,15 +6,9 @@
     " T "
   ],
   "key": {
-    "C": {
-      "item": "minecraft:copper_ingot"
-    },
-    "N": {
-      "item": "minecraft:netherite_scrap"
-    },
-    "T": {
-      "item": "minecraft:tnt"
-    }
+    "C": "minecraft:copper_ingot",
+    "N": "minecraft:netherite_scrap",
+    "T": "minecraft:tnt"
   },
   "result": {
     "id": "fpv:warhead_shaped"

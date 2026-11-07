@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IGI",
+    "CQC",
+    "ISI"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "G": "minecraft:glass_pane",
+    "C": "minecraft:copper_ingot",
+    "Q": "minecraft:quartz",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "fpv:plane_frame_scout"
+  }
+}

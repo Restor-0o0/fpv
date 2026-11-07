@@ -6,21 +6,11 @@
     "PPP"
   ],
   "key": {
-    "C": {
-      "item": "minecraft:copper_ingot"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "W": {
-      "item": "minecraft:crafting_table"
-    },
-    "P": {
-      "item": "minecraft:warped_planks"
-    }
+    "C": "minecraft:copper_ingot",
+    "R": "minecraft:redstone",
+    "I": "minecraft:iron_ingot",
+    "W": "minecraft:crafting_table",
+    "P": "minecraft:warped_planks"
   },
   "result": {
     "id": "fpv:assembly_station",

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " Q ",
+    "THT",
+    "CRC"
+  ],
+  "key": {
+    "Q": "minecraft:quartz",
+    "T": "minecraft:tripwire_hook",
+    "H": "fpv:warhead_he",
+    "C": "minecraft:copper_ingot",
+    "R": "minecraft:redstone"
+  },
+  "result": {
+    "id": "fpv:warhead_proximity"
+  }
+}

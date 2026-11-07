@@ -6,21 +6,11 @@
     "WSW"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "G": {
-      "item": "minecraft:glass_pane"
-    },
-    "V": {
-      "item": "fpv:vtx_25mw"
-    },
-    "W": {
-      "item": "minecraft:black_wool"
-    },
-    "S": {
-      "item": "minecraft:string"
-    }
+    "I": "minecraft:iron_ingot",
+    "G": "minecraft:glass_pane",
+    "V": "fpv:vtx_25mw",
+    "W": "minecraft:black_wool",
+    "S": "minecraft:string"
   },
   "result": {
     "id": "fpv:fpv_goggles"

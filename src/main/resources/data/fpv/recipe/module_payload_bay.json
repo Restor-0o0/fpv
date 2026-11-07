@@ -6,15 +6,9 @@
     "ICI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "S": {
-      "item": "minecraft:slime_ball"
-    },
-    "C": {
-      "item": "minecraft:chest"
-    }
+    "I": "minecraft:iron_ingot",
+    "S": "minecraft:slime_ball",
+    "C": "minecraft:chest"
   },
   "result": {
     "id": "fpv:module_payload_bay"

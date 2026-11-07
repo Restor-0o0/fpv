@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SCS",
+    "IQI",
+    "SCS"
+  ],
+  "key": {
+    "S": "minecraft:stick",
+    "C": "minecraft:copper_ingot",
+    "I": "minecraft:iron_ingot",
+    "Q": "minecraft:quartz"
+  },
+  "result": {
+    "id": "fpv:plane_frame_loiter"
+  }
+}

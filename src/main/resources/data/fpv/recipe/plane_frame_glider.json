@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SPS",
+    "PWP",
+    "S S"
+  ],
+  "key": {
+    "S": "minecraft:stick",
+    "P": "minecraft:oak_planks",
+    "W": "minecraft:white_wool"
+  },
+  "result": {
+    "id": "fpv:plane_frame_glider"
+  }
+}

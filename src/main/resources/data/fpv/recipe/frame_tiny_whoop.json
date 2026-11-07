@@ -6,12 +6,8 @@
     "SIS"
   ],
   "key": {
-    "S": {
-      "item": "minecraft:slime_ball"
-    },
-    "I": {
-      "item": "minecraft:iron_nugget"
-    }
+    "S": "minecraft:slime_ball",
+    "I": "minecraft:iron_nugget"
   },
   "result": {
     "id": "fpv:frame_tiny_whoop"

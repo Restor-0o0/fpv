@@ -6,15 +6,9 @@
     " R "
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "T": {
-      "item": "minecraft:tnt"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "I": "minecraft:iron_ingot",
+    "T": "minecraft:tnt",
+    "R": "minecraft:redstone"
   },
   "result": {
     "id": "fpv:warhead_he"

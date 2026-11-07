@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SIS",
+    "WPW",
+    "SIS"
+  ],
+  "key": {
+    "S": "minecraft:stick",
+    "I": "minecraft:iron_ingot",
+    "W": "minecraft:white_wool",
+    "P": "minecraft:birch_planks"
+  },
+  "result": {
+    "id": "fpv:plane_frame_trainer"
+  }
+}

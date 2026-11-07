@@ -6,21 +6,11 @@
     "THT"
   ],
   "key": {
-    "T": {
-      "item": "minecraft:tnt"
-    },
-    "W": {
-      "item": "fpv:module_warhead"
-    },
-    "N": {
-      "item": "minecraft:netherite_scrap"
-    },
-    "P": {
-      "item": "fpv:plane"
-    },
-    "H": {
-      "item": "fpv:fc_h7"
-    }
+    "T": "minecraft:tnt",
+    "W": "fpv:module_warhead",
+    "N": "minecraft:netherite_scrap",
+    "P": "fpv:plane",
+    "H": "fpv:fc_h7"
   },
   "result": {
     "id": "fpv:plane_kamikaze"

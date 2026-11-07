@@ -6,15 +6,9 @@
     "III"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "L": {
-      "item": "minecraft:leather"
-    },
-    "C": {
-      "item": "minecraft:chest"
-    }
+    "I": "minecraft:iron_ingot",
+    "L": "minecraft:leather",
+    "C": "minecraft:chest"
   },
   "result": {
     "id": "fpv:module_storage"

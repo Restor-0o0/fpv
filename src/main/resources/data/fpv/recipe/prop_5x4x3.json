@@ -6,12 +6,8 @@
     " S "
   ],
   "key": {
-    "S": {
-      "item": "minecraft:honeycomb"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "S": "minecraft:honeycomb",
+    "I": "minecraft:iron_ingot"
   },
   "result": {
     "count": 4,

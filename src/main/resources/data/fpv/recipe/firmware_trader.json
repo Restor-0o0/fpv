@@ -6,18 +6,10 @@
     "RER"
   ],
   "key": {
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "E": {
-      "item": "minecraft:emerald"
-    },
-    "B": {
-      "item": "minecraft:book"
-    },
-    "F": {
-      "item": "fpv:firmware_companion"
-    }
+    "R": "minecraft:redstone",
+    "E": "minecraft:emerald",
+    "B": "minecraft:book",
+    "F": "fpv:firmware_companion"
   },
   "result": {
     "id": "fpv:firmware_trader"

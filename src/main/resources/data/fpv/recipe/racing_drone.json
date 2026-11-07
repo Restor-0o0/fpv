@@ -6,15 +6,9 @@
     "MPM"
   ],
   "key": {
-    "M": {
-      "item": "fpv:motor_2207_2450kv"
-    },
-    "P": {
-      "item": "fpv:prop_5x4x3"
-    },
-    "F": {
-      "item": "fpv:frame_5inch"
-    }
+    "M": "fpv:motor_2207_2450kv",
+    "P": "fpv:prop_5x4x3",
+    "F": "fpv:frame_5inch"
   },
   "result": {
     "id": "fpv:racing_drone"

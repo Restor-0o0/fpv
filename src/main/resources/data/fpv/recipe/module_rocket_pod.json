@@ -6,21 +6,11 @@
     "RHR"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "B": {
-      "item": "minecraft:blast_furnace"
-    },
-    "C": {
-      "item": "fpv:mini_rocket"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "H": {
-      "item": "fpv:fc_h7"
-    }
+    "I": "minecraft:iron_ingot",
+    "B": "minecraft:blast_furnace",
+    "C": "fpv:mini_rocket",
+    "R": "minecraft:redstone",
+    "H": "fpv:fc_h7"
   },
   "result": {
     "id": "fpv:module_rocket_pod"

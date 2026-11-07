@@ -6,18 +6,10 @@
     " R "
   ],
   "key": {
-    "T": {
-      "item": "minecraft:tnt"
-    },
-    "G": {
-      "item": "minecraft:gunpowder"
-    },
-    "D": {
-      "item": "fpv:racing_drone"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "T": "minecraft:tnt",
+    "G": "minecraft:gunpowder",
+    "D": "fpv:racing_drone",
+    "R": "minecraft:redstone"
   },
   "result": {
     "id": "fpv:kamikaze_drone"

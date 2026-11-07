@@ -6,21 +6,11 @@
     "III"
   ],
   "key": {
-    "L": {
-      "item": "minecraft:redstone_lamp"
-    },
-    "G": {
-      "item": "minecraft:green_dye"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "C": {
-      "item": "minecraft:comparator"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "L": "minecraft:redstone_lamp",
+    "G": "minecraft:green_dye",
+    "R": "minecraft:redstone",
+    "C": "minecraft:comparator",
+    "I": "minecraft:iron_ingot"
   },
   "result": {
     "id": "fpv:race_start"
