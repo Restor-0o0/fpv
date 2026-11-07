@@ -13,7 +13,7 @@
       "item": "fpv:motor_3115_900kv"
     },
     "P": {
-      "item": "fpv:plane_shahed"
+      "item": "fpv:plane_loiter"
     },
     "G": {
       "item": "minecraft:gold_ingot"

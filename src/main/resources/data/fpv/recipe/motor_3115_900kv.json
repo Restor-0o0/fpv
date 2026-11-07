@@ -1,10 +1,23 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": ["CIC", "IRI", "CIC"],
+  "pattern": [
+    "CBC",
+    "BNB",
+    "CBC"
+  ],
   "key": {
-    "C": { "item": "minecraft:copper_ingot" },
-    "I": { "item": "minecraft:iron_ingot" },
-    "R": { "item": "minecraft:gold_ingot" }
+    "C": {
+      "item": "minecraft:copper_block"
+    },
+    "B": {
+      "item": "minecraft:iron_block"
+    },
+    "N": {
+      "item": "minecraft:netherite_scrap"
+    }
   },
-  "result": { "id": "fpv:motor_3115_900kv", "count": 2 }
+  "result": {
+    "count": 2,
+    "id": "fpv:motor_3115_900kv"
+  }
 }

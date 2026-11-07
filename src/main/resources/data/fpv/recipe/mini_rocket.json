@@ -20,7 +20,7 @@
     }
   },
   "result": {
-    "id": "fpv:mini_rocket",
-    "count": 2
+    "count": 2,
+    "id": "fpv:mini_rocket"
   }
 }

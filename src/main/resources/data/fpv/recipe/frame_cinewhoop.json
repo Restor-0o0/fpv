@@ -1,10 +1,22 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": ["SIS", "ICI", "SIS"],
+  "pattern": [
+    "SIS",
+    "ICI",
+    "SIS"
+  ],
   "key": {
-    "S": { "item": "minecraft:slime_ball" },
-    "I": { "item": "minecraft:iron_ingot" },
-    "C": { "item": "minecraft:copper_ingot" }
+    "S": {
+      "item": "minecraft:slime_ball"
+    },
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    }
   },
-  "result": { "id": "fpv:frame_cinewhoop" }
+  "result": {
+    "id": "fpv:frame_cinewhoop"
+  }
 }

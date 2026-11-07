@@ -23,3 +23,12 @@ type="required"
 versionRange="${minecraft_version_range}"
 ordering="NONE"
 side="BOTH"
+
+# JEI is an optional client integration. Declaring it lets NeoForge order and
+# expose the JEI plugin scan alongside the mod when JEI is installed.
+[[dependencies.${mod_id}]]
+modId="jei"
+type="optional"
+versionRange="[19.0,)"
+ordering="AFTER"
+side="CLIENT"

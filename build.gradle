@@ -20,7 +20,7 @@ sourceSets.main.resources {
 }
 
 repositories {
-    // Put repositories for dependencies here
+    maven { url = "https://maven.blamejared.com/" }
 }
 
 base {
@@ -98,6 +98,7 @@ neoForge {
 
 dependencies {
     // Specify mod dependencies here
+    compileOnly "mezz.jei:jei-1.21.1-neoforge-api:19.70.0.469"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.2'
 }
@@ -139,6 +140,7 @@ neoForge.ideSyncTask generateModMetadata
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+    options.release = 21
     options.compilerArgs << '-Xmaxerrs' << '10000'
 }
 
