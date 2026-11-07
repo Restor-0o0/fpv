@@ -1,12 +1,9 @@
 {
   "type": "minecraft:crafting_shapeless",
   "ingredients": [
-    "minecraft:tnt",
-    "minecraft:iron_nugget",
-    "minecraft:redstone"
+    { "item": "minecraft:tnt" },
+    { "item": "minecraft:iron_nugget" },
+    { "item": "minecraft:redstone" }
   ],
-  "result": {
-    "item": "fpv:drop_charge"
-  },
-  "key": {}
+  "result": { "item": "fpv:drop_charge" }
 }
