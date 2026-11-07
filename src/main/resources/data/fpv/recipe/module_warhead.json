@@ -6,18 +6,10 @@
     "IRI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "T": {
-      "item": "minecraft:tnt"
-    },
-    "N": {
-      "item": "minecraft:netherite_scrap"
-    },
-    "R": {
-      "item": "minecraft:redstone_torch"
-    }
+    "I": "minecraft:iron_ingot",
+    "T": "minecraft:tnt",
+    "N": "minecraft:netherite_scrap",
+    "R": "minecraft:redstone_torch"
   },
   "result": {
     "id": "fpv:module_warhead"

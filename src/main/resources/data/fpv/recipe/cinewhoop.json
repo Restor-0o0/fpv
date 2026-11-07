@@ -6,15 +6,9 @@
     "MPM"
   ],
   "key": {
-    "M": {
-      "item": "fpv:motor_1404_4500kv"
-    },
-    "P": {
-      "item": "fpv:prop_3x2x3"
-    },
-    "F": {
-      "item": "fpv:frame_cinewhoop"
-    }
+    "M": "fpv:motor_1404_4500kv",
+    "P": "fpv:prop_3x2x3",
+    "F": "fpv:frame_cinewhoop"
   },
   "result": {
     "id": "fpv:cinewhoop"

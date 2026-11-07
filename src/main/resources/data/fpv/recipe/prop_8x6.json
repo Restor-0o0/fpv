@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " S ",
+    "SIS",
+    " S "
+  ],
+  "key": {
+    "S": "minecraft:stick",
+    "I": "minecraft:iron_nugget"
+  },
+  "result": {
+    "id": "fpv:prop_8x6",
+    "count": 4
+  }
+}

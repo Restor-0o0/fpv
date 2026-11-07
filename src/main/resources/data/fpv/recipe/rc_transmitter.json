@@ -6,21 +6,11 @@
     "LBL"
   ],
   "key": {
-    "A": {
-      "item": "minecraft:iron_ingot"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "C": {
-      "item": "fpv:fc_f411"
-    },
-    "L": {
-      "item": "minecraft:lever"
-    },
-    "B": {
-      "item": "fpv:battery_1s_300"
-    }
+    "A": "minecraft:iron_ingot",
+    "R": "minecraft:redstone",
+    "C": "fpv:fc_f411",
+    "L": "minecraft:lever",
+    "B": "fpv:battery_1s_300"
   },
   "result": {
     "id": "fpv:rc_transmitter"

@@ -6,15 +6,9 @@
     "ITI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "T": {
-      "item": "minecraft:tnt"
-    },
-    "W": {
-      "item": "fpv:warhead_he"
-    }
+    "I": "minecraft:iron_ingot",
+    "T": "minecraft:tnt",
+    "W": "fpv:warhead_he"
   },
   "result": {
     "id": "fpv:warhead_heavy"

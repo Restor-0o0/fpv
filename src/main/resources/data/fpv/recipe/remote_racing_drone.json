@@ -6,18 +6,10 @@
     " H "
   ],
   "key": {
-    "V": {
-      "item": "fpv:vtx_800mw"
-    },
-    "C": {
-      "item": "fpv:camera_wide"
-    },
-    "D": {
-      "item": "fpv:racing_drone"
-    },
-    "H": {
-      "item": "fpv:fc_h7"
-    }
+    "V": "fpv:vtx_800mw",
+    "C": "fpv:camera_wide",
+    "D": "fpv:racing_drone",
+    "H": "fpv:fc_h7"
   },
   "result": {
     "id": "fpv:remote_racing_drone"

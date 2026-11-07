@@ -6,18 +6,10 @@
     " R "
   ],
   "key": {
-    "N": {
-      "item": "minecraft:iron_nugget"
-    },
-    "G": {
-      "item": "minecraft:gunpowder"
-    },
-    "P": {
-      "item": "minecraft:paper"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "N": "minecraft:iron_nugget",
+    "G": "minecraft:gunpowder",
+    "P": "minecraft:paper",
+    "R": "minecraft:redstone"
   },
   "result": {
     "count": 2,

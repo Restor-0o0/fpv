@@ -6,24 +6,12 @@
     "EBE"
   ],
   "key": {
-    "A": {
-      "item": "minecraft:iron_ingot"
-    },
-    "T": {
-      "item": "fpv:vtx_800mw"
-    },
-    "G": {
-      "item": "minecraft:gold_ingot"
-    },
-    "P": {
-      "item": "fpv:rc_transmitter"
-    },
-    "E": {
-      "item": "minecraft:ender_pearl"
-    },
-    "B": {
-      "item": "fpv:battery_4s_650"
-    }
+    "A": "minecraft:iron_ingot",
+    "T": "fpv:vtx_800mw",
+    "G": "minecraft:gold_ingot",
+    "P": "fpv:rc_transmitter",
+    "E": "minecraft:ender_pearl",
+    "B": "fpv:battery_4s_650"
   },
   "result": {
     "id": "fpv:rc_transmitter_lr"

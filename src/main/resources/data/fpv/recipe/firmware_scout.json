@@ -6,18 +6,10 @@
     "RGR"
   ],
   "key": {
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "G": {
-      "item": "minecraft:gold_nugget"
-    },
-    "S": {
-      "item": "minecraft:spyglass"
-    },
-    "F": {
-      "item": "fpv:firmware_companion"
-    }
+    "R": "minecraft:redstone",
+    "G": "minecraft:gold_nugget",
+    "S": "minecraft:spyglass",
+    "F": "fpv:firmware_companion"
   },
   "result": {
     "id": "fpv:firmware_scout"

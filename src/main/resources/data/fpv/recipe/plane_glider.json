@@ -6,18 +6,10 @@
     "WFW"
   ],
   "key": {
-    "W": {
-      "item": "minecraft:white_wool"
-    },
-    "S": {
-      "item": "minecraft:stick"
-    },
-    "P": {
-      "item": "fpv:plane"
-    },
-    "F": {
-      "item": "fpv:fc_f411"
-    }
+    "W": "minecraft:white_wool",
+    "S": "minecraft:stick",
+    "P": "fpv:plane",
+    "F": "fpv:fc_f411"
   },
   "result": {
     "id": "fpv:plane_glider"

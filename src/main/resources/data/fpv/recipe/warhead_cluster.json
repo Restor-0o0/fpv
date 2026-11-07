@@ -6,15 +6,9 @@
     " I "
   ],
   "key": {
-    "F": {
-      "item": "fpv:warhead_frag"
-    },
-    "D": {
-      "item": "minecraft:dispenser"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "F": "fpv:warhead_frag",
+    "D": "minecraft:dispenser",
+    "I": "minecraft:iron_ingot"
   },
   "result": {
     "id": "fpv:warhead_cluster"

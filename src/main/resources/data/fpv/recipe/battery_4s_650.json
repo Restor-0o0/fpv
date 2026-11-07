@@ -6,15 +6,9 @@
     "CRC"
   ],
   "key": {
-    "C": {
-      "item": "minecraft:coal"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "B": {
-      "item": "fpv:battery_1s_300"
-    }
+    "C": "minecraft:coal",
+    "R": "minecraft:redstone",
+    "B": "fpv:battery_1s_300"
   },
   "result": {
     "id": "fpv:battery_4s_650"

@@ -6,15 +6,9 @@
     "CBC"
   ],
   "key": {
-    "C": {
-      "item": "minecraft:copper_block"
-    },
-    "B": {
-      "item": "minecraft:iron_block"
-    },
-    "N": {
-      "item": "minecraft:netherite_scrap"
-    }
+    "C": "minecraft:copper_block",
+    "B": "minecraft:iron_block",
+    "N": "minecraft:netherite_scrap"
   },
   "result": {
     "count": 2,

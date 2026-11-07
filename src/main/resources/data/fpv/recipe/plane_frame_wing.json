@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "SFS",
+    "ICI",
+    "SFS"
+  ],
+  "key": {
+    "S": "minecraft:stick",
+    "F": "minecraft:feather",
+    "I": "minecraft:iron_ingot",
+    "C": "minecraft:copper_ingot"
+  },
+  "result": {
+    "id": "fpv:plane_frame_wing"
+  }
+}

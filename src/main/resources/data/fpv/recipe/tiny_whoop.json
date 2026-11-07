@@ -6,15 +6,9 @@
     "MPM"
   ],
   "key": {
-    "M": {
-      "item": "fpv:motor_1103_8000kv"
-    },
-    "P": {
-      "item": "fpv:prop_65mm"
-    },
-    "F": {
-      "item": "fpv:frame_tiny_whoop"
-    }
+    "M": "fpv:motor_1103_8000kv",
+    "P": "fpv:prop_65mm",
+    "F": "fpv:frame_tiny_whoop"
   },
   "result": {
     "id": "fpv:tiny_whoop"

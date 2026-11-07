@@ -6,12 +6,8 @@
     "III"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_block"
-    },
-    "N": {
-      "item": "minecraft:netherite_scrap"
-    }
+    "I": "minecraft:iron_block",
+    "N": "minecraft:netherite_scrap"
   },
   "result": {
     "id": "fpv:frame_octo_8inch"

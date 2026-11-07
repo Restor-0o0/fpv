@@ -6,15 +6,9 @@
     "QAQ"
   ],
   "key": {
-    "Q": {
-      "item": "minecraft:quartz"
-    },
-    "A": {
-      "item": "minecraft:amethyst_shard"
-    },
-    "F": {
-      "item": "fpv:fc_f411"
-    }
+    "Q": "minecraft:quartz",
+    "A": "minecraft:amethyst_shard",
+    "F": "fpv:fc_f411"
   },
   "result": {
     "id": "fpv:fc_h7"
