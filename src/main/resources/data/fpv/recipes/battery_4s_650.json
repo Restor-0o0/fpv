@@ -1,10 +1,22 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": ["CRC", "RBR", "CRC"],
+  "pattern": [
+    "CRC",
+    "RBR",
+    "CRC"
+  ],
   "key": {
-    "C": { "item": "minecraft:coal" },
-    "R": { "item": "minecraft:redstone" },
-    "B": { "item": "fpv:battery_1s_300" }
+    "C": {
+      "item": "minecraft:coal"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "B": {
+      "item": "fpv:battery_1s_300"
+    }
   },
-  "result": { "item": "fpv:battery_4s_650" }
+  "result": {
+    "item": "fpv:battery_4s_650"
+  }
 }

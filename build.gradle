@@ -55,8 +55,14 @@ minecraft {
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
+repositories {
+    maven { url = 'https://maven.blamejared.com/' }
+}
+
 dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    compileOnly fg.deobf('mezz.jei:jei-1.20.1-common-api:15.74.0.234')
+    compileOnly fg.deobf('mezz.jei:jei-1.20.1-forge-api:15.74.0.234')
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
 }
 

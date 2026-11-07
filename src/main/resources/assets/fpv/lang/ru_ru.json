@@ -619,5 +619,16 @@
   "tooltip.fpv.warhead.mass": "Масса: %s кг",
   "tooltip.fpv.warhead.mount": "Установка: Shift + ПКМ по аппарату с отсеком БЧ",
   "tooltip.fpv.warhead.power": "Мощность взрыва: %s",
-  "tooltip.fpv.warhead.shaped": "Бронебойная"
+  "tooltip.fpv.warhead.shaped": "Бронебойная",
+  "jei.fpv.assembly": "Станция сборки дронов",
+  "jei.fpv.assembly.slot.required": "Нужно для этой сборки",
+  "jei.fpv.assembly.slot.optional": "Дополнительный компонент",
+  "jei.fpv.assembly.slot.preset": "Входит в эту готовую сборку",
+  "jei.fpv.assembly.slot.motors": "Установи совместимые моторы: %s шт.",
+  "jei.fpv.assembly.slot.propellers": "Установи совместимые пропеллеры: %s шт.",
+  "jei.fpv.assembly.station_hint": "Разложи детали по соответствующим слотам станции",
+  "jei.fpv.assembly.motor_count": "Моторы: %s",
+  "jei.fpv.assembly.propeller_count": "Пропеллеры: %s",
+  "jei.fpv.assembly.warhead": "Установи эту БЧ на готовый аппарат",
+  "jei.fpv.assembly.warhead.short": "БЧ"
 }

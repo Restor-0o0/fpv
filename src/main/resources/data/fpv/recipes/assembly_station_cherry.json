@@ -23,11 +23,11 @@
     }
   },
   "result": {
-    "item": "fpv:assembly_station",
-    "nbt": {
-      "BlockStateTag": {
+    "components": {
+      "minecraft:block_state": {
         "wood": "cherry"
       }
-    }
+    },
+    "item": "fpv:assembly_station"
   }
 }
