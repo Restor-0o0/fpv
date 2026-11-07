@@ -6,21 +6,11 @@
     "RQR"
   ],
   "key": {
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "G": {
-      "item": "minecraft:gold_ingot"
-    },
-    "A": {
-      "item": "minecraft:arrow"
-    },
-    "Q": {
-      "item": "minecraft:quartz"
-    },
-    "F": {
-      "item": "fpv:firmware_companion"
-    }
+    "R": "minecraft:redstone",
+    "G": "minecraft:gold_ingot",
+    "A": "minecraft:arrow",
+    "Q": "minecraft:quartz",
+    "F": "fpv:firmware_companion"
   },
   "result": {
     "id": "fpv:firmware_guardian"

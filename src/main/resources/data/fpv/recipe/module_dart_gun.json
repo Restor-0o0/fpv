@@ -6,21 +6,11 @@
     " IF"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "F": {
-      "item": "minecraft:flint"
-    },
-    "D": {
-      "item": "minecraft:dispenser"
-    },
-    "C": {
-      "item": "minecraft:crossbow"
-    },
-    "H": {
-      "item": "fpv:fc_h7"
-    }
+    "I": "minecraft:iron_ingot",
+    "F": "minecraft:flint",
+    "D": "minecraft:dispenser",
+    "C": "minecraft:crossbow",
+    "H": "fpv:fc_h7"
   },
   "result": {
     "id": "fpv:module_dart_gun"

@@ -6,21 +6,11 @@
     "III"
   ],
   "key": {
-    "F": {
-      "item": "fpv:firmware_guardian"
-    },
-    "V": {
-      "item": "fpv:vtx_200mw"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "B": {
-      "item": "fpv:battery_4s_1300"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "F": "fpv:firmware_guardian",
+    "V": "fpv:vtx_200mw",
+    "R": "minecraft:redstone",
+    "B": "fpv:battery_4s_1300",
+    "I": "minecraft:iron_ingot"
   },
   "result": {
     "id": "fpv:guard_station"

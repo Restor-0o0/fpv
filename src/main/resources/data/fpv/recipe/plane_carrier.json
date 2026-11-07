@@ -6,21 +6,11 @@
     "IBI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "H": {
-      "item": "minecraft:hopper"
-    },
-    "M": {
-      "item": "fpv:motor_3115_900kv"
-    },
-    "P": {
-      "item": "fpv:plane_cargo"
-    },
-    "B": {
-      "item": "fpv:battery_6s_1100"
-    }
+    "I": "minecraft:iron_ingot",
+    "H": "minecraft:hopper",
+    "M": "fpv:motor_3115_900kv",
+    "P": "fpv:plane_cargo",
+    "B": "fpv:battery_6s_1100"
   },
   "result": {
     "id": "fpv:plane_carrier"

@@ -6,12 +6,8 @@
     " I "
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_nugget"
-    },
-    "S": {
-      "item": "minecraft:slime_ball"
-    }
+    "I": "minecraft:iron_nugget",
+    "S": "minecraft:slime_ball"
   },
   "result": {
     "count": 4,

@@ -6,15 +6,9 @@
     "IBI"
   ],
   "key": {
-    "I": {
-      "item": "minecraft:iron_ingot"
-    },
-    "B": {
-      "item": "minecraft:light_blue_dye"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "I": "minecraft:iron_ingot",
+    "B": "minecraft:light_blue_dye",
+    "R": "minecraft:redstone"
   },
   "result": {
     "count": 2,

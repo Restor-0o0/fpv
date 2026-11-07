@@ -6,15 +6,9 @@
     " C "
   ],
   "key": {
-    "A": {
-      "item": "minecraft:amethyst_shard"
-    },
-    "C": {
-      "item": "minecraft:copper_ingot"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    }
+    "A": "minecraft:amethyst_shard",
+    "C": "minecraft:copper_ingot",
+    "R": "minecraft:redstone"
   },
   "result": {
     "id": "fpv:vtx_25mw"

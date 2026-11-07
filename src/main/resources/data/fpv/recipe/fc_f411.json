@@ -6,15 +6,9 @@
     "RQR"
   ],
   "key": {
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "Q": {
-      "item": "minecraft:quartz"
-    },
-    "C": {
-      "item": "minecraft:copper_ingot"
-    }
+    "R": "minecraft:redstone",
+    "Q": "minecraft:quartz",
+    "C": "minecraft:copper_ingot"
   },
   "result": {
     "id": "fpv:fc_f411"

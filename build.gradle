@@ -58,7 +58,10 @@ neoForge {
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
+repositories { maven { url = 'https://maven.blamejared.com/' } }
+
 dependencies {
+    compileOnly "mezz.jei:jei-26.1.2-neoforge-api:29.53.0.115"
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }

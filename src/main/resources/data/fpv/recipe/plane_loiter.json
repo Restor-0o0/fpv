@@ -6,18 +6,10 @@
     " B "
   ],
   "key": {
-    "H": {
-      "item": "fpv:warhead_heavy"
-    },
-    "M": {
-      "item": "fpv:motor_2806_1300kv"
-    },
-    "P": {
-      "item": "fpv:plane_kamikaze"
-    },
-    "B": {
-      "item": "fpv:battery_6s_1100"
-    }
+    "H": "fpv:warhead_heavy",
+    "M": "fpv:motor_2806_1300kv",
+    "P": "fpv:plane_kamikaze",
+    "B": "fpv:battery_6s_1100"
   },
   "result": {
     "id": "fpv:plane_loiter"

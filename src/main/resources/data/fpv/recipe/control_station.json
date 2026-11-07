@@ -6,21 +6,11 @@
     "III"
   ],
   "key": {
-    "A": {
-      "item": "minecraft:amethyst_shard"
-    },
-    "V": {
-      "item": "fpv:vtx_800mw"
-    },
-    "R": {
-      "item": "minecraft:redstone"
-    },
-    "H": {
-      "item": "fpv:fc_h7"
-    },
-    "I": {
-      "item": "minecraft:iron_ingot"
-    }
+    "A": "minecraft:amethyst_shard",
+    "V": "fpv:vtx_800mw",
+    "R": "minecraft:redstone",
+    "H": "fpv:fc_h7",
+    "I": "minecraft:iron_ingot"
   },
   "result": {
     "id": "fpv:control_station"

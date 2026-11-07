@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "ICI",
+    "IWI",
+    "ISI"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "C": "minecraft:copper_ingot",
+    "W": "minecraft:white_wool",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "fpv:plane_frame_strike"
+  }
+}
