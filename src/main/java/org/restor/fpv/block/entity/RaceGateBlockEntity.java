@@ -43,9 +43,13 @@ public class RaceGateBlockEntity extends BlockEntity {
     public BlockPos getNextRoutePos() { return nextRoutePos; }
 
     public void configureGenerated(int generatedSize, int generatedYaw) {
+        configureGenerated(generatedSize, generatedYaw, 0);
+    }
+
+    public void configureGenerated(int generatedSize, int generatedYaw, int generatedPitch) {
         size = Math.max(2, Math.min(15, generatedSize));
         yaw = Math.floorMod(generatedYaw, 360);
-        pitch = 0;
+        pitch = Math.max(-90, Math.min(90, generatedPitch));
         offset = 0;
         sync();
     }
