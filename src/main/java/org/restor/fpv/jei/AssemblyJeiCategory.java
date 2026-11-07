@@ -34,25 +34,25 @@ public final class AssemblyJeiCategory extends AbstractRecipeCategory<AssemblyJe
 
             @Override
     public void setRecipe(IRecipeLayoutBuilder builder, AssemblyJeiGuide recipe, IFocusGroup focuses) {
-        input(builder, 104, 40, recipe.frame());
-        alternatives(builder, 104, 20, recipe.batteries());
-        alternatives(builder, 104, 60, recipe.cameras());
-        alternatives(builder, 140, 60, recipe.flightControllers());
-        alternatives(builder, 68, 60, recipe.videoTransmitters());
-        alternatives(builder, 140, 40, recipe.optionalModules(), recipe.preset()
+        input(builder, 86, 40, recipe.frame());
+        alternatives(builder, 86, 20, recipe.batteries());
+        alternatives(builder, 86, 60, recipe.cameras());
+        alternatives(builder, 122, 60, recipe.flightControllers());
+        alternatives(builder, 50, 60, recipe.videoTransmitters());
+        alternatives(builder, 122, 40, recipe.optionalModules(), recipe.preset()
             ? Component.translatable("jei.fpv.assembly.slot.preset")
             : Component.translatable("jei.fpv.assembly.slot.optional"));
-        alternatives(builder, 68, 40, recipe.optionalFirmware(), recipe.preset()
+        alternatives(builder, 50, 40, recipe.optionalFirmware(), recipe.preset()
             ? Component.translatable("jei.fpv.assembly.slot.preset")
             : Component.translatable("jei.fpv.assembly.slot.optional"));
 
-        alternatives(builder, 68, 80, recipe.motors(),
+        alternatives(builder, 50, 80, recipe.motors(),
             Component.translatable("jei.fpv.assembly.slot.motors", recipe.motorCount()));
-        alternatives(builder, 140, 80, recipe.propellers(),
+        alternatives(builder, 122, 80, recipe.propellers(),
             Component.translatable("jei.fpv.assembly.slot.propellers", recipe.motorCount()));
 
         boolean cardOutput = recipe.output().is(ModItems.DRONE_CARD.get());
-        builder.addOutputSlot(cardOutput ? 140 : 104, 100).addItemStack(recipe.output());
+        builder.addOutputSlot(cardOutput ? 122 : 86, 100).addItemStack(recipe.output());
 
         int bayIndex = 0;
         for (ItemStack extra : recipe.extraParts()) {
@@ -109,17 +109,17 @@ public final class AssemblyJeiCategory extends AbstractRecipeCategory<AssemblyJe
             graphics.fill(x + 3, y + 3, x + WIDTH - 3, y + HEIGHT - 3, 0xFF23232B);
             graphics.fill(x + 4, y + 4, x + WIDTH - 4, y + HEIGHT - 4, 0xFF202028);
 
-            drawSlot(graphics, x + 104, y + 20, 0xFF8B8B99);
-            drawSlot(graphics, x + 104, y + 40, 0xFF8B8B99);
-            drawSlot(graphics, x + 104, y + 60, 0xFF8B8B99);
-            drawSlot(graphics, x + 68, y + 40, 0xFF7BE08A);
-            drawSlot(graphics, x + 140, y + 40, 0xFFFFB733);
-            drawSlot(graphics, x + 68, y + 60, 0xFF9AC8FF);
-            drawSlot(graphics, x + 140, y + 60, 0xFFC7A0FF);
-            drawSlot(graphics, x + 68, y + 80, 0xFF8B8B99);
-            drawSlot(graphics, x + 140, y + 80, 0xFF8B8B99);
-            drawSlot(graphics, x + 104, y + 100, 0xFF66CC66);
-            drawSlot(graphics, x + 140, y + 100, 0xFFE8C27A);
+            drawSlot(graphics, x + 86, y + 20, 0xFF8B8B99);
+            drawSlot(graphics, x + 86, y + 40, 0xFF8B8B99);
+            drawSlot(graphics, x + 86, y + 60, 0xFF8B8B99);
+            drawSlot(graphics, x + 50, y + 40, 0xFF7BE08A);
+            drawSlot(graphics, x + 122, y + 40, 0xFFFFB733);
+            drawSlot(graphics, x + 50, y + 60, 0xFF9AC8FF);
+            drawSlot(graphics, x + 122, y + 60, 0xFFC7A0FF);
+            drawSlot(graphics, x + 50, y + 80, 0xFF8B8B99);
+            drawSlot(graphics, x + 122, y + 80, 0xFF8B8B99);
+            drawSlot(graphics, x + 86, y + 100, 0xFF66CC66);
+            drawSlot(graphics, x + 122, y + 100, 0xFFE8C27A);
             for (int i = 0; i < 4; i++) drawSlot(graphics, x + 36 + i * 24, y + 120, 0xFFCC6666);
             drawSlot(graphics, x + 140, y + 120, 0xFFFFB733);
         }
