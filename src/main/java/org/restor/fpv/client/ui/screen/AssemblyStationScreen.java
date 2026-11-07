@@ -25,7 +25,7 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
     private Button channelButton;
 
     public AssemblyStationScreen(AssemblyStationMenu menu, Inventory inv, Component title) {
-        super(menu, inv, title, 276, 225);
+        super(menu, inv, title, 264, 219);
         inventoryLabelY = imageHeight - 94;
     }
 
@@ -38,14 +38,14 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
                 if (minecraft != null && minecraft.gameMode != null) {
                     minecraft.gameMode.handleInventoryButtonClick(menu.containerId, AssemblyStationMenu.BUTTON_REPAIR);
                 }
-            }).bounds(leftPos + 207, topPos + 181, 61, 20).build());
+            }).bounds(leftPos + 203, topPos + 181, 61, 20).build());
         repairButton.active = menu.canRepair();
         channelButton = addRenderableWidget(Button.builder(channelLabel(),
             button -> {
                 if (minecraft != null && minecraft.gameMode != null) {
                     minecraft.gameMode.handleInventoryButtonClick(menu.containerId, AssemblyStationMenu.BUTTON_CHANNEL);
                 }
-            }).bounds(leftPos + 182, topPos + 161, 86, 18).build());
+            }).bounds(leftPos + 174, topPos + 161, 86, 18).build());
         channelButton.active = menu.hasRadio();
     }
 
@@ -67,8 +67,8 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
         g.fill(x + 1, y + 1, x + imageWidth - 1, y + imageHeight - 1, 0xFF3C3C46);
         g.fill(x + 3, y + 3, x + imageWidth - 3, y + imageHeight - 3, 0xFF23232B);
         // Inventory zone
-        g.fill(x + 4, y + 138, x + 172, y + imageHeight - 4, 0xFF2E2E38);
-        g.fill(x + 176, y + 4, x + 272, y + imageHeight - 4, 0xFF191921);
+        g.fill(x + 4, y + 132, x + 172, y + imageHeight - 4, 0xFF2E2E38);
+        g.fill(x + 172, y + 4, x + 260, y + imageHeight - 4, 0xFF191921);
 
         // Slot frames for every menu slot in the station area
         for (int i = 0; i < AssemblyStationMenu.SLOT_COUNT; i++) {
@@ -102,33 +102,33 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
     @Override
     protected void extractLabels(GuiGraphicsExtractor g, int mouseX, int mouseY) {
         super.extractLabels(g, mouseX, mouseY);
-        g.text(font, Component.translatable("screen.fpv.assembly.diagnostics"), 182, 8, 0xFFE0E0E8, false);
+        g.text(font, Component.translatable("screen.fpv.assembly.diagnostics"), 174, 8, 0xFFE0E0E8, false);
 
         var issues = menu.issues();
         int lineY = 23;
         if (issues.isEmpty()) {
-            g.text(font, Component.translatable("assembly.validation.ready"), 182, lineY, 0xFF66CC66, false);
+            g.text(font, Component.translatable("assembly.validation.ready"), 174, lineY, 0xFF66CC66, false);
         } else {
             int lines = 0;
             for (var issue : issues) {
                 int color = issue.isError() ? 0xFFFF7777 : 0xFFFFC45C;
                 for (var line : font.split(Component.translatable(issue.localizationKey()), 84)) {
                     if (lines++ >= 5) break;
-                    g.text(font, line, 182, lineY, color, false);
+                    g.text(font, line, 174, lineY, color, false);
                     lineY += 10;
                 }
                 if (lines >= 5) break;
             }
         }
 
-        g.text(font, metric("screen.fpv.assembly.mass", menu.massKg(), "kg", 3), 182, 78, 0xFFB8B8C4, false);
-        g.text(font, metric("screen.fpv.assembly.thrust", menu.thrustN(), "N", 2), 182, 90, 0xFFB8B8C4, false);
-        g.text(font, metric("screen.fpv.assembly.twr", menu.twr(), "", 2), 182, 102, 0xFFB8B8C4, false);
-        g.text(font, metric("screen.fpv.assembly.hover", menu.hoverThrottle() * 100f, "%", 0), 182, 114, 0xFFB8B8C4, false);
+        g.text(font, metric("screen.fpv.assembly.mass", menu.massKg(), "kg", 3), 174, 78, 0xFFB8B8C4, false);
+        g.text(font, metric("screen.fpv.assembly.thrust", menu.thrustN(), "N", 2), 174, 90, 0xFFB8B8C4, false);
+        g.text(font, metric("screen.fpv.assembly.twr", menu.twr(), "", 2), 174, 102, 0xFFB8B8C4, false);
+        g.text(font, metric("screen.fpv.assembly.hover", menu.hoverThrottle() * 100f, "%", 0), 174, 114, 0xFFB8B8C4, false);
         int conditionColor = menu.conditionPercent() < 50 ? 0xFFFF7777
             : menu.conditionPercent() < 100 ? 0xFFFFC45C : 0xFF66CC66;
         g.text(font, Component.translatable("screen.fpv.assembly.condition", menu.conditionPercent()),
-            182, 126, conditionColor, false);
+            174, 126, conditionColor, false);
 
         ComponentType repairType = menu.repairTargetType();
         Component repairStatus;
@@ -142,7 +142,7 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
         int repairY = 138;
         for (var line : font.split(repairStatus, 84)) {
             if (repairY > 148) break;
-            g.text(font, line, 182, repairY, 0xFFAFC8D8, false);
+            g.text(font, line, 174, repairY, 0xFFAFC8D8, false);
             repairY += 10;
         }
     }
