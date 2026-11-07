@@ -1,8 +1,12 @@
 package org.restor.fpv.controller;
 
 import com.mojang.logging.LogUtils;
+import org.lwjgl.glfw.GLFW;
 import org.restor.fpv.Config;
 import org.slf4j.Logger;
+
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 
 public class RCController {
     public static final int AXIS_THROTTLE = 0;
@@ -24,35 +28,42 @@ public class RCController {
     private static int modeButton = -1;
     private static float[] lastRawAxes;
     private static float[] lastProcessedAxes;
+    private static int armAxisStateIndex = -1;
+    private static boolean armSwitchOn;
+    private static boolean armAxisFormatKnown;
+    private static boolean armAxisBipolar;
     private static int logCounter;
 
     private static final Logger LOGGER = LogUtils.getLogger();
 
     public static void scan() {
-        int[] ids = Joysticks.ids();
-        for (int jid : ids) {
-            String name = Joysticks.name(jid);
-            if (name != null && (name.toLowerCase().contains("tx") || name.toLowerCase().contains("radio")
-                || name.toLowerCase().contains("transmitter") || name.toLowerCase().contains("joystick")
-                || name.toLowerCase().contains("gamepad") || name.toLowerCase().contains("controller")
-                || name.toLowerCase().contains("radiomaster") || name.toLowerCase().contains("pocket")
-                || name.toLowerCase().contains("boxer") || name.toLowerCase().contains("zorro")
-                || name.toLowerCase().contains("t-lite") || name.toLowerCase().contains("t-pro")
-                || name.toLowerCase().contains("commander") || name.toLowerCase().contains("elrs")
-                || name.toLowerCase().contains("jumper") || name.toLowerCase().contains("betaflight")
-                || name.toLowerCase().contains("ethos") || name.toLowerCase().contains("frsky"))) {
-                setupController(jid, name);
-                return;
+        for (int jid = GLFW.GLFW_JOYSTICK_1; jid <= GLFW.GLFW_JOYSTICK_LAST; jid++) {
+            if (GLFW.glfwJoystickPresent(jid)) {
+                String name = GLFW.glfwGetJoystickName(jid);
+                if (name != null && (name.toLowerCase().contains("tx") || name.toLowerCase().contains("radio")
+                    || name.toLowerCase().contains("transmitter") || name.toLowerCase().contains("joystick")
+                    || name.toLowerCase().contains("gamepad") || name.toLowerCase().contains("controller")
+                    || name.toLowerCase().contains("radiomaster") || name.toLowerCase().contains("pocket")
+                    || name.toLowerCase().contains("boxer") || name.toLowerCase().contains("zorro")
+                    || name.toLowerCase().contains("t-lite") || name.toLowerCase().contains("t-pro")
+                    || name.toLowerCase().contains("commander") || name.toLowerCase().contains("elrs")
+                    || name.toLowerCase().contains("jumper") || name.toLowerCase().contains("betaflight")
+                    || name.toLowerCase().contains("ethos") || name.toLowerCase().contains("frsky"))) {
+                    setupController(jid, name);
+                    return;
+                }
             }
         }
 
         // Fallback: pick first joystick with 4+ axes
-        for (int jid : ids) {
-            float[] buf = Joysticks.axes(jid);
-            if (buf != null && buf.length >= 4) {
-                String name = Joysticks.name(jid);
-                setupController(jid, name != null ? name : "Unknown");
-                return;
+        for (int jid = GLFW.GLFW_JOYSTICK_1; jid <= GLFW.GLFW_JOYSTICK_LAST; jid++) {
+            if (GLFW.glfwJoystickPresent(jid)) {
+                FloatBuffer buf = GLFW.glfwGetJoystickAxes(jid);
+                if (buf != null && buf.remaining() >= 4) {
+                    String name = GLFW.glfwGetJoystickName(jid);
+                    setupController(jid, name != null ? name : "Unknown");
+                    return;
+                }
             }
         }
 
@@ -64,6 +75,7 @@ public class RCController {
         currentJoystick = -1;
         controllerName = "";
         axisCenter = null;
+        resetArmAxisState();
     }
 
     private static void setupController(int jid, String name) {
@@ -71,6 +83,7 @@ public class RCController {
         currentJoystick = jid;
         controllerName = name;
         connected = true;
+        resetArmAxisState();
         LOGGER.info("Connected to controller: \"{}\" (joystick #{})", name, jid);
 
         // Auto-detect axis mapping and device type based on name
@@ -89,8 +102,8 @@ public class RCController {
         axisCenter = null; // will be calibrated on first readAxes call
 
         // Auto-detect buttons
-        boolean[] buttons = Joysticks.buttons(jid);
-        int btnCount = buttons != null ? buttons.length : 0;
+        ByteBuffer buttons = GLFW.glfwGetJoystickButtons(jid);
+        int btnCount = buttons != null ? buttons.remaining() : 0;
         if (btnCount >= 2) {
             armButton = 0;
             modeButton = 1;
@@ -107,13 +120,15 @@ public class RCController {
         if (!connected || currentJoystick < 0) return null;
         if (applyConfiguredAxisMap()) axisCenter = null;
 
-        float[] raw = Joysticks.axes(currentJoystick);
-        if (raw == null || raw.length < 4) {
+        FloatBuffer axes = GLFW.glfwGetJoystickAxes(currentJoystick);
+        if (axes == null || axes.remaining() < 4) {
             connected = false;
             return null;
         }
 
         float[] values = new float[4];
+        float[] raw = new float[axes.remaining()];
+        for (int i = 0; i < raw.length; i++) raw[i] = axes.get(i);
         lastRawAxes = raw;
 
         if (isRCTransmitter) {
@@ -261,24 +276,24 @@ public class RCController {
     public static boolean[] readButtons() {
         if (!connected || currentJoystick < 0) return null;
 
-        boolean[] buttons = Joysticks.buttons(currentJoystick);
-        if (buttons == null || buttons.length == 0) return null;
+        ByteBuffer buttons = GLFW.glfwGetJoystickButtons(currentJoystick);
+        if (buttons == null || buttons.remaining() == 0) return null;
 
         boolean[] state = new boolean[2];
-        int btnCount = buttons.length;
+        int btnCount = buttons.remaining();
 
         if (armButton >= 0 && armButton < btnCount) {
-            state[0] = buttons[armButton];
+            state[0] = buttons.get(armButton) == GLFW.GLFW_PRESS;
         }
         if (modeButton >= 0 && modeButton < btnCount) {
-            state[1] = buttons[modeButton];
+            state[1] = buttons.get(modeButton) == GLFW.GLFW_PRESS;
         }
 
         return state;
     }
 
     // RC transmitters expose their arm switch as an AUX axis (rest ~-1, flipped ~+1),
-    // not a joystick button — so the button-based arm path never fires for them. Read the
+    // not a GLFW button — so the button-based arm path never fires for them. Read the
     // configured arm axis; when unset (-1), auto-detect the first non-gimbal axis the
     // user flips high and persist it so future reads use it directly.
     public static boolean isArmSwitchOn() {
@@ -288,10 +303,35 @@ public class RCController {
         boolean invert = Config.RC_INVERT_ARM.get();
         int cfg = Config.RC_AXIS_ARM.get();
         if (cfg >= 0 && cfg < raw.length) {
-            float v = invert ? -raw[cfg] : raw[cfg];
-            return v > 0f;
+            if (armAxisStateIndex != cfg) {
+                resetArmAxisState();
+                armAxisStateIndex = cfg;
+            }
+            float rawValue = raw[cfg];
+            if (!armAxisFormatKnown) {
+                armAxisBipolar = rawValue < -0.2f;
+                armAxisFormatKnown = true;
+            } else if (rawValue < -0.2f) {
+                // Most transmitter switches report -1/+1. Some HID profiles report 0/1.
+                // Detect the format so the neutral/off position is handled correctly.
+                armAxisBipolar = true;
+            }
+
+            float value = invert ? -rawValue : rawValue;
+            if (armAxisBipolar) {
+                // Leave a dead zone around the switch midpoint so small HID noise cannot
+                // repeatedly disarm and re-arm the flight controller.
+                if (value >= 0.35f) armSwitchOn = true;
+                else if (value <= -0.35f) armSwitchOn = false;
+            } else {
+                // Unipolar switches commonly report 0/1 instead of -1/+1.
+                if (value >= 0.75f) armSwitchOn = true;
+                else if (value <= 0.25f) armSwitchOn = false;
+            }
+            return armSwitchOn;
         }
         if (cfg < 0) {
+            resetArmAxisState();
             for (int i = 0; i < raw.length; i++) {
                 if (i == axisMap[AXIS_THROTTLE] || i == axisMap[AXIS_ROLL]
                     || i == axisMap[AXIS_PITCH] || i == axisMap[AXIS_YAW]) continue;
@@ -299,12 +339,23 @@ public class RCController {
                 if (v > 0.5f) {
                     Config.RC_AXIS_ARM.set(i);
                     Config.save();
+                    armAxisStateIndex = i;
+                    armSwitchOn = true;
+                    armAxisFormatKnown = true;
+                    armAxisBipolar = raw[i] < -0.2f;
                     LOGGER.info("[RC-ARM] auto-detected arm switch on AUX axis {}", i);
                     return true;
                 }
             }
         }
         return false;
+    }
+
+    private static void resetArmAxisState() {
+        armAxisStateIndex = -1;
+        armSwitchOn = false;
+        armAxisFormatKnown = false;
+        armAxisBipolar = false;
     }
 
     public static String getControllerName() {
