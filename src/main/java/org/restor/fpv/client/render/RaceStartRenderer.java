@@ -27,6 +27,11 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
     }
 
     @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(RaceStartBlockEntity start) {
+        return start.renderBoundingBox();
+    }
+
+    @Override
     public void render(RaceStartBlockEntity start, float partialTick, PoseStack pose,
                        MultiBufferSource buffer, int packedLight, int packedOverlay) {
         if (start.getRouteSize() <= 0) return;
@@ -34,38 +39,30 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
         float a = ((c >> 24) & 0xFF) / 255f;
         if (a <= 0f) a = 1f;
 
+        VertexConsumer vc = buffer.getBuffer(RaceFrames.type());
         Matrix4f mat = pose.last().pose();
         BlockPos origin = start.getBlockPos();
         float half = start.getSize() / 2.0f;
         Vector3f center = local(origin, start.frameCenter());
         Vector3f n = start.normal().normalize();
-        boolean racing = ClientRaceState.active();
 
-        Vector3f finishCenter = null;
-        Vector3f finishNormal = null;
-        if (racing && start.getFinishPos() != null) {
-            Vec3 fn = start.finishNormal();
-            Vector3f fv = new Vector3f((float) fn.x, (float) fn.y, (float) fn.z);
-            if (fv.lengthSquared() > 1e-6f) {
-                finishNormal = fv;
-                finishCenter = local(origin, start.finishCenter());
-            }
-        }
-
-        // One shared builder backs every batch, and drawInBatch below switches it to the font
-        // format — so all of the quads have to be written before the first plate is drawn.
-        VertexConsumer vc = buffer.getBuffer(RaceFrames.type());
         RaceFrames.hoop(vc, mat, center, n, half, org.restor.fpv.block.RaceGateBlock.FRAME_RADIUS,
             RaceFrames.shade(c, 1f), RaceFrames.WHITE, a);
-        if (finishCenter != null) {
-            RaceFrames.hoop(vc, mat, finishCenter, finishNormal, half, org.restor.fpv.block.RaceGateBlock.FRAME_RADIUS,
-                RaceFrames.WHITE, RaceFrames.DARK, a);
-        }
-        if (racing) renderFirstSegment(start, vc, mat, a);
-
         renderPlateText(pose, buffer, center, n, half, "START", 0xFF40FF40);
-        if (finishCenter != null) {
-            renderPlateText(pose, buffer, finishCenter, finishNormal, half, "FINISH", 0xFFFFFFFF);
+
+        if (ClientRaceState.active()) {
+            BlockPos finishPos = start.getFinishPos();
+            if (finishPos != null) {
+                Vec3 fn = start.finishNormal();
+                Vector3f finishNormal = new Vector3f((float) fn.x, (float) fn.y, (float) fn.z);
+                if (finishNormal.lengthSquared() > 1e-6f) {
+                    Vector3f finishCenter = local(origin, start.finishCenter());
+                    RaceFrames.hoop(vc, mat, finishCenter, finishNormal, half, org.restor.fpv.block.RaceGateBlock.FRAME_RADIUS,
+                        RaceFrames.WHITE, RaceFrames.DARK, a);
+                    renderPlateText(pose, buffer, finishCenter, finishNormal, half, "FINISH", 0xFFFFFFFF);
+                }
+            }
+            renderFirstSegment(start, vc, mat, a);
         }
     }
 
@@ -131,8 +128,20 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
     }
 
     private static Vector3f tangent(Vector3f point, Vector3f prevPoint, Vector3f nextPoint, float handle) {
+        Vector3f incoming = new Vector3f(point).sub(prevPoint);
+        Vector3f outgoing = new Vector3f(nextPoint).sub(point);
         Vector3f t = new Vector3f(nextPoint).sub(prevPoint);
-        if (t.lengthSquared() < 1e-4f) t.set(nextPoint).sub(point);
+        if (incoming.lengthSquared() > 1e-4f && outgoing.lengthSquared() > 1e-4f
+            && new Vector3f(incoming).normalize().dot(new Vector3f(outgoing).normalize()) < -0.75f) {
+            Vector3f normal = new Vector3f(incoming).cross(outgoing);
+            if (normal.lengthSquared() < 1e-4f) {
+                Vector3f axis = Math.abs(incoming.y) < incoming.length() * 0.9f
+                    ? new Vector3f(0, 1, 0) : new Vector3f(1, 0, 0);
+                normal = axis.cross(incoming);
+            }
+            t = normal.cross(incoming);
+        }
+        if (t.lengthSquared() < 1e-4f) t.set(outgoing);
         if (t.lengthSquared() < 1e-4f) return new Vector3f();
         return t.normalize().mul(handle);
     }
@@ -171,10 +180,5 @@ public class RaceStartRenderer implements BlockEntityRenderer<RaceStartBlockEnti
     @Override
     public int getViewDistance() {
         return 256;
-    }
-
-    @Override
-    public net.minecraft.world.phys.AABB getRenderBoundingBox(RaceStartBlockEntity be) {
-        return be.getRenderBoundingBox();
     }
 }

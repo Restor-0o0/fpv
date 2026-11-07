@@ -31,6 +31,11 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
     }
 
     @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(RaceGateBlockEntity gate) {
+        return gate.renderBoundingBox();
+    }
+
+    @Override
     public void render(RaceGateBlockEntity gate, float partialTick, PoseStack pose,
                        MultiBufferSource buffer, int packedLight, int packedOverlay) {
         if (!ClientRaceState.active()) return;
@@ -117,8 +122,20 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
     }
 
     private static Vector3f tangent(Vector3f point, Vector3f prevPoint, Vector3f nextPoint, float handle) {
+        Vector3f incoming = new Vector3f(point).sub(prevPoint);
+        Vector3f outgoing = new Vector3f(nextPoint).sub(point);
         Vector3f t = new Vector3f(nextPoint).sub(prevPoint);
-        if (t.lengthSquared() < 1e-4f) t.set(nextPoint).sub(point);
+        if (incoming.lengthSquared() > 1e-4f && outgoing.lengthSquared() > 1e-4f
+            && new Vector3f(incoming).normalize().dot(new Vector3f(outgoing).normalize()) < -0.75f) {
+            Vector3f normal = new Vector3f(incoming).cross(outgoing);
+            if (normal.lengthSquared() < 1e-4f) {
+                Vector3f axis = Math.abs(incoming.y) < incoming.length() * 0.9f
+                    ? new Vector3f(0, 1, 0) : new Vector3f(1, 0, 0);
+                normal = axis.cross(incoming);
+            }
+            t = normal.cross(incoming);
+        }
+        if (t.lengthSquared() < 1e-4f) t.set(outgoing);
         if (t.lengthSquared() < 1e-4f) return new Vector3f();
         return t.normalize().mul(handle);
     }
@@ -169,10 +186,5 @@ public class RaceGateRenderer implements BlockEntityRenderer<RaceGateBlockEntity
     @Override
     public int getViewDistance() {
         return 256;
-    }
-
-    @Override
-    public net.minecraft.world.phys.AABB getRenderBoundingBox(RaceGateBlockEntity be) {
-        return be.getRenderBoundingBox();
     }
 }

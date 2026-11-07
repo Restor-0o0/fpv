@@ -171,10 +171,6 @@ public class RaceStartBlockEntity extends BlockEntity {
         return results.stream().filter(r -> Objects.equals(activeCourseKey, r.courseKey())).toList();
     }
 
-    public AABB getRenderBoundingBox() {
-        return renderBoundingBox();
-    }
-
     public AABB renderBoundingBox() {
         Vec3 c = frameCenter();
         double frameReach = size * 0.75 + Math.abs(offset) + 2.0;
@@ -259,6 +255,11 @@ public class RaceStartBlockEntity extends BlockEntity {
 
     public boolean installGeneratedRoute(List<BlockPos> generatedRoute, int generatedLaps,
                                          int generatedSize, int generatedYaw) {
+        return installGeneratedRoute(generatedRoute, generatedLaps, generatedSize, generatedYaw, 0);
+    }
+
+    public boolean installGeneratedRoute(List<BlockPos> generatedRoute, int generatedLaps,
+                                         int generatedSize, int generatedYaw, int generatedPitch) {
         if (!(level instanceof ServerLevel) || generatedRoute.isEmpty()
             || generatedRoute.stream().distinct().count() != generatedRoute.size()) {
             return false;
@@ -276,7 +277,7 @@ public class RaceStartBlockEntity extends BlockEntity {
         laps = Math.max(1, Math.min(50, generatedLaps));
         size = Math.max(2, Math.min(15, generatedSize));
         yaw = Math.floorMod(generatedYaw, 360);
-        pitch = 0;
+        pitch = Math.max(-90, Math.min(90, generatedPitch));
         offset = 0;
         markingPlayer = null;
         invalidateCourse();
