@@ -1,6 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": ["III", "INI", "III"],
-  "key": { "I": { "item": "minecraft:iron_block" }, "N": { "item": "minecraft:netherite_scrap" } },
+  "pattern": ["III", "ICI", "III"],
+  "key": { "I": { "item": "minecraft:iron_ingot" }, "C": { "item": "minecraft:gold_ingot" } },
   "result": { "id": "fpv:frame_octo_8inch" }
 }
