@@ -3,6 +3,7 @@ package org.restor.fpv.jei;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
+import mezz.jei.api.gui.builder.ITooltipBuilder;
 import mezz.jei.api.helpers.IGuiHelper;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.category.AbstractRecipeCategory;
@@ -46,8 +47,14 @@ public final class AssemblyJeiCategory extends AbstractRecipeCategory<AssemblyJe
         builder.addOutputSlot(cardOutput ? 122 : 86, 100).addItemStack(recipe.output())
             .addRichTooltipCallback((slot, lines) -> lines.add(Component.translatable(
                 cardOutput ? "screen.fpv.assembly.hint.card" : "screen.fpv.assembly.part.result")));
+        if (!cardOutput) {
+            builder.addOutputSlot(122, 100)
+                .addRichTooltipCallback((slot, lines) -> lines.add(
+                    Component.translatable("screen.fpv.assembly.hint.card")));
+        }
 
         int bayIndex = 0;
+        boolean hasWarhead = false;
         for (ItemStack extra : recipe.extraParts()) {
             if (DroneCardItem.isCard(extra) && bayIndex < 4) {
                 input(builder, 36 + bayIndex * 24, 120, extra,
@@ -55,7 +62,16 @@ public final class AssemblyJeiCategory extends AbstractRecipeCategory<AssemblyJe
                 bayIndex++;
             } else if (WarheadItem.typeOf(extra) != null) {
                 input(builder, 140, 120, extra, Component.translatable("jei.fpv.assembly.warhead.short"));
+                hasWarhead = true;
             }
+        }
+        for (int i = bayIndex; i < 4; i++) {
+            alternatives(builder, 36 + i * 24, 120, java.util.List.of(),
+                Component.translatable("screen.fpv.assembly.part.bay", i + 1));
+        }
+        if (!hasWarhead) {
+            alternatives(builder, 140, 120, java.util.List.of(),
+                Component.translatable("jei.fpv.assembly.warhead.short"));
         }
     }
 
@@ -69,6 +85,27 @@ public final class AssemblyJeiCategory extends AbstractRecipeCategory<AssemblyJe
             if (nameY > 25) break;
             graphics.text(font, line, 8, nameY, 0xFF70D8E8, false);
             nameY += 9;
+        }
+    }
+    @Override
+    public void getTooltip(ITooltipBuilder tooltip, AssemblyJeiGuide recipe,
+                           mezz.jei.api.gui.ingredient.IRecipeSlotsView slots,
+                           double mouseX, double mouseY) {
+        if (mouseX >= 122 && mouseX < 138 && mouseY >= 100 && mouseY < 116
+            && !recipe.output().is(ModItems.DRONE_CARD.get())) {
+            tooltip.add(Component.translatable("screen.fpv.assembly.hint.card"));
+            return;
+        }
+        int cardCount = 0;
+        for (ItemStack extra : recipe.extraParts()) {
+            if (DroneCardItem.isCard(extra)) cardCount++;
+        }
+        for (int i = cardCount; i < 4; i++) {
+            int x = 36 + i * 24;
+            if (mouseX >= x && mouseX < x + 16 && mouseY >= 120 && mouseY < 136) {
+                tooltip.add(Component.translatable("screen.fpv.assembly.part.bay", i + 1));
+                return;
+            }
         }
     }
     private static void input(IRecipeLayoutBuilder builder, int x, int y, ItemStack stack) {
@@ -87,8 +124,9 @@ public final class AssemblyJeiCategory extends AbstractRecipeCategory<AssemblyJe
 
     private static void alternatives(IRecipeLayoutBuilder builder, int x, int y,
                                      java.util.List<ItemStack> stacks, Component tooltip) {
-        if (!stacks.isEmpty()) builder.addInputSlot(x, y).addItemStacks(stacks)
-            .addRichTooltipCallback((slot, lines) -> lines.add(tooltip));
+        var slot = builder.addInputSlot(x, y);
+        if (!stacks.isEmpty()) slot.addItemStacks(stacks);
+        slot.addRichTooltipCallback((view, lines) -> lines.add(tooltip));
     }
 
     private static final class AssemblyStationBackground implements IDrawable {
