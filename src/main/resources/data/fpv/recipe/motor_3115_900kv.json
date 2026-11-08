@@ -8,7 +8,7 @@
   "key": {
     "C": "minecraft:copper_block",
     "B": "minecraft:iron_block",
-    "N": "minecraft:netherite_scrap"
+    "N": "minecraft:iron_ingot"
   },
   "result": {
     "count": 2,
