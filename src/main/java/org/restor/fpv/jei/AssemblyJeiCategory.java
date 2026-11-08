@@ -96,6 +96,24 @@ public final class AssemblyJeiCategory extends AbstractRecipeCategory<AssemblyJe
             tooltip.add(Component.translatable("screen.fpv.assembly.hint.card"));
             return;
         }
+        if (emptySlotTooltip(tooltip, mouseX, mouseY, 86, 20, recipe.batteries().isEmpty(),
+                Component.translatable("screen.fpv.assembly.part.battery"))
+            || emptySlotTooltip(tooltip, mouseX, mouseY, 86, 60, recipe.cameras().isEmpty(),
+                Component.translatable("screen.fpv.assembly.part.camera"))
+            || emptySlotTooltip(tooltip, mouseX, mouseY, 122, 60, recipe.flightControllers().isEmpty(),
+                Component.translatable("screen.fpv.assembly.hint.controller"))
+            || emptySlotTooltip(tooltip, mouseX, mouseY, 50, 60, recipe.videoTransmitters().isEmpty(),
+                Component.translatable("screen.fpv.assembly.hint.video_transmitter"))
+            || emptySlotTooltip(tooltip, mouseX, mouseY, 122, 40, recipe.optionalModules().isEmpty(),
+                Component.translatable("screen.fpv.assembly.hint.module"))
+            || emptySlotTooltip(tooltip, mouseX, mouseY, 50, 40, recipe.optionalFirmware().isEmpty(),
+                Component.translatable("screen.fpv.assembly.hint.firmware"))
+            || emptySlotTooltip(tooltip, mouseX, mouseY, 50, 80, recipe.motors().isEmpty(),
+                Component.translatable("screen.fpv.assembly.part.motor", recipe.motorCount()))
+            || emptySlotTooltip(tooltip, mouseX, mouseY, 122, 80, recipe.propellers().isEmpty(),
+                Component.translatable("screen.fpv.assembly.part.propeller", recipe.motorCount()))) {
+            return;
+        }
         int cardCount = 0;
         for (ItemStack extra : recipe.extraParts()) {
             if (DroneCardItem.isCard(extra)) cardCount++;
@@ -107,6 +125,18 @@ public final class AssemblyJeiCategory extends AbstractRecipeCategory<AssemblyJe
                 return;
             }
         }
+        boolean hasWarhead = recipe.extraParts().stream().anyMatch(extra -> WarheadItem.typeOf(extra) != null);
+        emptySlotTooltip(tooltip, mouseX, mouseY, 140, 120, !hasWarhead,
+            Component.translatable("jei.fpv.assembly.warhead.short"));
+    }
+
+    private static boolean emptySlotTooltip(ITooltipBuilder tooltip, double mouseX, double mouseY,
+                                            int x, int y, boolean empty, Component label) {
+        if (empty && mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+            tooltip.add(label);
+            return true;
+        }
+        return false;
     }
     private static void input(IRecipeLayoutBuilder builder, int x, int y, ItemStack stack) {
         input(builder, x, y, stack, stack.getHoverName());
