@@ -244,14 +244,14 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
             case AssemblyStationMenu.SLOT_FRAME -> Component.translatable("screen.fpv.assembly.part.frame");
             case AssemblyStationMenu.SLOT_BATTERY -> Component.translatable("screen.fpv.assembly.part.battery");
             case AssemblyStationMenu.SLOT_CAMERA -> Component.translatable("screen.fpv.assembly.part.camera");
-            case AssemblyStationMenu.SLOT_MODULE -> Component.translatable("screen.fpv.payload_slot");
-            case AssemblyStationMenu.SLOT_FIRMWARE -> Component.translatable("screen.fpv.firmware_slot");
-            case AssemblyStationMenu.SLOT_VTX -> Component.translatable("screen.fpv.vtx_slot");
-            case AssemblyStationMenu.SLOT_FC -> Component.translatable("screen.fpv.fc_slot");
+            case AssemblyStationMenu.SLOT_MODULE -> Component.translatable("screen.fpv.assembly.hint.module");
+            case AssemblyStationMenu.SLOT_FIRMWARE -> Component.translatable("screen.fpv.assembly.hint.firmware");
+            case AssemblyStationMenu.SLOT_VTX -> Component.translatable("screen.fpv.assembly.hint.video_transmitter");
+            case AssemblyStationMenu.SLOT_FC -> Component.translatable("screen.fpv.assembly.hint.controller");
             case AssemblyStationMenu.SLOT_REPAIR_MATERIAL ->
-                Component.translatable("screen.fpv.assembly.repair_slot");
-            case AssemblyStationMenu.SLOT_CARD_IN -> Component.translatable("screen.fpv.assembly.part.card_in");
-            case AssemblyStationMenu.SLOT_CARD_OUT -> Component.translatable("screen.fpv.assembly.part.card_out");
+                Component.translatable("screen.fpv.assembly.hint.repair");
+            case AssemblyStationMenu.SLOT_CARD_IN -> Component.translatable("screen.fpv.assembly.hint.card");
+            case AssemblyStationMenu.SLOT_CARD_OUT -> Component.translatable("screen.fpv.assembly.hint.card");
             case AssemblyStationMenu.SLOT_RESULT -> Component.translatable("screen.fpv.assembly.part.result");
             default -> null;
         };
@@ -263,10 +263,7 @@ public class AssemblyStationScreen extends AbstractContainerScreen<AssemblyStati
         if (hoveredSlot != null && !hoveredSlot.hasItem() && hoveredSlot.index < AssemblyStationMenu.SLOT_COUNT) {
             Component name = slotName(hoveredSlot.index);
             if (name != null) {
-                ItemStack ghost = ghostFor(hoveredSlot.index);
-                g.setComponentTooltipForNextFrame(font, ghost.isEmpty() ? List.of(name) : List.of(name,
-                    Component.translatable("screen.fpv.assembly.slot_example", ghost.getHoverName())
-                        .withStyle(net.minecraft.ChatFormatting.DARK_GRAY)), mouseX, mouseY);
+                g.setComponentTooltipForNextFrame(font, List.of(name), mouseX, mouseY);
             }
         }
     }
