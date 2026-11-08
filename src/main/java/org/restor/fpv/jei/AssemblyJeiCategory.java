@@ -34,34 +34,32 @@ public final class AssemblyJeiCategory extends AbstractRecipeCategory<AssemblyJe
 
             @Override
     public void setRecipe(IRecipeLayoutBuilder builder, AssemblyJeiGuide recipe, IFocusGroup focuses) {
-        input(builder, 86, 40, recipe.frame());
-        alternatives(builder, 86, 20, recipe.batteries());
-        alternatives(builder, 86, 60, recipe.cameras());
-        alternatives(builder, 122, 60, recipe.flightControllers());
-        alternatives(builder, 50, 60, recipe.videoTransmitters());
-        alternatives(builder, 122, 40, recipe.optionalModules(), recipe.preset()
-            ? Component.translatable("jei.fpv.assembly.slot.preset")
-            : Component.translatable("jei.fpv.assembly.slot.optional"));
-        alternatives(builder, 50, 40, recipe.optionalFirmware(), recipe.preset()
-            ? Component.translatable("jei.fpv.assembly.slot.preset")
-            : Component.translatable("jei.fpv.assembly.slot.optional"));
+        input(builder, 86, 40, recipe.frame(), Component.translatable("screen.fpv.assembly.part.frame"));
+        alternatives(builder, 86, 20, recipe.batteries(), Component.translatable("screen.fpv.assembly.part.battery"));
+        alternatives(builder, 86, 60, recipe.cameras(), Component.translatable("screen.fpv.assembly.part.camera"));
+        alternatives(builder, 122, 60, recipe.flightControllers(), Component.translatable("screen.fpv.assembly.hint.controller"));
+        alternatives(builder, 50, 60, recipe.videoTransmitters(), Component.translatable("screen.fpv.assembly.hint.video_transmitter"));
+        alternatives(builder, 122, 40, recipe.optionalModules(), Component.translatable("screen.fpv.assembly.hint.module"));
+        alternatives(builder, 50, 40, recipe.optionalFirmware(), Component.translatable("screen.fpv.assembly.hint.firmware"));
 
         alternatives(builder, 50, 80, recipe.motors(),
-            Component.translatable("jei.fpv.assembly.slot.motors", recipe.motorCount()));
+            Component.translatable("screen.fpv.assembly.part.motor", recipe.motorCount()));
         alternatives(builder, 122, 80, recipe.propellers(),
-            Component.translatable("jei.fpv.assembly.slot.propellers", recipe.motorCount()));
+            Component.translatable("screen.fpv.assembly.part.propeller", recipe.motorCount()));
 
         boolean cardOutput = recipe.output().is(ModItems.DRONE_CARD.get());
-        builder.addOutputSlot(cardOutput ? 122 : 86, 100).addItemStack(recipe.output());
+        builder.addOutputSlot(cardOutput ? 122 : 86, 100).addItemStack(recipe.output())
+            .addRichTooltipCallback((slot, lines) -> lines.add(Component.translatable(
+                cardOutput ? "screen.fpv.assembly.hint.card" : "screen.fpv.assembly.part.result")));
 
         int bayIndex = 0;
         for (ItemStack extra : recipe.extraParts()) {
             if (DroneCardItem.isCard(extra) && bayIndex < 4) {
                 input(builder, 36 + bayIndex * 24, 120, extra,
-                    Component.translatable("jei.fpv.assembly.slot.preset"));
+                    Component.translatable("screen.fpv.assembly.part.bay", bayIndex + 1));
                 bayIndex++;
             } else if (WarheadItem.typeOf(extra) != null) {
-                input(builder, 140, 120, extra, Component.translatable("jei.fpv.assembly.warhead"));
+                input(builder, 140, 120, extra, Component.translatable("jei.fpv.assembly.warhead.short"));
             }
         }
     }
@@ -79,7 +77,7 @@ public final class AssemblyJeiCategory extends AbstractRecipeCategory<AssemblyJe
         }
     }
     private static void input(IRecipeLayoutBuilder builder, int x, int y, ItemStack stack) {
-        input(builder, x, y, stack, Component.translatable("jei.fpv.assembly.slot.required"));
+        input(builder, x, y, stack, stack.getHoverName());
     }
 
     private static void input(IRecipeLayoutBuilder builder, int x, int y, ItemStack stack, Component tooltip) {
@@ -89,7 +87,7 @@ public final class AssemblyJeiCategory extends AbstractRecipeCategory<AssemblyJe
 
     private static void alternatives(IRecipeLayoutBuilder builder, int x, int y,
                                     java.util.List<ItemStack> stacks) {
-        alternatives(builder, x, y, stacks, Component.translatable("jei.fpv.assembly.slot.required"));
+        alternatives(builder, x, y, stacks, stacks.get(0).getHoverName());
     }
 
     private static void alternatives(IRecipeLayoutBuilder builder, int x, int y,
