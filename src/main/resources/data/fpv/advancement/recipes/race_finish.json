@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:race_finish"
+        "recipes": "fpv:race_finish"
       }
     }
   },

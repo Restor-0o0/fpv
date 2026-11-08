@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:charging_station"
+        "recipes": "fpv:charging_station"
       }
     }
   },

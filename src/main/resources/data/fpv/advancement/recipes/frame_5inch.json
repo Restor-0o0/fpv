@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:frame_5inch"
+        "recipes": "fpv:frame_5inch"
       }
     }
   },

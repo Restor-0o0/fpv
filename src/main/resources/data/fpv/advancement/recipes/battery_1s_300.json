@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:battery_1s_300"
+        "recipes": "fpv:battery_1s_300"
       }
     }
   },

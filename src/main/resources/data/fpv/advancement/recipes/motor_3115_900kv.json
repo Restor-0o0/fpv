@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:motor_3115_900kv"
+        "recipes": "fpv:motor_3115_900kv"
       }
     }
   },

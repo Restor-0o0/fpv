@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:assembly_station_dark_oak"
+        "recipes": "fpv:assembly_station_dark_oak"
       }
     }
   },

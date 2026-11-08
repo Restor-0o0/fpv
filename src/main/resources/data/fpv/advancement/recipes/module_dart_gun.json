@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:module_dart_gun"
+        "recipes": "fpv:module_dart_gun"
       }
     }
   },

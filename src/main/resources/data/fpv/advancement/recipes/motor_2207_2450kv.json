@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:motor_2207_2450kv"
+        "recipes": "fpv:motor_2207_2450kv"
       }
     }
   },

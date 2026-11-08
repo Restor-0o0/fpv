@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:prop_5x4x3"
+        "recipes": "fpv:prop_5x4x3"
       }
     }
   },

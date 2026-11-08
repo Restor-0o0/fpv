@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:camera_standard"
+        "recipes": "fpv:camera_standard"
       }
     }
   },

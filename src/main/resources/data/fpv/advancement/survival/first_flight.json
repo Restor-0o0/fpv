@@ -20,8 +20,12 @@
       "trigger": "minecraft:started_riding",
       "conditions": {
         "player": {
-          "vehicle": {
-            "type": "#fpv:aircraft"
+          "type": "minecraft:entity_properties",
+          "entity": "this",
+          "predicate": {
+            "minecraft:vehicle": {
+              "minecraft:entity_type": "#fpv:aircraft"
+            }
           }
         }
       }

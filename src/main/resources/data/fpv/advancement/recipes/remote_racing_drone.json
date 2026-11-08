@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:remote_racing_drone"
+        "recipes": "fpv:remote_racing_drone"
       }
     }
   },

@@ -14,7 +14,7 @@
     "has_the_recipe": {
       "trigger": "minecraft:recipe_unlocked",
       "conditions": {
-        "recipe": "fpv:frame_tiny_whoop"
+        "recipes": "fpv:frame_tiny_whoop"
       }
     }
   },
